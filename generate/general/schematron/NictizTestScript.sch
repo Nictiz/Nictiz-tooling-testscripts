@@ -12,6 +12,7 @@
             <sch:assert test="f:description[@value]">element 'description' with a value is required</sch:assert>
             <sch:assert test="f:test">At least one 'test' element is required</sch:assert>
             <sch:assert test="not(nts:patientTokenFixture) or @nts:scenario = 'server' or @nts:scenario = 'client'">Set the scenario to either 'server' or 'client' using the nts:scenario attribute</sch:assert>
+            <sch:assert test="not(@nts:accept) or @nts:accept=('xml','json','xml json','json xml')">Set the accept output value to either 'xml', 'json' or both ('xml json') using the nts:accept attribute</sch:assert>
             
             <!-- These FHIR TestScript elements are automatically added and shouldn't be included here -->
             <sch:report test="f:date" subject="f:date">Element 'date' not allowed; it will be created during transformation</sch:report>
@@ -61,12 +62,17 @@
             <sch:report test="@value and @scope and count(@*) &gt; 2">Only the scope and value attributes are allowed</sch:report>
             <sch:assert test="not(@scope) or @scope = 'project' or @scope = 'common'">Scope may be 'project' (default) or 'common'.</sch:assert>
         </sch:rule>
-        <sch:rule context="nts:variable">
+        <sch:rule context="nts:with-parameter">
             <sch:assert test=".[parent::nts:include]">element can only be used in a "nts:include" element</sch:assert>
             <sch:assert test="@name and @value">Both 'name' and 'value' attributes are required</sch:assert>
             <sch:assert test="count(@*) = 2">Only 'name' and 'value' attribute are required</sch:assert>
         </sch:rule>
         <sch:rule context="nts:component"/>
+        <sch:rule context="nts:parameter">
+            <sch:assert test=".[parent::nts:component]">Element can only be used in a "nts:component" element.</sch:assert>
+            <sch:assert test="not(preceding-sibling::*[not(self::nts:parameter)])">"nts:parameter" must be first child in "nts:component".</sch:assert>
+            <sch:assert test="@name and @value">Both 'name' and 'value' attributes are required</sch:assert>
+        </sch:rule>
         <sch:rule context="nts:*">
             <sch:assert test="false()">Unknown element in the Nictiz TestScript namespace</sch:assert>
         </sch:rule>
