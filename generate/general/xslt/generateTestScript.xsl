@@ -21,29 +21,20 @@
                         'project/commonComponentFolder' template parameters are relative to this directory.
                         This parameter is only needed when applying this template on a document that's not read from 
                         disk (i.e. a generated/rewritten document).
-         param expectedResponseFormat is the format for responses (either 'xml' (default) or 'json') that this 
-                                      TestScript expects when it tests a server (i.e. it has no meaning when 
-                                      nts:scenario is set to 'client'). This value is added as 'Accept' header on all
-                                      requests and to the name and id of the TestScript.
+         param runtimeParameters is a collection of nts:parameter elements that can be passed on runtime to the script.
+                                 Parameters in the TestScript take precedence.
     -->
     <xsl:template name="generate" match="f:TestScript">
         <xsl:param name="inputDir" as="xs:string" select="replace(base-uri(current()), '(.*)/[^/]+', '$1')"/>
-        <xsl:param name="expectedResponseFormat" select="if(@nts:scenario = 'server') then 'xml' else ''"/>
+        <xsl:param name="runtimeParameters" as="element(nts:parameter)*"/>
         <xsl:variable name="scenario" select="@nts:scenario"/>
-        
-        <!-- Sanity check the expectedResponseFormat parameter -->
-        <xsl:if test="$expectedResponseFormat != '' and $scenario != 'server'">
-            <xsl:message terminate="yes" select="'Parameter ''expectedResponseFormat'' only has a meaning when nts:scenario is ''server'''"></xsl:message>
-        </xsl:if>
-        <xsl:if test="$scenario = 'server' and not($expectedResponseFormat = ('xml', 'json'))">
-            <xsl:message terminate="yes" select="concat('Invalid value ''', $expectedResponseFormat, ''' for parameter ''expectedResponseFormat''; should be either ''xml'' or ''json''')"></xsl:message>
-        </xsl:if>
-        
+     
         <!-- Expand all the Nictiz inclusion elements to their FHIR representation --> 
         <xsl:variable name="expanded">
             <xsl:apply-templates mode="expand" select=".">
                 <xsl:with-param name="inputDir" select="$inputDir" tunnel="yes"/>
                 <xsl:with-param name="scenario" select="$scenario" tunnel="yes"/>
+                <xsl:with-param name="runtimeParameters" select="$runtimeParameters" tunnel="yes"/>
             </xsl:apply-templates>
         </xsl:variable>
         
@@ -55,7 +46,6 @@
             <xsl:with-param name="variables" select="$expanded//f:variable" tunnel="yes"/>
             <xsl:with-param name="rules" select="$expanded//f:rule[@id]" tunnel="yes"/>
             <xsl:with-param name="scenario" select="$scenario" tunnel="yes"/>
-            <xsl:with-param name="expectedResponseFormat" select="$expectedResponseFormat" tunnel="yes"/>
         </xsl:apply-templates>
     </xsl:template>
 
@@ -369,6 +359,7 @@
     <xsl:template match="@*" mode="expand">
         <xsl:param name="inclusionParameters" as="element(nts:with-parameter)*" tunnel="yes"/>
         <xsl:param name="defaultParameters" as="element(nts:parameter)*" select="ancestor::nts:component[1]/nts:parameter"/>
+        <xsl:param name="runtimeParameters" as="element(nts:parameter)*" tunnel="yes"/>
         
         <xsl:variable name="value">
             <xsl:variable name="regexString" select="concat('\{\$(',$parameterChars,'*)}')"/>
@@ -377,11 +368,15 @@
                     <xsl:analyze-string select="." regex="{$regexString}">
                         <xsl:matching-substring>
                             <xsl:variable name="paramName" select="regex-group(1)"/>
-                            <xsl:variable name="replacement" select="$inclusionParameters[@name = $paramName]"/>
+                            <xsl:variable name="inclusionReplacement" select="$inclusionParameters[@name = $paramName]"/>
+                            <xsl:variable name="runtimeReplacement" select="$runtimeParameters[@name = $paramName]"/>
                             <xsl:variable name="default" select="$defaultParameters[@name=$paramName and not(@value='')]"/>
                             <xsl:choose>
-                                <xsl:when test="$paramName != '' and count($replacement) = 1">
-                                    <xsl:value-of select="$replacement/@value"/>
+                                <xsl:when test="$paramName != '' and count($inclusionReplacement) = 1">
+                                    <xsl:value-of select="$inclusionReplacement/@value"/>
+                                </xsl:when>
+                                <xsl:when test="$paramName != '' and count($runtimeReplacement) = 1">
+                                    <xsl:value-of select="$runtimeReplacement/@value"/>
                                 </xsl:when>
                                 <xsl:when test="$paramName != '' and count($default) ne 0">
                                     <xsl:value-of select="$default[last()]/@value"/>
