@@ -251,6 +251,22 @@
         </fixture>
     </xsl:template>
     
+    <!-- Expand a nts:variable element to a FHIR variable element -->
+    <xsl:template match="nts:variable[@name and ((@expression and @sourceId) or @defaultValue)]" mode="expand">
+        <variable>
+            <name value="{@name}"/>
+            <xsl:if test="@expression!=''">
+                <expression value="{@expression}"/>
+            </xsl:if>
+            <xsl:if test="@sourceId!=''">
+                <sourceId value="{@sourceId}"/>    
+            </xsl:if>
+            <xsl:if test="@defaultValue!=''">
+                <defaultValue value="{@defaultValue}"/>    
+            </xsl:if>            
+        </variable>
+    </xsl:template>
+    
     <!-- Expand an nts:patientTokenFixture element to create a variable called 'patient-token-id'. How this is handled
          is different for server and client scripts:
          - for a server script, it will be provided with a default value read from the fixture, which can be overridden
