@@ -130,9 +130,11 @@
                 <local name="file.basename"/>
                 <local name="file.dirname"/>
                 <local name="file.reldir"/>
+                <local name="nts-in"/>
                 
                 <!-- All variables extracted from xmlproperty should be declared local -->
                 <local name="TestScript(nts:scenario)"/>
+                <local name="TestScript(nts:generate-asserts-from)"/>
                 
                 <basename property="file.basename" file="@{file}" suffix="xml"/>
                 <dirname property="file.dirname" file="@{file}"/>
@@ -144,6 +146,23 @@
                 </pathconvert>
                 
                 <xmlproperty file="@{file}"/>
+                
+                <if>
+                    <isset property="TestScript(nts:generate-asserts-from)"/>
+                    <then>
+                        <property name="nts-in" value="${temp.dir}/${file.reldir}/${file.basename}-asserts.xml"/>
+                        <xslt force="true" style="${xslt.dir}/generateAsserts.xsl" in="@{file}" out="@{nts-in}">                            
+                            <factory name="net.sf.saxon.TransformerFactoryImpl"/>
+                            <classpath location="${Saxon-HE.jar}"/>
+                            <param name="inputDir" expression="file:///${projectdir.unix}"/>
+                            <param name="fixtureFolder" expression="_fixtures"/>
+                        </xslt>
+                        
+                    </then>
+                    <else>
+                        <property name="nts-in" value="@{file}"/>
+                    </else>
+                </if>
                 
                 <if>
                     <equals arg1="${TestScript(nts:scenario)}" arg2="server"/>
@@ -161,7 +180,7 @@
                         <local name="file.reldirXisInternal"/>
                         <property name="file.newname" value="${file.basename}-@{expectedResponseFormat}.xml"/>
                         
-                        <xslt force="true" style="${xslt.dir}/generateTestScript.xsl" in="@{file}" out="${temp.dir}/${file.reldir}/${file.newname}">                            
+                        <xslt force="true" style="${xslt.dir}/generateTestScript.xsl" in="@{nts-in}" out="${temp.dir}/${file.reldir}/${file.newname}">                            
                             <factory name="net.sf.saxon.TransformerFactoryImpl"/>
                             <classpath location="${Saxon-HE.jar}"/>
                             <param name="inputDir" expression="file:///${projectdir.unix}"/>

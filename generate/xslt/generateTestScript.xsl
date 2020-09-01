@@ -8,17 +8,17 @@
     <xsl:strip-space elements="*"/>
         
     <!-- The base of the folder where fixtures can be found, relative to the folder where the output TestScript will reside. -->
-    <xsl:param name="referenceFolder" select="'../_reference'"/>
+    <xsl:param name="referenceFolder" select="'_reference'"/>
     
     <!-- The folder where components for this project can be found, relative to the XIS or PHR input dir. -->
-    <xsl:param name="projectComponentFolder" select="'components'"/>
+    <xsl:param name="projectComponentFolder" select="'_components'"/>
     
     <!-- The folder where the common components for TestScript generation can be found, relative to the XIS or PHR input dir. -->
-    <xsl:param name="commonComponentFolder" select="'../../general/common-tests'"/>
+    <xsl:param name="commonComponentFolder" select="'../common-asserts'"/>
     
-    <xsl:param name="inputDir" as="xs:string"/>
+    <xsl:param name="inputDir" as="xs:string" select="'file:/C:/Users/144189-ADM/Documents/Git/Nictiz-STU3-testscripts/Generate/src/Medication-9-0-7'"/>
     
-    <xsl:param name="expectedResponseFormat" select="if(@nts:scenario = 'server') then 'xml' else ''"/>
+    <xsl:param name="expectedResponseFormat" select="if(/f:TestScript/@nts:scenario = 'server') then 'xml' else ''"/>
     
     <!-- The main template, which will call the remaining templates.
          param inputDir is a string describing the direcory where the input file resides. The 
@@ -366,6 +366,42 @@
             <xsl:copy-of select="./*"/>
         </rule>
     </xsl:template>
+    
+    <!-- Expand a nts:generated-asserts element. Duplicate its parent f:test, edit the id, name and description, and add the responseId to the operation action. -->
+    <xsl:template match="f:test[nts:generated-asserts]" mode="expand">
+        <xsl:variable name="test-content-expanded">
+            <xsl:copy>
+                <xsl:apply-templates select="node()|@*" mode="#current"/>
+            </xsl:copy>
+            
+        </xsl:variable>
+        <!--<xsl:copy>-->
+            <xsl:value-of select="$test-content-expanded"/>
+        <!--</xsl:copy>-->
+        <test>
+            <xsl:copy-of select="@*"/>
+            <xsl:attribute name="id" select="concat(@id,'-asserts')"/>
+            <name value="{f:name/@value} - Content asserts"/>
+            <description value="Generated content asserts for {f:name/@value}. These asserts check if the response contains the same content as the Nictiz fixtures based on the Addenda, which was previously done by hand. Fails give warnings only and do not have consequences for qualification per se, but please expect inquiries into the reason of failing."/>
+            <xsl:choose>
+                <xsl:when test="count($test-content-expanded/f:test/f:action/f:operation)=1">
+                    <action>
+                        <operation>
+                            <xsl:copy-of select="$test-content-expanded/f:test/f:action/f:operation/*[not(self::f:responseId) and not(self::f:sourceId) and not(self::f:targetId) and not(self::f:url)]"/>
+                            <responseId value="{nts:generated-asserts/@responseId}"/>
+                            <xsl:copy-of select="$test-content-expanded/f:test/f:action/f:operation/*[self::f:sourceId or self::f:targetId or self::f:url]"/>
+                        </operation>
+                    </action>
+                </xsl:when>
+                <xsl:otherwise>
+                    <xsl:message terminate="yes">Found either no or multiple operation actions within test.</xsl:message>
+                </xsl:otherwise>
+            </xsl:choose>
+            <xsl:copy-of select="nts:generated-asserts/*"/>
+        </test>
+    </xsl:template>
+    
+    <xsl:template match="nts:generated-asserts"/>
     
     <xsl:variable name="parameterChars" select="'[a-zA-Z_0-9-]'"/>
     
