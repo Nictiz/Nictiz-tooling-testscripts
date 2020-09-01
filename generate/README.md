@@ -149,6 +149,16 @@ There may be differences for xis and phr scenarios in how a TestScript is transf
 nts:scenario="server|client"
 ```
 
+### Generating assertions based on fixture
+
+For each `test` element within `TestScript`, an `nts:generate-asserts-from` attribute can be added to generate assertions based on the contents of the fixture referenced in the attribute. The fixture has  to be placed in the `_fixtures` folder.
+
+```xml
+<test id="…" nts:generate-asserts-from="[filename].xml">
+```
+
+The `test` element where this attribute is added to will be duplicated (because responses cannot be transferred between tests); the duplicate will be filled with (warning only) assertions to check the contents of the response.
+
 ## Running the transformation
 
 The transformation is called by the ANT build in `ant/build.xml`. For more information on the location of the inputs and outputs, see [the readme in the TestScripts repository](https://github.com/Nictiz/Nictiz-STU3-testscripts/blob/master/Generate/README.md).
