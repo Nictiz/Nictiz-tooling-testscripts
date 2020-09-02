@@ -8,13 +8,28 @@
     exclude-result-prefixes="#all"
     version="2.0">
     
-    <!-- DESCRIPTIONS! -->
+    <!-- 
+        
+        TO-DO/WISH LIST:
+        - Edit readme: "The `test` element where this attribute is added to will be duplicated (because responses cannot be transferred between tests)"
+        - Create one assert for Coding system/code pairs instead of two. The pair should be checked, not the individual values.
+        - Response or request check? See Questionnaires
+        - Exclude specific parts of fixture when generating?
+        - What if a resource-id-variable cannot be created?
+        - Add an assert to check if resource-id-variable finds one and only one resource.
+        - Is it possible to generate assertions from a singe resource instead of a bundle?
+        - '_fixtures' folder not necessary, can also be '_resources' folder. Look at generateTestScript to see how filenames are resolved.
+        - Edit (or automate?) the relevant resources to look at (scenarioResources variable). Maybe based on selflink?
+        - Edit the descriptions to better reflect what is tested based on datatype.
+        - Investigate the possibility to, upon failure, let de description give a hint to what needs to be searched for in the response to get to the relevant part.
+        - Look at expression parts: is it possible to have a resource that has no unique content per se, but still is unique in the combination of everything.
+        
+    -->
     
     <xsl:param name="inputDir" as="xs:string" select="'file:/C:/Users/144189-ADM/Documents/Git/Nictiz-STU3-testscripts/Generate/src/Medication-9-0-7'"/>
     <xsl:param name="fixtureFolder" as="xs:string" select="'_fixtures'"/>
     
     <xsl:param name="scenarioType" select="'MA'"/>
-    <!-- Hoe kun je dit beter bekijken? -->
     <xsl:variable name="scenarioResources" select="('MedicationRequest','Medication')"/>
     
     <xsl:output indent="yes"/>
@@ -32,11 +47,6 @@
     <xsl:template match="f:TestScript/f:test" mode="copy">
         <xsl:variable name="test-count" select="count(preceding-sibling::f:test)+1"/>
         <xsl:variable name="asserts-fixture" select="document(string-join(($inputDir, $fixtureFolder, @nts:generate-asserts-from), '/'))"/>
-        <!-- Create asserts based on 1 resource, not on Bundle? -->
-        <!-- Edge cases:
-            - Wat als de variabele niets kan vinden?
-            - Wat als (door een foutje van de leverancier) er 2 resultaten zijn, waar er een uniek ID moet zijn?
-        -->
         <xsl:copy>
             <xsl:apply-templates select="node()|@*" mode="copy"/>
             <xsl:variable name="idExpressionParts">
@@ -77,7 +87,6 @@
                         <xsl:message terminate="yes">Could not determine unique expression to catch ID in a variable.</xsl:message>
                     </xsl:otherwise>
                 </xsl:choose>
-                <!-- TODO: Generate 1 assert per variable to check if variable isn't empty or contains more then 1 resource -->
                 <xsl:apply-templates select="$asserts-fixture" mode="asserts">
                     <!--<xsl:with-param name="responseId" select="concat('response-',$test-count)" tunnel="yes"/>-->
                 </xsl:apply-templates>
