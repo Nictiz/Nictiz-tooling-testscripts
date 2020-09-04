@@ -32,7 +32,7 @@
         
         <!-- Sanity check the expectedResponseFormat parameter -->
         <xsl:if test="$expectedResponseFormat != '' and $scenario != 'server'">
-            <xsl:message terminate="yes" select="'Parameter ''expectedResponseFormat'' only has a meaning when nts:scenario is ''server'''"></xsl:message>
+            <xsl:message select="'Parameter ''expectedResponseFormat'' only has a meaning when nts:scenario is ''server'''"></xsl:message>
         </xsl:if>
         <xsl:if test="$scenario = 'server' and not($expectedResponseFormat = ('xml', 'json'))">
             <xsl:message terminate="yes" select="concat('Invalid value ''', $expectedResponseFormat, ''' for parameter ''expectedResponseFormat''; should be either ''xml'' or ''json''')"></xsl:message>
@@ -219,7 +219,7 @@
         <xsl:copy>
             <xsl:apply-templates select="@*" mode="#current"/>
             <xsl:apply-templates select="f:*[local-name()=$pre-accept]" mode="#current"/>
-            <xsl:if test="not(f:accept) and $expectedResponseFormat != ''">
+            <xsl:if test="$scenario='server' and not(f:accept) and $expectedResponseFormat != ''">
                 <accept value="{lower-case($expectedResponseFormat)}"/>
             </xsl:if>
             <xsl:apply-templates select="f:*[not(local-name()=$pre-accept)]" mode="#current"/>
