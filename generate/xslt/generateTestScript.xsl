@@ -178,8 +178,18 @@
                     <xsl:value-of select="."/>
                 </xsl:attribute>
             </xsl:for-each>
-            <xsl:apply-templates select="./(*|comment())" mode="filter"/>
+            <xsl:apply-templates select="./(*|comment())" mode="filter">
+                <xsl:with-param name="generatedAsserts" select="@nts:responseId" tunnel="yes"/>
+            </xsl:apply-templates>
         </xsl:element>
+    </xsl:template>
+    
+    <xsl:template match="f:test[@nts:responseId]" mode="filter" priority="0">
+        <xsl:copy>
+            <xsl:apply-templates select="@*|node()" mode="#current">
+                <xsl:with-param name="generatedAsserts" select="@nts:responseId" tunnel="yes"/>
+            </xsl:apply-templates>
+        </xsl:copy>
     </xsl:template>
     
     <!-- Add the format for requests to the TestScript id, if specified -->
@@ -213,16 +223,28 @@
     <xsl:template match="f:TestScript/f:test/f:action/f:operation" mode="filter">
         <xsl:param name="scenario" tunnel="yes"/>
         <xsl:param name="expectedResponseFormat" tunnel="yes"/>
+        <xsl:param name="generatedAsserts" tunnel="yes"/>
         
         <!--All elements that can exist before the accept element following the FHIR spec.-->
         <xsl:variable name="pre-accept" select="('type','resource','label','description')"/>
+        <!-- All elements that can exist after the responseId element following the FHIR spec -->
+        <xsl:variable name="post-responseId" select="('sourceId','targetId','url')"/>
         <xsl:copy>
             <xsl:apply-templates select="@*" mode="#current"/>
             <xsl:apply-templates select="f:*[local-name()=$pre-accept]" mode="#current"/>
             <xsl:if test="$scenario='server' and not(f:accept) and $expectedResponseFormat != ''">
                 <accept value="{lower-case($expectedResponseFormat)}"/>
             </xsl:if>
-            <xsl:apply-templates select="f:*[not(local-name()=$pre-accept)]" mode="#current"/>
+            <xsl:choose>
+                <xsl:when test="not($generatedAsserts='')">
+                    <xsl:apply-templates select="f:*[not(local-name()=$pre-accept) and not(local-name()=$post-responseId)]" mode="#current"/>
+                    <responseId value="{$generatedAsserts}"/>
+                    <xsl:apply-templates select="f:*[local-name()=$post-responseId]" mode="#current"/>
+                </xsl:when>
+                <xsl:otherwise>
+                    <xsl:apply-templates select="f:*[not(local-name()=$pre-accept)]" mode="#current"/>
+                </xsl:otherwise>
+            </xsl:choose>
         </xsl:copy>
     </xsl:template>
     
@@ -357,15 +379,19 @@
     </xsl:template>
     
     <!-- Expand a nts:generated-asserts element. Duplicate its parent f:test, edit the id, name and description, and add the responseId to the operation action. -->
+    
     <xsl:template match="f:test[nts:generated-asserts]" mode="expand">
-        <xsl:variable name="test-content-expanded">
+        <xsl:copy>
+            <xsl:attribute name="nts:responseId" select="nts:generated-asserts/@responseId"/>
+            <xsl:apply-templates select="node()|@*" mode="#current"/>
+        </xsl:copy>
+        <!-- Duplication is removed because of KT-228 -->
+        <!--<xsl:variable name="test-content-expanded">
             <xsl:copy>
                 <xsl:apply-templates select="node()|@*" mode="#current"/>
             </xsl:copy>
         </xsl:variable>
-        <!--<xsl:copy>-->
         <xsl:copy-of select="$test-content-expanded"/>
-        <!--</xsl:copy>-->
         <test>
             <xsl:copy-of select="@*"/>
             <xsl:attribute name="id" select="concat(@id,'-asserts')"/>
@@ -386,10 +412,13 @@
                 </xsl:otherwise>
             </xsl:choose>
             <xsl:copy-of select="nts:generated-asserts/*"/>
-        </test>
+        </test>-->
     </xsl:template>
     
-    <xsl:template match="nts:generated-asserts"/>
+    <!--<xsl:template match="nts:generated-asserts"/>-->
+    <xsl:template match="nts:generated-asserts" mode="expand">
+        <xsl:apply-templates mode="#current"/>
+    </xsl:template>
     
     <xsl:variable name="parameterChars" select="'[a-zA-Z_0-9-]'"/>
     

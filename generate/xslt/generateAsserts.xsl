@@ -11,18 +11,23 @@
     <!-- 
         
         TO-DO/WISH LIST:
-        - Edit readme: "The `test` element where this attribute is added to will be duplicated (because responses cannot be transferred between tests)"
+        - What if a resource-id-variable cannot be created?
+        - Rename @responseId to @fixtureId
         - Create one assert for Coding system/code pairs instead of two. The pair should be checked, not the individual values.
         - Response or request check? See Questionnaires
         - Exclude specific parts of fixture when generating?
-        - What if a resource-id-variable cannot be created?
-        - Add an assert to check if resource-id-variable finds one and only one resource.
+        -
+        
         - Is it possible to generate assertions from a singe resource instead of a bundle?
         - '_fixtures' folder not necessary, can also be '_resources' folder. Look at generateTestScript to see how filenames are resolved.
         - Edit (or automate?) the relevant resources to look at (scenarioResources variable). Maybe based on selflink?
         - Edit the descriptions to better reflect what is tested based on datatype.
         - Investigate the possibility to, upon failure, let de description give a hint to what needs to be searched for in the response to get to the relevant part.
         - Look at expression parts: is it possible to have a resource that has no unique content per se, but still is unique in the combination of everything.
+        
+        
+        DEPENDS ON KT-226:
+        - Edit readme: "The `test` element where this attribute is added to will be duplicated (because responses cannot be transferred between tests)"
         
     -->
     
@@ -84,6 +89,13 @@
                                 <expression value="Bundle.entry.select(resource as {@resource}).where({./text()}).id"/>
                                 <sourceId value="response-{$test-count}"/>
                             </variable>
+                            <action>
+                                <assert>
+                                    <description value="CONTENT ASSERTION ID MATCH - Check if variable '{@name}' can be matched to a resource in the response."/>
+                                    <expression value="Bundle.entry.select(resource as MedicationRequest).where(id = '${{{@name}}}').count() = 1"/>
+                                    <!-- Should be warning or not? <warningOnly value="true"/>-->
+                                </assert>
+                            </action>
                         </xsl:for-each>
                     </xsl:when>
                     <xsl:otherwise>
@@ -258,6 +270,8 @@
             </xsl:choose>
         </xsl:variable>
         <xsl:variable name="description">
+            <!-- Because duplication is removed because of KT-228, start every description with 'CONTENT ASSERTION' -->
+            <xsl:text>CONTENT ASSERTION - </xsl:text>
             <xsl:call-template name="create-resourceID"/>
             <xsl:text>: Check if </xsl:text>
             <xsl:value-of select="substring-after($withinResourceExpression,'.')"/>
