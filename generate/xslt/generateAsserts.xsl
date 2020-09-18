@@ -26,8 +26,8 @@
         
     -->
     
-    <xsl:param name="inputDir" as="xs:string" select="'file:/C:/Users/144189-ADM/Documents/Git/Nictiz-STU3-testscripts/Generate/src/Medication-9-0-7'"/>
-    <xsl:param name="fixtureFolder" as="xs:string" select="'_fixtures'"/>
+    <!--<xsl:param name="fixtureFolder" as="xs:string" required="yes"/>-->
+    <xsl:param name="fixtureFolder" as="xs:string" select="'file:/C:/Users/144189-ADM/Documents/Git/Nictiz-STU3-testscripts/Generate/src/Medication-9-0-7/_fixtures'"/>
     
     <xsl:param name="scenarioType" select="'MA'"/>
     <xsl:variable name="scenarioResources" select="('MedicationRequest','Medication')"/>
@@ -46,7 +46,10 @@
     
     <xsl:template match="f:TestScript/f:test" mode="copy">
         <xsl:variable name="test-count" select="count(preceding-sibling::f:test)+1"/>
-        <xsl:variable name="asserts-fixture" select="document(string-join(($inputDir, $fixtureFolder, @nts:generate-asserts-from), '/'))"/>
+        <xsl:variable name="asserts-fixture" select="document(string-join(($fixtureFolder, @nts:generate-asserts-from), '/'),.)"/>
+        <xsl:if test="not($asserts-fixture)">
+            <xsl:message terminate="yes">Fixture <xsl:value-of select="$asserts-fixture"/> not found.</xsl:message>
+        </xsl:if>
         <xsl:copy>
             <xsl:apply-templates select="node()|@*" mode="copy"/>
             <xsl:variable name="idExpressionParts">
@@ -96,7 +99,7 @@
     
     <xsl:template name="generateExpressionParts">
         <xsl:param name="in" select="."/>
-        <xsl:for-each select="$in//@value[. = number(.) or parent::f:code]"><!-- only apply values that are numbers (integers) and codes. prevent ambiguity -->
+        <xsl:for-each select="$in//@value[string(number(.)) != 'NaN' or parent::f:code]"><!-- only apply values that are numbers (integers) and codes. prevent ambiguity -->
             <nts:expressionPart>
                 <xsl:for-each select="ancestor::*[ancestor::f:*[parent::f:resource]]">
                     <xsl:value-of select="nf:DTchoice(.)"/>
