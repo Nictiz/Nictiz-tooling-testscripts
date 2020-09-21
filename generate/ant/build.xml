@@ -17,16 +17,16 @@
     The script will ask you for one of the project dirs inside the "src/" dir. Alternatively, this can be passed in the
     ANT call with the -Dproject= option.
 -->
-     
-<project xmlns:ivy="antlib:org.apache.ivy.ant" basedir="." name="generateTestScripts" default="build">
-    <!-- The basedir property is the basedir of the including script. This property sets _our_ basedir. -->
-    <dirname property="included.basedir" file="${ant.file.generateTestScripts}/.."/>
+
+<project xmlns:ivy="antlib:org.apache.ivy.ant" xmlns:if="ant:if" basedir="." name="generateTestScripts" default="build">
+    <!-- Set testscripttools.dir if it is not supplied by including build file. -->
+    <dirname property="testscripttools.dir" file="${ant.file.generateTestScripts}/.."/>
     
     <property name="ivy.install.version" value="2.5.0-rc1" />
     <property name="ivy.jar.file" value="${ant.library.dir}/ivy.jar" />
-    <property name="ivy.dep.file" value="${included.basedir}/ant/ivy.xml" />
+    <property name="ivy.dep.file" value="${testscripttools.dir}/ant/ivy.xml" />
     
-    <property name="xslt.dir" value="${included.basedir}/xslt" />
+    <property name="xslt.dir" value="${testscripttools.dir}/xslt" />
     <property name="build.dir" value="${basedir}/build" />
     <property name="src.dir" value="${basedir}/src" />
     <property name="lib.dir" value="${basedir}/lib/ant-dependencies"/>
@@ -121,7 +121,7 @@
 
     <macrodef name="transform-NTS-file" description="Custom task to perform the transformation of an NTS file">
         <attribute name="nts.file" description="The (full) path to the input file."/>
-        <attribute name="project.dir" description="The base dir of the project."/>
+        <!--<attribute name="project.dir" description="The base dir of the project."/>-->
         <attribute name="output.dir" description="The target dir (not just the base) of the transformed file. The name of the actual file will be determined by this task."/>
         <attribute name="references.file" description="The (temporary) text file to collect the list of fixtures to. See the collect-fixtures macrodef for more information."/>
 
@@ -134,7 +134,10 @@
                  declared local. -->
             <local name="TestScript(nts:scenario)"/>
             <local name="TestScript.test(nts:generate-asserts-from)"/>
+            <!--<local name="TestScript.test(id)"/>-->
             <xmlproperty file="@{nts.file}"/>
+            
+            <!--<echo level="error">${TestScript.test(id)}</echo>-->
             
             <!-- Calculate the relative path to the reference dir from the NTS file-->
             <local name="nts.file.dir"/>
@@ -147,27 +150,6 @@
             <propertyregex property="reference.dir.relative.normalized" input="${reference.dir.relative}" regexp="[\\]" replace="/" global="true" defaultValue="${reference.dir.relative}"/>
             
             <if>
-                <isset property="TestScript.test(nts:generate-asserts-from)"/>
-                <then>
-                    <echo>Generating asserts</echo>
-                    <tempfile property="nts.file.generated" destDir="${temp.dir}" suffix=".xml"/>
-                    <!--<property name="nts.file.generated" value="${temp.dir}/${file.reldir}/${file.basename}-asserts.xml"/>-->
-                    <!--<xslt force="true" style="${xslt.dir}/generateAsserts.xsl" in="@{nts.file}" out="@{nts.file.generated}">                            
-                        <factory name="net.sf.saxon.TransformerFactoryImpl"/>
-                        <classpath location="${Saxon-HE.jar}"/>
-                    </xslt>-->
-                    <saxon-transform style="${xslt.dir}/generateAsserts.xsl" in="@{nts.file}" out="${nts.file.generated}">
-                        <parameters>
-                            <param name="fixtureFolder" expression="${fixtures.dir.absolute}"/>
-                        </parameters>
-                    </saxon-transform>
-                </then>
-                <else>
-                    <property name="nts.file.generated" value="@{nts.file}"/>
-                </else>
-            </if>
-            
-            <if>
                 <equals arg1="${TestScript(nts:scenario)}" arg2="server"/>
                 <then>
                     <for param="expectedResponseFormat" list="xml,json"> <!-- XIS scripts are generated in both XML and JSON flavor -->
@@ -175,7 +157,7 @@
                             <local name="nts.file.newname"/>
                             <property name="nts.file.newname" value="${nts.file.basename}-@{expectedResponseFormat}.xml"/>
 
-                            <saxon-transform style="${xslt.dir}/generateTestScript.xsl" in="${nts.file.generated}" out="@{output.dir}/${nts.file.newname}">
+                            <saxon-transform style="${xslt.dir}/generateTestScript.xsl" in="@{nts.file}" out="@{output.dir}/${nts.file.newname}">
                                 <parameters>
                                     <param name="referenceBase" expression="${reference.dir.relative.normalized}"/>
                                     <param name="commonComponentFolder" expression="${commoncomponents.dir.absolute}"/>
@@ -186,13 +168,14 @@
                             </saxon-transform>
                             
                             <collect-references testscript.path="@{output.dir}/${nts.file.newname}" references.file="@{references.file}" reference.dir.rel="@{reference.dir.rel}"/>
+                            <generate-asserts testscript.path="@{output.dir}/${nts.file.newname}" if:set="TestScript.test(nts:generate-asserts-from)"/>
                         </sequential>
                     </for>
                 </then>
                 <else>
                     <local name="nts.file.newname"/>
                     <property name="nts.file.newname" value="${nts.file.basename}.xml"/>
-                    <saxon-transform style="${xslt.dir}/generateTestScript.xsl" in="${nts.file.generated}" out="@{output.dir}/${nts.file.newname}">
+                    <saxon-transform style="${xslt.dir}/generateTestScript.xsl" in="@{nts.file}" out="@{output.dir}/${nts.file.newname}">
                         <parameters>
                             <param name="referenceBase" expression="${reference.dir.relative.normalized}"/>
                             <param name="commonComponentFolder" expression="${commoncomponents.dir.absolute}"/>
@@ -200,9 +183,34 @@
                             <param name="referenceComponentFolder" expression="${reference.dir.absolute}"/>
                         </parameters>
                     </saxon-transform>
+                    
                     <collect-references testscript.path="@{output.dir}/${nts.file.newname}" references.file="@{references.file}" reference.dir.rel="@{reference.dir.rel}"/>
+                    <generate-asserts testscript.path="@{output.dir}/${nts.file.newname}" if:set="TestScript.test(nts:generate-asserts-from)"/>
                 </else>
             </if>
+        </sequential>
+    </macrodef>
+    
+    <macrodef name="generate-asserts">
+        <attribute name="testscript.path" description="The FHIR TestScript to analyze."/>
+        
+        <sequential>
+            <!--<echo>Generating asserts</echo>-->
+            <local name="nts.file.generated"/>
+            <local name="nts.file.filtered"/>
+            <tempfile property="nts.file.generated" destDir="${temp.dir}" suffix=".xml"/>
+            <tempfile property="nts.file.filtered" destDir="${temp.dir}" suffix=".xml"/>
+            <echo>${nts.file.generated}</echo>
+            <echo>${nts.file.filtered}</echo>
+            <saxon-transform style="${xslt.dir}/generateAsserts.xsl" in="@{testscript.path}" out="${nts.file.generated}">
+                <parameters>
+                    <param name="fixtureFolder" expression="${fixtures.dir.absolute}"/>
+                </parameters>
+            </saxon-transform>
+            <saxon-transform style="${xslt.dir}/filterTestScript.xsl" in="${nts.file.generated}" out="${nts.file.filtered}"/>
+            
+            <!--<copy file="${nts.file.filtered}" tofile="@{testscript.path}"/>-->
+            <move file="${nts.file.filtered}" tofile="@{testscript.path}"/>
         </sequential>
     </macrodef>
     
@@ -354,7 +362,6 @@
                             <!-- Apply the transformation -->
                             <transform-NTS-file 
                                 nts.file="@{nts.file}"
-                                project.dir="${src.dir}/${project}" 
                                 output.dir="${build.dir}/${project}/${nts.file.reldir}" 
                                 references.file="${references.file}"/>
                         </sequential>

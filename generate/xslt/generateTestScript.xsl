@@ -173,23 +173,9 @@
         
         <!-- Write back the element we matched on -->
         <xsl:element name="{local-name()}">
-            <xsl:for-each select="@*">
-                <xsl:attribute name="{local-name()}">
-                    <xsl:value-of select="."/>
-                </xsl:attribute>
-            </xsl:for-each>
-            <xsl:apply-templates select="./(*|comment())" mode="filter">
-                <xsl:with-param name="generatedAsserts" select="@nts:responseId" tunnel="yes"/>
-            </xsl:apply-templates>
+            <xsl:copy-of select="@*"/>
+            <xsl:apply-templates select="./(*|comment())" mode="filter"/>
         </xsl:element>
-    </xsl:template>
-    
-    <xsl:template match="f:test[@nts:responseId]" mode="filter" priority="0">
-        <xsl:copy>
-            <xsl:apply-templates select="@*|node()" mode="#current">
-                <xsl:with-param name="generatedAsserts" select="@nts:responseId" tunnel="yes"/>
-            </xsl:apply-templates>
-        </xsl:copy>
     </xsl:template>
     
     <!-- Add the format for requests to the TestScript id, if specified -->
@@ -223,28 +209,16 @@
     <xsl:template match="f:TestScript/f:test/f:action/f:operation" mode="filter">
         <xsl:param name="scenario" tunnel="yes"/>
         <xsl:param name="expectedResponseFormat" tunnel="yes"/>
-        <xsl:param name="generatedAsserts" tunnel="yes"/>
         
         <!--All elements that can exist before the accept element following the FHIR spec.-->
         <xsl:variable name="pre-accept" select="('type','resource','label','description')"/>
-        <!-- All elements that can exist after the responseId element following the FHIR spec -->
-        <xsl:variable name="post-responseId" select="('sourceId','targetId','url')"/>
         <xsl:copy>
             <xsl:apply-templates select="@*" mode="#current"/>
             <xsl:apply-templates select="f:*[local-name()=$pre-accept]" mode="#current"/>
             <xsl:if test="$scenario='server' and not(f:accept) and $expectedResponseFormat != ''">
                 <accept value="{lower-case($expectedResponseFormat)}"/>
             </xsl:if>
-            <xsl:choose>
-                <xsl:when test="not($generatedAsserts='')">
-                    <xsl:apply-templates select="f:*[not(local-name()=$pre-accept) and not(local-name()=$post-responseId)]" mode="#current"/>
-                    <responseId value="{$generatedAsserts}"/>
-                    <xsl:apply-templates select="f:*[local-name()=$post-responseId]" mode="#current"/>
-                </xsl:when>
-                <xsl:otherwise>
-                    <xsl:apply-templates select="f:*[not(local-name()=$pre-accept)]" mode="#current"/>
-                </xsl:otherwise>
-            </xsl:choose>
+            <xsl:apply-templates select="f:*[not(local-name()=$pre-accept)]" mode="#current"/>
         </xsl:copy>
     </xsl:template>
     
@@ -376,48 +350,6 @@
             </resource>
             <xsl:copy-of select="./*"/>
         </rule>
-    </xsl:template>
-    
-    <!-- Expand a nts:generated-asserts element. Duplicate its parent f:test, edit the id, name and description, and add the responseId to the operation action. -->
-    
-    <xsl:template match="f:test[nts:generated-asserts]" mode="expand">
-        <xsl:copy>
-            <xsl:attribute name="nts:responseId" select="nts:generated-asserts/@responseId"/>
-            <xsl:apply-templates select="node()|@*" mode="#current"/>
-        </xsl:copy>
-        <!-- Duplication is removed because of KT-228 -->
-        <!--<xsl:variable name="test-content-expanded">
-            <xsl:copy>
-                <xsl:apply-templates select="node()|@*" mode="#current"/>
-            </xsl:copy>
-        </xsl:variable>
-        <xsl:copy-of select="$test-content-expanded"/>
-        <test>
-            <xsl:copy-of select="@*"/>
-            <xsl:attribute name="id" select="concat(@id,'-asserts')"/>
-            <name value="{f:name/@value} - Content asserts"/>
-            <description value="Generated content asserts for {f:name/@value}. These asserts check if the response contains the same content as the Nictiz fixtures based on the Addenda, which was previously done by hand. Fails give warnings only and do not have consequences for qualification per se, but please expect inquiries into the reason of failing."/>
-            <xsl:choose>
-                <xsl:when test="count($test-content-expanded/f:test/f:action/f:operation)=1">
-                    <action>
-                        <operation>
-                            <xsl:copy-of select="$test-content-expanded/f:test/f:action/f:operation/*[not(self::f:responseId) and not(self::f:sourceId) and not(self::f:targetId) and not(self::f:url)]"/>
-                            <responseId value="{nts:generated-asserts/@responseId}"/>
-                            <xsl:copy-of select="$test-content-expanded/f:test/f:action/f:operation/*[self::f:sourceId or self::f:targetId or self::f:url]"/>
-                        </operation>
-                    </action>
-                </xsl:when>
-                <xsl:otherwise>
-                    <xsl:message terminate="yes">Found either no or multiple operation actions within test.</xsl:message>
-                </xsl:otherwise>
-            </xsl:choose>
-            <xsl:copy-of select="nts:generated-asserts/*"/>
-        </test>-->
-    </xsl:template>
-    
-    <!--<xsl:template match="nts:generated-asserts"/>-->
-    <xsl:template match="nts:generated-asserts" mode="expand">
-        <xsl:apply-templates mode="#current"/>
     </xsl:template>
     
     <xsl:variable name="parameterChars" select="'[a-zA-Z_0-9-]'"/>
