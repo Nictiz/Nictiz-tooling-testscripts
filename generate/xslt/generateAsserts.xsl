@@ -12,7 +12,6 @@
         
         TO-DO/WISH LIST:
         
-        - Create one assert for Coding system/code pairs instead of two. The pair should be checked, not the individual values.
         - Exclude specific parts of fixture when generating?
         
         - Better readable discriptions.
@@ -254,101 +253,122 @@
     <xsl:template match="f:entry/f:search" mode="asserts"/>
     
     <xsl:template match="@value[ancestor::f:resource/f:*[local-name()=$scenarioResources]]" mode="asserts">
-        <xsl:variable name="resourceExpression">
-            <xsl:for-each select="ancestor::*[descendant-or-self::f:*[local-name()=$scenarioResources]]">
-                <xsl:choose>
-                    <xsl:when test="self::f:resource"/>
-                    <xsl:when test="self::f:*[local-name()=$scenarioResources]">
-                        <xsl:text>.</xsl:text>
-                        <xsl:text>select(resource as </xsl:text>
-                        <xsl:value-of select="local-name()"/>
-                        <xsl:text>).where(id = '${</xsl:text>
-                        <xsl:call-template name="create-resourceID"/>
-                        <xsl:text>}')</xsl:text>
-                    </xsl:when>
-                    <xsl:otherwise>
-                        <xsl:if test="not(self::f:Bundle)">
-                            <xsl:text>.</xsl:text>
-                        </xsl:if>
-                        <xsl:value-of select="nf:DTchoice(.)"/>
-                    </xsl:otherwise>
-                </xsl:choose>
-            </xsl:for-each>
-        </xsl:variable>
-        <xsl:variable name="withinResourceExpression">
-            <xsl:for-each select="ancestor::*[ancestor::f:*[local-name()=$scenarioResources]]">
-                <xsl:text>.</xsl:text>
-                <xsl:value-of select="nf:DTchoice(.)"/>
-            </xsl:for-each>
-        </xsl:variable>
-        <xsl:variable name="expression">
-            <xsl:value-of select="$resourceExpression"/>
-            <xsl:value-of select="$withinResourceExpression"/>
-            <xsl:choose>
-                <!-- Profile -->
-                <xsl:when test="parent::f:profile/parent::f:meta">
-                    <xsl:text>.startsWith('</xsl:text>
-                    <xsl:value-of select="."/>
-                    <xsl:text>')</xsl:text>
-                </xsl:when>
-                <!-- Code -->
-                <!-- combine coding.system and .code in one assert? -->
-                <xsl:when test="parent::f:code">
-                    <xsl:text>.where($this = '</xsl:text>
-                    <xsl:value-of select="."/>
-                    <xsl:text>').exists()</xsl:text>
-                </xsl:when>
-                <!-- DateTime met T-datum -->
-                <xsl:when test="starts-with(.,'${DATE, T')">
-                    <!-- exists? -->
-                    <xsl:text>.exists()</xsl:text>
-                    <!-- calculate from current date? -->
-                    <!-- regex to check if accuracy of addendum is achieved? -->
-                </xsl:when>
-                <!-- DateTime zonder T-datum? -->
-                <!-- parent is Identifier -->
-                <xsl:when test="parent::f:*/parent::f:*[local-name()='identifier' or ends-with(local-name(),'Identifier')]">
-                    <xsl:text>.exists()</xsl:text>
-                </xsl:when>
-                <!-- References -->
-                <xsl:when test="parent::f:reference">
-                    <xsl:text>.exists()</xsl:text>
-                </xsl:when>
-                <!-- Number, integer -->
-                <xsl:when test="string(number(.)) != 'NaN'">
-                <!--<xsl:when test=". = number(.)">-->
-                    <xsl:text> = </xsl:text>
-                    <xsl:value-of select="."/>
-                </xsl:when>
-                <!-- Display, text, note-->
-                <xsl:when test="parent::f:display or parent::f:text or parent::f:note or parent::f:unit">
-                    <xsl:text>.where($this.matches('(?i)</xsl:text>
-                    <xsl:value-of select="replace(.,
-                        '(\.|\[|\]|\\|\||\-|\^|\$|\?|\*|\+|\{|\}|\(|\))','[$1]')"/>
-                    <xsl:text>')).exists()</xsl:text>
-                </xsl:when>
-                <xsl:otherwise>
-                    <xsl:text>.where($this = '</xsl:text>
-                    <xsl:value-of select="."/>
-                    <xsl:text>').exists()</xsl:text>
-                </xsl:otherwise>
-            </xsl:choose>
-        </xsl:variable>
-        <xsl:variable name="description">
-            <!-- Because duplication is removed because of KT-228, start every description with 'CONTENT ASSERTION' -->
-            <xsl:text>CONTENT ASSERTION - </xsl:text>
-            <xsl:call-template name="create-resourceID"/>
-            <xsl:text>: Check if </xsl:text>
-            <xsl:value-of select="substring-after($withinResourceExpression,'.')"/>
-            <xsl:text> conforms to addendum.</xsl:text>
-        </xsl:variable>
-        <action>
-            <assert>
-                <description value="{$description}"/>
-                <expression value="{$expression}"/>
-                <warningOnly value="true"/>
-            </assert>
-        </action>
+        <xsl:choose>
+            <!-- Do nothing when matching the system part of a Coding.system/code pair. -->
+            <xsl:when test="parent::f:system/parent::*[self::f:coding or ends-with(local-name(),'Coding')]"/>
+            <xsl:otherwise>
+                <xsl:variable name="resourceExpression">
+                    <xsl:for-each select="ancestor::*[descendant-or-self::f:*[local-name()=$scenarioResources]]">
+                        <xsl:choose>
+                            <xsl:when test="self::f:resource"/>
+                            <xsl:when test="self::f:*[local-name()=$scenarioResources]">
+                                <xsl:text>.</xsl:text>
+                                <xsl:text>select(resource as </xsl:text>
+                                <xsl:value-of select="local-name()"/>
+                                <xsl:text>).where(id = '${</xsl:text>
+                                <xsl:call-template name="create-resourceID"/>
+                                <xsl:text>}')</xsl:text>
+                            </xsl:when>
+                            <xsl:otherwise>
+                                <xsl:if test="not(self::f:Bundle)">
+                                    <xsl:text>.</xsl:text>
+                                </xsl:if>
+                                <xsl:value-of select="nf:DTchoice(.)"/>
+                            </xsl:otherwise>
+                        </xsl:choose>
+                    </xsl:for-each>
+                </xsl:variable>
+                <xsl:variable name="withinResourceExpression">
+                    <xsl:for-each select="ancestor::*[ancestor::f:*[local-name()=$scenarioResources]]">
+                        <xsl:choose>
+                            <!-- Do nothing when matching the code parent of a Coding.system/code pair. -->
+                            <xsl:when test="self::f:code[parent::*[self::f:coding or ends-with(local-name(),'Coding')]/f:system/@value]"/>
+                            <xsl:otherwise>
+                                <xsl:text>.</xsl:text>
+                                <xsl:value-of select="nf:DTchoice(.)"/>
+                            </xsl:otherwise>
+                        </xsl:choose>
+                    </xsl:for-each>
+                </xsl:variable>
+                <xsl:variable name="expression">
+                    <xsl:value-of select="$resourceExpression"/>
+                    <xsl:value-of select="$withinResourceExpression"/>
+                    <xsl:choose>
+                        <!-- Profile -->
+                        <xsl:when test="parent::f:profile/parent::f:meta">
+                            <xsl:text>.startsWith('</xsl:text>
+                            <xsl:value-of select="."/>
+                            <xsl:text>')</xsl:text>
+                        </xsl:when>
+                        <!-- Code -->
+                        <!-- combine coding.system and .code in one assert -->
+                        <xsl:when test="parent::f:code/parent::*[self::f:coding or ends-with(local-name(),'Coding')]/f:system/@value">
+                            <xsl:text>.where($this.system = '</xsl:text>
+                            <xsl:value-of select="parent::f:code/parent::*[self::f:coding or ends-with(local-name(),'Coding')]/f:system/@value"/>
+                            <xsl:text>' and $this.code = '</xsl:text>
+                            <xsl:value-of select="."/>
+                            <xsl:text>').exists()</xsl:text>
+                        </xsl:when>
+                        <!-- fallback when system is not present -->
+                        <xsl:when test="parent::f:code">
+                            <xsl:text>.where($this = '</xsl:text>
+                            <xsl:value-of select="."/>
+                            <xsl:text>').exists()</xsl:text>
+                        </xsl:when>
+                        <!-- DateTime met T-datum -->
+                        <xsl:when test="starts-with(.,'${DATE, T')">
+                            <!-- exists? -->
+                            <xsl:text>.exists()</xsl:text>
+                            <!-- calculate from current date? -->
+                            <!-- regex to check if accuracy of addendum is achieved? -->
+                            <!-- possible to put CURRENTDATE in assertion? -->
+                        </xsl:when>
+                        <!-- DateTime zonder T-datum? -->
+                        <!-- parent is Identifier -->
+                        <xsl:when test="parent::f:*/parent::f:*[local-name()='identifier' or ends-with(local-name(),'Identifier')]">
+                            <xsl:text>.exists()</xsl:text>
+                        </xsl:when>
+                        <!-- References -->
+                        <xsl:when test="parent::f:reference">
+                            <xsl:text>.exists()</xsl:text>
+                        </xsl:when>
+                        <!-- Number, integer -->
+                        <xsl:when test="string(number(.)) != 'NaN'">
+                            <!--<xsl:when test=". = number(.)">-->
+                            <xsl:text> = </xsl:text>
+                            <xsl:value-of select="."/>
+                        </xsl:when>
+                        <!-- Display, text, note-->
+                        <xsl:when test="parent::f:display or parent::f:text or parent::f:note or parent::f:unit">
+                            <xsl:text>.where($this.matches('(?i)</xsl:text>
+                            <xsl:value-of select="replace(.,
+                                '(\.|\[|\]|\\|\||\-|\^|\$|\?|\*|\+|\{|\}|\(|\))','[$1]')"/>
+                            <xsl:text>')).exists()</xsl:text>
+                        </xsl:when>
+                        <xsl:otherwise>
+                            <xsl:text>.where($this = '</xsl:text>
+                            <xsl:value-of select="."/>
+                            <xsl:text>').exists()</xsl:text>
+                        </xsl:otherwise>
+                    </xsl:choose>
+                </xsl:variable>
+                <xsl:variable name="description">
+                    <!-- Because duplication is removed because of KT-228, start every description with 'CONTENT ASSERTION' -->
+                    <xsl:text>CONTENT ASSERTION - </xsl:text>
+                    <xsl:call-template name="create-resourceID"/>
+                    <xsl:text>: Check if </xsl:text>
+                    <xsl:value-of select="substring-after($withinResourceExpression,'.')"/>
+                    <xsl:text> conforms to addendum.</xsl:text>
+                </xsl:variable>
+                <action>
+                    <assert>
+                        <description value="{$description}"/>
+                        <expression value="{$expression}"/>
+                        <warningOnly value="true"/>
+                    </assert>
+                </action>
+            </xsl:otherwise>
+        </xsl:choose>
     </xsl:template>
     
     <!-- extensions! -->
