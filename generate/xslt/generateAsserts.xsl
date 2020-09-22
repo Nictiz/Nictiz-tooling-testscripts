@@ -11,12 +11,11 @@
     <!-- 
         
         TO-DO/WISH LIST:
-        - What if a resource-id-variable cannot be created?
-        - Rename @responseId to @fixtureId
+        
         - Create one assert for Coding system/code pairs instead of two. The pair should be checked, not the individual values.
-        - Response or request check? See Questionnaires
         - Exclude specific parts of fixture when generating?
-        - What is responseId is already filled?
+        
+        - Better readable discriptions.
         
         - Refactor expectedResponseFormat to be added after assertions are generated
         - Refactor 'filter' mode in generateTestScript to be matched to separate 'filterTestScript.xsl'.
@@ -28,6 +27,7 @@
         - Investigate the possibility to, upon failure, let de description give a hint to what needs to be searched for in the response to get to the relevant part.
         - Look at expression parts: is it possible to have a resource that has no unique content per se, but still is unique in the combination of everything.
         
+        - Handle client POST/PUTs that a server receives with minimumId instead of generating asserts. Depends on KT-198.
         
         DEPENDS ON KT-226:
         - Edit readme: "The `test` element where this attribute is added to will be duplicated (because responses cannot be transferred between tests)"
@@ -67,12 +67,26 @@
                 <xsl:variable name="asserts-fixture" select="document(string-join(($fixtureFolder, @nts:generate-asserts-from), '/'),.)"/>
                 <xsl:variable name="fixture-id">
                     <xsl:choose>
-                        <xsl:when test="f:action/f:operation/f:responseId/@value">
-                            <xsl:value-of select="f:action/f:operation/f:responseId/@value"/>
+                        <xsl:when test="$scenario = 'client'">
+                            <xsl:choose>
+                                <xsl:when test="f:action/f:operation/f:requestId/@value">
+                                    <xsl:value-of select="f:action/f:operation/f:requestId/@value"/>
+                                </xsl:when>
+                                <xsl:otherwise>
+                                    <xsl:value-of select="concat('contentasserts-request-',$test-count)"/>
+                                </xsl:otherwise>
+                            </xsl:choose>
                         </xsl:when>
-                        <xsl:otherwise>
-                            <xsl:value-of select="concat('response-',$test-count)"/>
-                        </xsl:otherwise>
+                        <xsl:when test="$scenario = 'server'">
+                            <xsl:choose>
+                                <xsl:when test="f:action/f:operation/f:responseId/@value">
+                                    <xsl:value-of select="f:action/f:operation/f:responseId/@value"/>
+                                </xsl:when>
+                                <xsl:otherwise>
+                                    <xsl:value-of select="concat('contentasserts-response-',$test-count)"/>
+                                </xsl:otherwise>
+                            </xsl:choose>
+                        </xsl:when>
                     </xsl:choose>
                 </xsl:variable>
                 <xsl:if test="not($asserts-fixture)">
@@ -128,7 +142,6 @@
                             </xsl:otherwise>
                         </xsl:choose>
                         <xsl:apply-templates select="$asserts-fixture" mode="asserts"/>
-                        
                     </nts:generated-asserts>
                 </xsl:copy>
             </xsl:when>
@@ -144,8 +157,13 @@
         <xsl:param name="fixture-id" tunnel="yes"/>
         <xsl:copy>
             <xsl:choose>
-                <xsl:when test="not(f:responseId) and not($fixture-id='')">
+                <xsl:when test="$scenario = 'client' and not(f:requestId) and not($fixture-id='')">
                     <xsl:apply-templates select="*[not(self::f:responseId) and not(self::f:sourceId) and not(self::f:targetId) and not(self::f:url)]" mode="#current"/>
+                    <requestId value="{$fixture-id}"/>
+                    <xsl:apply-templates select="*[self::f:responseId and self::f:sourceId or self::f:targetId or self::f:url]"/>
+                </xsl:when>
+                <xsl:when test="$scenario = 'server' and not(f:responseId) and not($fixture-id='')">
+                    <xsl:apply-templates select="*[not(self::f:sourceId) and not(self::f:targetId) and not(self::f:url)]" mode="#current"/>
                     <responseId value="{$fixture-id}"/>
                     <xsl:apply-templates select="*[self::f:sourceId or self::f:targetId or self::f:url]"/>
                 </xsl:when>
