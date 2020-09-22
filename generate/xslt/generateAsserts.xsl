@@ -36,6 +36,7 @@
     
     <!--<xsl:param name="fixtureFolder" as="xs:string" required="yes"/>-->
     <xsl:param name="fixtureFolder" as="xs:string" select="'file:/C:/Users/144189-ADM/Documents/Git/Nictiz-STU3-testscripts/Generate/src/Medication-9-0-7/_fixtures'"/>
+    <xsl:param name="scenario" as="xs:string"/>
     
     <xsl:param name="scenarioType" select="'MA'"/>
     <xsl:variable name="scenarioResources" select="('MedicationRequest','Medication')"/>
@@ -47,80 +48,96 @@
     </xsl:template>
     
     <xsl:template match="/">
+        <xsl:if test="not($scenario=('server','client'))">
+            <xsl:message terminate="yes">Scenario value '<xsl:value-of select="$scenario"/>' not recognized. Should be one of 'server,client'.</xsl:message>
+        </xsl:if>
         <xsl:copy>
             <xsl:apply-templates select="node()" mode="copy"/>
         </xsl:copy>
     </xsl:template>
     
     <xsl:template match="f:TestScript/f:test[@nts:generate-asserts-from]" mode="copy">
-        <xsl:variable name="test-count" select="count(preceding-sibling::f:test)+1"/>
-        <xsl:variable name="asserts-fixture" select="document(string-join(($fixtureFolder, @nts:generate-asserts-from), '/'),.)"/>
-        <xsl:variable name="fixture-id">
-            <xsl:choose>
-                <xsl:when test="f:action/f:operation/f:responseId/@value">
-                    <xsl:value-of select="f:action/f:operation/f:responseId/@value"/>
-                </xsl:when>
-                <xsl:otherwise>
-                    <xsl:value-of select="concat('response-',$test-count)"/>
-                </xsl:otherwise>
-            </xsl:choose>
-        </xsl:variable>
-        <xsl:if test="not($asserts-fixture)">
-            <xsl:message terminate="yes">Fixture <xsl:value-of select="$asserts-fixture"/> not found.</xsl:message>
-        </xsl:if>
-        <xsl:copy>
-            <xsl:apply-templates select="node()|@*" mode="copy">
-                <xsl:with-param name="fixture-id" tunnel="yes" select="$fixture-id"/>
-            </xsl:apply-templates>
-            <xsl:variable name="idExpressionParts">
-                <nts:idExpressions>
-                    <xsl:for-each select="$asserts-fixture/f:Bundle/f:entry/f:resource/f:*[local-name()=$scenarioResources]">
-                        <nts:idExpression resource="{local-name()}">
-                            <xsl:attribute name="name">
-                                <xsl:call-template name="create-resourceID"/>
-                            </xsl:attribute>
-                            <xsl:call-template name="generateExpressionParts">
-                                <xsl:with-param name="in" select="."/>
-                            </xsl:call-template>
-                        </nts:idExpression>
-                    </xsl:for-each>
-                </nts:idExpressions>
-            </xsl:variable>
-            <xsl:variable name="filteredIdExpressionParts">
-                <xsl:apply-templates select="$idExpressionParts" mode="filterExpressions"/>
-            </xsl:variable>
-            <xsl:variable name="combinedIdExpressionParts">
-                <xsl:apply-templates select="$filteredIdExpressionParts" mode="combineExpressions"/>
-            </xsl:variable>
-            <nts:generated-asserts>
-                <xsl:choose>
-                    <xsl:when test="count($combinedIdExpressionParts/nts:idExpression) = count(distinct-values($combinedIdExpressionParts/nts:idExpression))">
-                        <xsl:for-each select="$combinedIdExpressionParts/nts:idExpression">
-                            <xsl:variable name="resourceID">
-                                <xsl:call-template name="create-resourceID"/>
-                            </xsl:variable>
-                            <variable>
-                                <name value="{@name}"/>
-                                <expression value="Bundle.entry.select(resource as {@resource}).where({./text()}).id"/>
-                                <sourceId value="{$fixture-id}"/>
-                            </variable>
-                            <action>
-                                <assert>
-                                    <description value="CONTENT ASSERTION ID MATCH - Check if variable '{@name}' can be matched to a resource in the response."/>
-                                    <expression value="Bundle.entry.select(resource as MedicationRequest).where(id = '${{{@name}}}').count() = 1"/>
-                                    <!-- Should be warning or not? <warningOnly value="true"/>-->
-                                </assert>
-                            </action>
-                        </xsl:for-each>
-                    </xsl:when>
-                    <xsl:otherwise>
-                        <xsl:message terminate="yes">Could not determine unique expression to catch ID in a variable.</xsl:message>
-                    </xsl:otherwise>
-                </xsl:choose>
-                <xsl:apply-templates select="$asserts-fixture" mode="asserts"/>
-                
-            </nts:generated-asserts>
-        </xsl:copy>
+        <xsl:choose>
+            <!-- Make sure @nts:generate-asserts-from is only added to tests where it is relevant, otherwise ignore. -->
+            <!-- Edge case: when a server receives a POST or PUT, asserts are generated, but as it is supposed to send back the complete resource (with only resource.id added), perhaps using minimumId is more elegant. -->
+            <xsl:when test="$scenario = 'server' or 
+                f:action/f:operation/f:type[f:system/@value = 'http://hl7.org/fhir/testscript-operation-codes']/
+                f:code/@value=('batch','transaction','create','update','updateCreate')">
+                <xsl:variable name="test-count" select="count(preceding-sibling::f:test)+1"/>
+                <xsl:variable name="asserts-fixture" select="document(string-join(($fixtureFolder, @nts:generate-asserts-from), '/'),.)"/>
+                <xsl:variable name="fixture-id">
+                    <xsl:choose>
+                        <xsl:when test="f:action/f:operation/f:responseId/@value">
+                            <xsl:value-of select="f:action/f:operation/f:responseId/@value"/>
+                        </xsl:when>
+                        <xsl:otherwise>
+                            <xsl:value-of select="concat('response-',$test-count)"/>
+                        </xsl:otherwise>
+                    </xsl:choose>
+                </xsl:variable>
+                <xsl:if test="not($asserts-fixture)">
+                    <xsl:message terminate="yes">Fixture <xsl:value-of select="$asserts-fixture"/> not found.</xsl:message>
+                </xsl:if>
+                <xsl:copy>
+                    <xsl:apply-templates select="node()|@*" mode="copy">
+                        <xsl:with-param name="fixture-id" tunnel="yes" select="$fixture-id"/>
+                    </xsl:apply-templates>
+                    <xsl:variable name="idExpressionParts">
+                        <nts:idExpressions>
+                            <xsl:for-each select="$asserts-fixture/f:Bundle/f:entry/f:resource/f:*[local-name()=$scenarioResources]">
+                                <nts:idExpression resource="{local-name()}">
+                                    <xsl:attribute name="name">
+                                        <xsl:call-template name="create-resourceID"/>
+                                    </xsl:attribute>
+                                    <xsl:call-template name="generateExpressionParts">
+                                        <xsl:with-param name="in" select="."/>
+                                    </xsl:call-template>
+                                </nts:idExpression>
+                            </xsl:for-each>
+                        </nts:idExpressions>
+                    </xsl:variable>
+                    <xsl:variable name="filteredIdExpressionParts">
+                        <xsl:apply-templates select="$idExpressionParts" mode="filterExpressions"/>
+                    </xsl:variable>
+                    <xsl:variable name="combinedIdExpressionParts">
+                        <xsl:apply-templates select="$filteredIdExpressionParts" mode="combineExpressions"/>
+                    </xsl:variable>
+                    <nts:generated-asserts>
+                        <xsl:choose>
+                            <xsl:when test="count($combinedIdExpressionParts/nts:idExpression) = count(distinct-values($combinedIdExpressionParts/nts:idExpression))">
+                                <xsl:for-each select="$combinedIdExpressionParts/nts:idExpression">
+                                    <xsl:variable name="resourceID">
+                                        <xsl:call-template name="create-resourceID"/>
+                                    </xsl:variable>
+                                    <variable>
+                                        <name value="{@name}"/>
+                                        <expression value="Bundle.entry.select(resource as {@resource}).where({./text()}).id"/>
+                                        <sourceId value="{$fixture-id}"/>
+                                    </variable>
+                                    <action>
+                                        <assert>
+                                            <description value="CONTENT ASSERTION ID MATCH - Check if variable '{@name}' can be matched to a resource in the response."/>
+                                            <expression value="Bundle.entry.select(resource as MedicationRequest).where(id = '${{{@name}}}').count() = 1"/>
+                                            <!-- Should be warning or not? <warningOnly value="true"/>-->
+                                        </assert>
+                                    </action>
+                                </xsl:for-each>
+                            </xsl:when>
+                            <xsl:otherwise>
+                                <xsl:message terminate="yes">Could not determine unique expression to catch ID in a variable.</xsl:message>
+                            </xsl:otherwise>
+                        </xsl:choose>
+                        <xsl:apply-templates select="$asserts-fixture" mode="asserts"/>
+                        
+                    </nts:generated-asserts>
+                </xsl:copy>
+            </xsl:when>
+            <xsl:otherwise>
+                <xsl:copy>
+                    <xsl:apply-templates select="@*|node()" mode="copy"/>
+                </xsl:copy>
+            </xsl:otherwise>
+        </xsl:choose>
     </xsl:template>
     
     <xsl:template match="f:operation" mode="copy">

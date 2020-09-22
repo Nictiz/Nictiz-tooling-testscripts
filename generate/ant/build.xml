@@ -195,16 +195,15 @@
         <attribute name="testscript.path" description="The FHIR TestScript to analyze."/>
         
         <sequential>
-            <!--<echo>Generating asserts</echo>-->
             <local name="nts.file.generated"/>
             <local name="nts.file.filtered"/>
             <tempfile property="nts.file.generated" destDir="${temp.dir}" suffix=".xml"/>
             <tempfile property="nts.file.filtered" destDir="${temp.dir}" suffix=".xml"/>
-            <echo>${nts.file.generated}</echo>
-            <echo>${nts.file.filtered}</echo>
+            
             <saxon-transform style="${xslt.dir}/generateAsserts.xsl" in="@{testscript.path}" out="${nts.file.generated}">
                 <parameters>
                     <param name="fixtureFolder" expression="${fixtures.dir.absolute}"/>
+                    <param name="scenario" expression="${TestScript(nts:scenario)}"/>
                 </parameters>
             </saxon-transform>
             <saxon-transform style="${xslt.dir}/filterTestScript.xsl" in="${nts.file.generated}" out="${nts.file.filtered}"/>
