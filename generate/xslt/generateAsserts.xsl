@@ -20,9 +20,6 @@
         - Refactor 'filter' mode in generateTestScript to be matched to separate 'filterTestScript.xsl'.
         
         - '_fixtures' folder not necessary, can also be '_resources' folder. Look at generateTestScript to see how filenames are resolved.
-        - Edit (or automate?) the relevant resources to look at (scenarioResources variable). Maybe based on selflink?
-        - Edit the descriptions to better reflect what is tested based on datatype.
-        - Investigate the possibility to, upon failure, let de description give a hint to what needs to be searched for in the response to get to the relevant part.
         - Look at expression parts: is it possible to have a resource that has no unique content per se, but still is unique in the combination of everything.
         
         - Handle client POST/PUTs that a server receives with minimumId instead of generating asserts. Depends on KT-198.
@@ -136,6 +133,7 @@
                                             </xsl:attribute>
                                             <xsl:call-template name="generateExpressionParts">
                                                 <xsl:with-param name="in" select="."/>
+                                                <xsl:with-param name="generate-from-resources" select="$generate-from-resources" as="element()+"/>
                                             </xsl:call-template>
                                         </nts:idExpression>
                                     </xsl:for-each>
@@ -150,6 +148,7 @@
                                             </xsl:attribute>
                                             <xsl:call-template name="generateExpressionParts">
                                                 <xsl:with-param name="in" select="."/>
+                                                <xsl:with-param name="generate-from-resources" select="$generate-from-resources" as="element()+"/>
                                             </xsl:call-template>
                                         </nts:idExpression>
                                     </xsl:for-each>
@@ -227,9 +226,10 @@
     
     <xsl:template name="generateExpressionParts">
         <xsl:param name="in" select="."/>
-        <xsl:for-each select="$in//@value[string(number(.)) != 'NaN' or parent::f:code]"><!-- only apply values that are numbers (integers) and codes. prevent ambiguity -->
+        <xsl:param name="generate-from-resources" as="element()+"/>
+        <xsl:for-each select="$in//@value[string(number(.)) != 'NaN' or parent::f:code][not(parent::f:versionId)]"><!-- only apply values that are numbers (integers) and codes. prevent ambiguity -->
             <nts:expressionPart>
-                <xsl:for-each select="ancestor::*[ancestor::f:*[parent::f:resource]]">
+                <xsl:for-each select="ancestor::*[ancestor::f:*[local-name()=$generate-from-resources/@name]]">
                     <xsl:value-of select="nf:DTchoice(.)"/>
                     <xsl:if test="not(position()=last())">
                         <xsl:text>.</xsl:text>
@@ -259,12 +259,7 @@
                 <xsl:choose>
                     <xsl:when test="count(ancestor::nts:idExpressions/nts:idExpression[@resource = $resource]) gt 1 and count(ancestor::nts:idExpressions/nts:idExpression[@resource = $resource]) = count(ancestor::nts:idExpressions/nts:idExpression[@resource = $resource]/nts:expressionPart[text()=$contents])"/>
                     <xsl:when test="count(ancestor::nts:idExpressions/nts:idExpression[@resource = $resource]) = 1">
-                        <xsl:choose>
-                            <xsl:when test="position() = 1">
-                                <xsl:copy-of select="."/>
-                            </xsl:when>
-                            <xsl:otherwise/>
-                        </xsl:choose>
+                        <xsl:copy-of select="."/>
                     </xsl:when>
                     <xsl:otherwise>
                         <xsl:copy-of select="."/>
