@@ -19,7 +19,6 @@
         - Refactor expectedResponseFormat to be added after assertions are generated
         - Refactor 'filter' mode in generateTestScript to be matched to separate 'filterTestScript.xsl'.
         
-        - Is it possible to generate assertions from a singe resource instead of a bundle?
         - '_fixtures' folder not necessary, can also be '_resources' folder. Look at generateTestScript to see how filenames are resolved.
         - Edit (or automate?) the relevant resources to look at (scenarioResources variable). Maybe based on selflink?
         - Edit the descriptions to better reflect what is tested based on datatype.
@@ -62,12 +61,34 @@
                 f:action/f:operation/f:type[f:system/@value = 'http://hl7.org/fhir/testscript-operation-codes']/
                 f:code/@value=('batch','transaction','create','update','updateCreate')">
                 <xsl:variable name="generate-from-resources" as="element()+">
-                    <xsl:choose>
-                        <xsl:when test="f:action/f:operation/f:resource/@value='MedicationRequest'">
-                            <resource name="MedicationRequest"/>
-                            <resource name="Medication"/>
-                        </xsl:when>
-                    </xsl:choose>
+                    <xsl:variable name="resource" select="f:action/f:operation/f:resource/@value"/>
+                    <xsl:if test="$resource">
+                        <resource name="{$resource}"/>
+                    </xsl:if>
+                    <xsl:if test="contains(f:action/f:operation/f:params/@value,'_include=')">
+                        <xsl:variable name="after-include" select="substring-after(f:action/f:operation/f:params/@value,'_include=')"/>
+                        <xsl:variable name="before-amp">
+                            <xsl:choose>
+                                <xsl:when test="contains($after-include,'&amp;')">
+                                    <xsl:value-of select="substring-before($after-include,'&amp;')"/>
+                                </xsl:when>
+                                <xsl:otherwise>
+                                    <xsl:value-of select="$after-include"/>
+                                </xsl:otherwise>
+                            </xsl:choose>
+                        </xsl:variable>
+                        <xsl:if test="not(substring-after($before-amp,concat($resource,':'))='')">
+                            <xsl:variable name="search-param" select="substring-after($before-amp,concat($resource,':'))"/>
+                            <xsl:choose>
+                                <xsl:when test="$search-param='medication'">
+                                    <resource name="Medication"/>
+                                </xsl:when>
+                                <xsl:otherwise>
+                                    <xsl:message terminate="yes">Unknown _include search param</xsl:message>
+                                </xsl:otherwise>
+                            </xsl:choose>
+                        </xsl:if>
+                    </xsl:if>
                 </xsl:variable>
                 <xsl:variable name="test-count" select="count(preceding-sibling::f:test)+1"/>
                 <xsl:variable name="asserts-fixture" select="document(string-join(($fixtureFolder, @nts:generate-asserts-from), '/'),.)"/>
