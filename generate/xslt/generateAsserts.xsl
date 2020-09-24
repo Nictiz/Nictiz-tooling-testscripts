@@ -130,7 +130,7 @@
                                     <action>
                                         <assert>
                                             <description value="CONTENT ASSERTION ID MATCH - Check if variable '{@name}' can be matched to a resource in the response."/>
-                                            <expression value="Bundle.entry.select(resource as MedicationRequest).where(id = '${{{@name}}}').count() = 1"/>
+                                            <expression value="Bundle.entry.select(resource as {@resource}).where(id = '${{{@name}}}').count() = 1"/>
                                             <!-- Should be warning or not? <warningOnly value="true"/>-->
                                         </assert>
                                     </action>
@@ -290,56 +290,95 @@
                         </xsl:choose>
                     </xsl:for-each>
                 </xsl:variable>
+                <xsl:variable name="type">
+                    <xsl:choose>
+                        <!-- Profile -->
+                        <xsl:when test="parent::f:profile/parent::f:meta">Profile</xsl:when>
+                        <!-- Code -->
+                        <!-- combine coding.system and .code in one assert -->
+                        <xsl:when test="parent::f:code/parent::*[self::f:coding or ends-with(local-name(),'Coding')]/f:system/@value">CodeSystem</xsl:when>
+                        <!-- fallback when system is not present -->
+                        <xsl:when test="parent::f:code">Code</xsl:when>
+                        <!-- DateTime met T-datum -->
+                        <xsl:when test="starts-with(.,'${DATE, T')">
+                            <xsl:choose>
+                                <!-- if T-variable is present within testscript, then use it! -->
+                                <xsl:when test="ancestor::f:TestScript/f:variable/f:name/@value='T'">TVariable</xsl:when>
+                                <!-- else only check for significance -->
+                                <xsl:otherwise>
+                                    <xsl:choose>
+                                        <xsl:when test="starts-with(.,'${DATE, T, D') and matches(.,'(Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00))$')">TDateTime</xsl:when>
+                                        <xsl:when test="starts-with(.,'${DATE, T, D')">TDate</xsl:when>
+                                        <!-- Separate when for year-month? -->
+                                        <xsl:when test="starts-with(.,'${DATE, T, Y')">TYear</xsl:when>
+                                        <xsl:otherwise>
+                                            <xsl:message terminate="yes">Unhandled type</xsl:message>
+                                        </xsl:otherwise>
+                                    </xsl:choose>
+                                </xsl:otherwise>
+                                <!-- Option to introduce Test Execution-wide variables? KT-229 -->
+                            </xsl:choose>
+                        </xsl:when>
+                        <!-- DateTime zonder T-datum? -->
+                        <!-- parent is Identifier -->
+                        <xsl:when test="parent::f:*/parent::f:*[local-name()='identifier' or ends-with(local-name(),'Identifier')]">Identifier</xsl:when>
+                        <!-- Reference -->
+                        <xsl:when test="parent::f:reference">Reference</xsl:when>
+                        <!-- Number, integer -->
+                        <xsl:when test="string(number(.)) != 'NaN'">Number</xsl:when>
+                        <!-- Display, text, note-->
+                        <xsl:when test="parent::f:display or parent::f:text or parent::f:note or parent::f:unit">Display</xsl:when>
+                    </xsl:choose>
+                </xsl:variable>
                 <xsl:variable name="expression">
                     <xsl:value-of select="$resourceExpression"/>
                     <xsl:value-of select="$withinResourceExpression"/>
                     <xsl:choose>
-                        <!-- Profile -->
-                        <xsl:when test="parent::f:profile/parent::f:meta">
-                            <xsl:text>.startsWith('</xsl:text>
+                        <xsl:when test="$type='Profile'">
+                            <xsl:text> = '</xsl:text>
                             <xsl:value-of select="."/>
-                            <xsl:text>')</xsl:text>
+                            <xsl:text>'</xsl:text>
                         </xsl:when>
-                        <!-- Code -->
-                        <!-- combine coding.system and .code in one assert -->
-                        <xsl:when test="parent::f:code/parent::*[self::f:coding or ends-with(local-name(),'Coding')]/f:system/@value">
+                        <xsl:when test="$type='CodeSystem'">
                             <xsl:text>.where($this.system = '</xsl:text>
                             <xsl:value-of select="parent::f:code/parent::*[self::f:coding or ends-with(local-name(),'Coding')]/f:system/@value"/>
                             <xsl:text>' and $this.code = '</xsl:text>
                             <xsl:value-of select="."/>
                             <xsl:text>').exists()</xsl:text>
                         </xsl:when>
-                        <!-- fallback when system is not present -->
-                        <xsl:when test="parent::f:code">
+                        <xsl:when test="$type='Code'">
                             <xsl:text>.where($this = '</xsl:text>
                             <xsl:value-of select="."/>
                             <xsl:text>').exists()</xsl:text>
                         </xsl:when>
-                        <!-- DateTime met T-datum -->
-                        <xsl:when test="starts-with(.,'${DATE, T')">
-                            <!-- exists? -->
-                            <xsl:text>.exists()</xsl:text>
-                            <!-- calculate from current date? -->
-                            <!-- regex to check if accuracy of addendum is achieved? -->
-                            <!-- possible to put CURRENTDATE in assertion? -->
-                        </xsl:when>
-                        <!-- DateTime zonder T-datum? -->
-                        <!-- parent is Identifier -->
-                        <xsl:when test="parent::f:*/parent::f:*[local-name()='identifier' or ends-with(local-name(),'Identifier')]">
-                            <xsl:text>.exists()</xsl:text>
-                        </xsl:when>
-                        <!-- References -->
-                        <xsl:when test="parent::f:reference">
-                            <xsl:text>.exists()</xsl:text>
-                        </xsl:when>
-                        <!-- Number, integer -->
-                        <xsl:when test="string(number(.)) != 'NaN'">
-                            <!--<xsl:when test=". = number(.)">-->
+                        <xsl:when test="$type='TVariable'">
                             <xsl:text> = </xsl:text>
                             <xsl:value-of select="."/>
                         </xsl:when>
-                        <!-- Display, text, note-->
-                        <xsl:when test="parent::f:display or parent::f:text or parent::f:note or parent::f:unit">
+                        <xsl:when test="$type='TDateTime'">
+                            <!-- Regex modified from FHIR dateTime datatype - made time non-optional -->
+                            <!-- Original: ([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1])(T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?(Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)))?)?)? -->
+                            <xsl:text>.matches('([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1])(T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)([.][0-9]+)?(Z|([+]|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)))))')</xsl:text>
+                        </xsl:when>
+                        <xsl:when test="$type='TDate'">
+                            <!-- Regex copied from FHIR date datatype -->
+                            <!-- ([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1]))?)? -->
+                            <xsl:text>.matches('([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1]))?)')</xsl:text>
+                        </xsl:when>
+                        <xsl:when test="$type='TYear'">
+                            <xsl:text>.matches('([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)')</xsl:text>
+                        </xsl:when>
+                        <xsl:when test="$type='Identifier'">
+                            <xsl:text>.exists()</xsl:text>
+                        </xsl:when>
+                        <xsl:when test="$type='Reference'">
+                            <xsl:text>.exists()</xsl:text>
+                        </xsl:when>
+                        <xsl:when test="$type='Number'">
+                            <xsl:text> = </xsl:text>
+                            <xsl:value-of select="."/>
+                        </xsl:when>
+                        <xsl:when test="$type='Display'">
                             <xsl:text>.where($this.matches('(?i)</xsl:text>
                             <xsl:value-of select="replace(.,
                                 '(\.|\[|\]|\\|\||\-|\^|\$|\?|\*|\+|\{|\}|\(|\))','[$1]')"/>
@@ -353,15 +392,73 @@
                     </xsl:choose>
                 </xsl:variable>
                 <xsl:variable name="description">
-                    <!-- Because duplication is removed because of KT-228, start every description with 'CONTENT ASSERTION' -->
-                    <xsl:text>CONTENT ASSERTION - </xsl:text>
+                    <xsl:text>${</xsl:text>
                     <xsl:call-template name="create-resourceID"/>
-                    <xsl:text>: Check if </xsl:text>
+                    <xsl:text>}: </xsl:text>
                     <xsl:value-of select="substring-after($withinResourceExpression,'.')"/>
-                    <xsl:text> conforms to addendum.</xsl:text>
+                    <xsl:text> </xsl:text>
+                    <xsl:choose>
+                        <xsl:when test="$type='Profile'">
+                            <xsl:text>equals</xsl:text>
+                            <xsl:text> '</xsl:text>
+                            <xsl:value-of select="."/>
+                            <xsl:text>'</xsl:text>
+                        </xsl:when>
+                        <xsl:when test="$type='CodeSystem'">
+                            <xsl:text>contains both system '</xsl:text>
+                            <xsl:value-of select="parent::f:code/parent::*[self::f:coding or ends-with(local-name(),'Coding')]/f:system/@value"/>
+                            <xsl:text>' and value</xsl:text>
+                            <xsl:text> '</xsl:text>
+                            <xsl:value-of select="."/>
+                            <xsl:text>'</xsl:text>
+                        </xsl:when>
+                        <xsl:when test="$type='Code'">
+                            <xsl:text>[TBD]</xsl:text>
+                            <xsl:text> '</xsl:text>
+                            <xsl:value-of select="."/>
+                            <xsl:text>'</xsl:text>
+                        </xsl:when>
+                        <xsl:when test="$type='TVariable'">
+                            <xsl:text>equals T-reference</xsl:text>
+                            <xsl:text> '</xsl:text>
+                            <xsl:value-of select="."/>
+                            <xsl:text>'</xsl:text>
+                        </xsl:when>
+                        <xsl:when test="$type='TDateTime'">
+                            <xsl:text>contains a date, time and timezone.</xsl:text>
+                        </xsl:when>
+                        <xsl:when test="$type='TDate'">
+                            <xsl:text>contains a date.</xsl:text>
+                        </xsl:when>
+                        <xsl:when test="$type='TYear'">
+                            <xsl:text>contains only a year.</xsl:text>
+                        </xsl:when>
+                        <xsl:when test="$type='Identifier'">
+                            <xsl:text>exists. [NEEDS IMPROVEMENT]</xsl:text>
+                        </xsl:when>
+                        <xsl:when test="$type='Reference'">
+                            <xsl:text>exists. [NEEDS IMPROVEMENT]</xsl:text>
+                        </xsl:when>
+                        <xsl:when test="$type='Number'">
+                            <xsl:text>equals value '</xsl:text>
+                            <xsl:value-of select="."/>
+                            <xsl:text>'</xsl:text>
+                        </xsl:when>
+                        <xsl:when test="$type='Display'">
+                            <xsl:text>exists with value matching '</xsl:text>
+                            <xsl:value-of select="."/>
+                            <xsl:text>'</xsl:text>
+                        </xsl:when>
+                        <xsl:otherwise>
+                            <xsl:text>exists with value '</xsl:text>
+                            <xsl:value-of select="."/>
+                            <xsl:text>'</xsl:text>
+                        </xsl:otherwise>
+                    </xsl:choose>
                 </xsl:variable>
                 <action>
                     <assert>
+                        <label value="assert-{count(preceding::*[@value])+1}"/>
                         <description value="{$description}"/>
                         <expression value="{$expression}"/>
                         <warningOnly value="true"/>
