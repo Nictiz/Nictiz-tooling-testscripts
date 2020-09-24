@@ -38,7 +38,6 @@
     <xsl:param name="scenario" as="xs:string"/>
     
     <xsl:param name="scenarioType" select="'MA'"/>
-    <xsl:variable name="scenarioResources" select="('MedicationRequest','Medication')"/>
     
     <xsl:output indent="yes"/>
     
@@ -62,6 +61,14 @@
             <xsl:when test="$scenario = 'server' or 
                 f:action/f:operation/f:type[f:system/@value = 'http://hl7.org/fhir/testscript-operation-codes']/
                 f:code/@value=('batch','transaction','create','update','updateCreate')">
+                <xsl:variable name="generate-from-resources" as="element()+">
+                    <xsl:choose>
+                        <xsl:when test="f:action/f:operation/f:resource/@value='MedicationRequest'">
+                            <resource name="MedicationRequest"/>
+                            <resource name="Medication"/>
+                        </xsl:when>
+                    </xsl:choose>
+                </xsl:variable>
                 <xsl:variable name="test-count" select="count(preceding-sibling::f:test)+1"/>
                 <xsl:variable name="asserts-fixture" select="document(string-join(($fixtureFolder, @nts:generate-asserts-from), '/'),.)"/>
                 <xsl:variable name="fixture-id">
@@ -97,16 +104,36 @@
                     </xsl:apply-templates>
                     <xsl:variable name="idExpressionParts">
                         <nts:idExpressions>
-                            <xsl:for-each select="$asserts-fixture/f:Bundle/f:entry/f:resource/f:*[local-name()=$scenarioResources]">
-                                <nts:idExpression resource="{local-name()}">
-                                    <xsl:attribute name="name">
-                                        <xsl:call-template name="create-resourceID"/>
-                                    </xsl:attribute>
-                                    <xsl:call-template name="generateExpressionParts">
-                                        <xsl:with-param name="in" select="."/>
-                                    </xsl:call-template>
-                                </nts:idExpression>
-                            </xsl:for-each>
+                            <xsl:choose>
+                                <xsl:when test="$asserts-fixture/f:Bundle">
+                                    <xsl:for-each select="$asserts-fixture/f:Bundle/f:entry/f:resource/f:*[local-name()=$generate-from-resources/@name]">
+                                        <nts:idExpression resource="{local-name()}">
+                                            <xsl:attribute name="name">
+                                                <xsl:call-template name="create-resourceID">
+                                                    <xsl:with-param name="generate-from-resources" select="$generate-from-resources" as="element()+"/>
+                                                </xsl:call-template>
+                                            </xsl:attribute>
+                                            <xsl:call-template name="generateExpressionParts">
+                                                <xsl:with-param name="in" select="."/>
+                                            </xsl:call-template>
+                                        </nts:idExpression>
+                                    </xsl:for-each>
+                                </xsl:when>
+                                <xsl:when test="$asserts-fixture/f:*[local-name()=$generate-from-resources/@name]">
+                                    <xsl:for-each select="$asserts-fixture/f:*[local-name()=$generate-from-resources/@name]">
+                                        <nts:idExpression resource="{local-name()}">
+                                            <xsl:attribute name="name">
+                                                <xsl:call-template name="create-resourceID">
+                                                    <xsl:with-param name="generate-from-resources" select="$generate-from-resources" as="element()+"/>
+                                                </xsl:call-template>
+                                            </xsl:attribute>
+                                            <xsl:call-template name="generateExpressionParts">
+                                                <xsl:with-param name="in" select="."/>
+                                            </xsl:call-template>
+                                        </nts:idExpression>
+                                    </xsl:for-each>
+                                </xsl:when>
+                            </xsl:choose>
                         </nts:idExpressions>
                     </xsl:variable>
                     <xsl:variable name="filteredIdExpressionParts">
@@ -120,7 +147,9 @@
                             <xsl:when test="count($combinedIdExpressionParts/nts:idExpression) = count(distinct-values($combinedIdExpressionParts/nts:idExpression))">
                                 <xsl:for-each select="$combinedIdExpressionParts/nts:idExpression">
                                     <xsl:variable name="resourceID">
-                                        <xsl:call-template name="create-resourceID"/>
+                                        <xsl:call-template name="create-resourceID">
+                                            <xsl:with-param name="generate-from-resources" select="$generate-from-resources" as="element()+"/>
+                                        </xsl:call-template>
                                     </xsl:variable>
                                     <variable>
                                         <name value="{@name}"/>
@@ -140,7 +169,9 @@
                                 <xsl:message terminate="yes">Could not determine unique expression to catch ID in a variable.</xsl:message>
                             </xsl:otherwise>
                         </xsl:choose>
-                        <xsl:apply-templates select="$asserts-fixture" mode="asserts"/>
+                        <xsl:apply-templates select="$asserts-fixture" mode="asserts">
+                            <xsl:with-param name="generate-from-resources" select="$generate-from-resources" tunnel="yes" as="element()+"/>
+                        </xsl:apply-templates>
                     </nts:generated-asserts>
                 </xsl:copy>
             </xsl:when>
@@ -233,7 +264,8 @@
     </xsl:template>
     
     <xsl:template name="create-resourceID">
-        <xsl:variable name="resourceName" select="ancestor-or-self::f:entry/f:resource/f:*/local-name()"/>
+        <xsl:param name="generate-from-resources" as="element()+"/>
+        <xsl:variable name="resourceName" select="ancestor-or-self::f:*[local-name()=$generate-from-resources/@name]/local-name()"/>
         <xsl:value-of select="$resourceName"/>
         <xsl:text>-</xsl:text>
         <xsl:value-of select="count(ancestor-or-self::f:entry/preceding-sibling::f:entry/f:resource/f:*[local-name()=$resourceName])+1"/>
@@ -251,43 +283,137 @@
     <xsl:template match="f:entry/f:fullUrl" mode="asserts"/>
     <xsl:template match="f:entry/f:resource/f:*/f:text" mode="asserts"/>
     <xsl:template match="f:entry/f:search" mode="asserts"/>
+    <xsl:template match="f:meta/f:lastUpdated | f:meta/f:versionId" mode="asserts"/>
     
     <xsl:template match="f:*" mode="asserts">
+        <xsl:param name="generate-from-resources" tunnel="yes" as="element()+"/>
         <xsl:param name="expression-inherited" tunnel="yes"/>
+        <xsl:variable name="resourceID">
+            <xsl:call-template name="create-resourceID">
+                <xsl:with-param name="generate-from-resources" select="$generate-from-resources" as="element()+"/>
+            </xsl:call-template>
+        </xsl:variable>
         <xsl:variable name="expression-local">
             <xsl:choose>
                 <xsl:when test="self::f:Bundle">
                     <xsl:value-of select="nf:DTchoice(.)"/>
                 </xsl:when>
-                <xsl:when test="self::f:*[local-name()=$scenarioResources]">
-                    <xsl:text>.</xsl:text>
-                    <xsl:text>select(resource as </xsl:text>
+                <xsl:when test="self::f:*[local-name()=$generate-from-resources/@name]">
+                    <xsl:if test="not(ancestor::f:Bundle)">
+                        <xsl:text>Bundle.entry</xsl:text>
+                    </xsl:if>
+                    <xsl:text>.select(resource as </xsl:text>
                     <xsl:value-of select="local-name()"/>
                     <xsl:text>).where(id = '${</xsl:text>
-                    <xsl:call-template name="create-resourceID"/>
+                    <xsl:value-of select="$resourceID"/>
                     <xsl:text>}')</xsl:text>
                 </xsl:when>
                 <xsl:when test="self::f:resource"/>
-                <!-- Do nothing when matching the code parent of a Coding.system/code pair. -->
-                <xsl:when test="self::f:code[parent::*[self::f:coding or ends-with(local-name(),'Coding')]/f:system/@value]"/>
                 <xsl:otherwise>
                     <xsl:text>.</xsl:text>
                     <xsl:value-of select="nf:DTchoice(.)"/>
                 </xsl:otherwise>
             </xsl:choose>
         </xsl:variable>
+        <xsl:variable name="description-prefix">
+            <xsl:variable name="expression-description">
+                <xsl:choose>
+                    <xsl:when test="string-length(substring-after($expression-inherited,concat($resourceID,'}'').'))) eq 0 and starts-with($expression-local,'.')">
+                        <xsl:value-of select="substring-after($expression-local,'.')"/>
+                    </xsl:when>
+                    <xsl:otherwise>
+                        <xsl:value-of select="substring-after($expression-inherited,concat($resourceID,'}'').'))"/>
+                        <xsl:value-of select="$expression-local"/>
+                    </xsl:otherwise>
+                </xsl:choose>
+            </xsl:variable>
+            <xsl:value-of select="$resourceID"/>
+            <xsl:text>: </xsl:text>
+            <xsl:value-of select="$expression-description"/>
+        </xsl:variable>
         <xsl:choose>
-            <!-- Do nothing when matching the system part of a Coding.system/code pair. -->
-            <xsl:when test="self::f:system/parent::*[self::f:coding or ends-with(local-name(),'Coding')]"/>
-            <xsl:when test="@value and ancestor::f:*[local-name()=$scenarioResources]">
+            <!-- Create 1 assert for Coding.system/code pair. -->
+            <xsl:when test="self::f:coding or ends-with(local-name(),'Coding')">
+                <xsl:variable name="description">
+                    <xsl:value-of select="$description-prefix"/>
+                    <xsl:text> contains both system '</xsl:text>
+                    <xsl:value-of select="f:system/@value"/>
+                    <xsl:text>' and code '</xsl:text>
+                    <xsl:value-of select="f:code/@value"/>
+                    <xsl:text>'.</xsl:text>
+                </xsl:variable>
+                <xsl:variable name="expression">
+                    <xsl:value-of select="$expression-inherited"/>
+                    <xsl:value-of select="$expression-local"/>
+                    <xsl:text>.where($this.system = '</xsl:text>
+                    <xsl:value-of select="f:system/@value"/>
+                    <xsl:text>' and $this.code = '</xsl:text>
+                    <xsl:value-of select="f:code/@value"/>
+                    <xsl:text>').exists()</xsl:text>
+                </xsl:variable>
+                <action>
+                    <assert>
+                        <description value="{$description}"/>
+                        <expression value="{$expression}"/>
+                        <warningOnly value="true"/>
+                    </assert>
+                </action>
+                <xsl:apply-templates select="node()[not(self::f:system or self::f:code)]" mode="asserts">
+                    <xsl:with-param name="expression-inherited" select="concat($expression-inherited,$expression-local)" tunnel="yes"/>
+                </xsl:apply-templates>
+            </xsl:when>
+            <!-- Do nothing for resource.id. Is more thoroughly tested through common asserts at the moment. -->
+            <xsl:when test="self::f:id/parent::f:*[local-name()=$generate-from-resources/@name]"/>
+            <!-- If identifier is present, it should contain system and value -->
+            <xsl:when test="self::f:identifier or ends-with(local-name(),'Identifier')">
+                <xsl:variable name="description">
+                    <xsl:value-of select="$description-prefix"/>
+                    <xsl:text>, if present, contains both system and value.</xsl:text>
+                </xsl:variable>
+                <xsl:variable name="expression">
+                    <xsl:value-of select="$expression-inherited"/>
+                    <xsl:value-of select="$expression-local"/>
+                    <xsl:text>.all($this.empty() or $this.where($this.system and $this.value).exists())</xsl:text>
+                </xsl:variable>
+                <action>
+                    <assert>
+                        <description value="{$description}"/>
+                        <expression value="{$expression}"/>
+                        <warningOnly value="true"/>
+                    </assert>
+                </action>
+                <xsl:apply-templates select="node()[not(self::f:system or self::f:value)]" mode="asserts">
+                    <xsl:with-param name="expression-inherited" select="concat($expression-inherited,$expression-local)" tunnel="yes"/>
+                </xsl:apply-templates>
+            </xsl:when>
+            <!-- Reference datatype should contain display (also tested through common asserts) and (reference or identifier). Reference element is not further asserted (this is also tested through common asserts -->
+            <xsl:when test="f:display and (f:reference or f:identifier)">
+                <xsl:variable name="description">
+                    <xsl:value-of select="$description-prefix"/>
+                    <xsl:text> contains display and either reference or identifier.</xsl:text>
+                </xsl:variable>
+                <xsl:variable name="expression">
+                    <xsl:value-of select="$expression-inherited"/>
+                    <xsl:value-of select="$expression-local"/>
+                    <xsl:text>.where($this.display and ($this.reference or $this.identifier)).exists()</xsl:text>
+                </xsl:variable>
+                <action>
+                    <assert>
+                        <description value="{$description}"/>
+                        <expression value="{$expression}"/>
+                        <warningOnly value="true"/>
+                    </assert>
+                </action>
+                <xsl:apply-templates select="node()[not(self::f:reference)]" mode="asserts">
+                    <xsl:with-param name="expression-inherited" select="concat($expression-inherited,$expression-local)" tunnel="yes"/>
+                </xsl:apply-templates>
+            </xsl:when>
+            <xsl:when test="@value and ancestor::f:*[local-name()=$generate-from-resources/@name]">
                 <xsl:variable name="type">
                     <xsl:choose>
                         <!-- Profile -->
                         <xsl:when test="self::f:profile/parent::f:meta">Profile</xsl:when>
                         <!-- Code -->
-                        <!-- combine coding.system and .code in one assert -->
-                        <xsl:when test="self::f:code/parent::*[self::f:coding or ends-with(local-name(),'Coding')]/f:system/@value">CodeSystem</xsl:when>
-                        <!-- fallback when system is not present -->
                         <xsl:when test="self::f:code">Code</xsl:when>
                         <!-- DateTime met T-datum -->
                         <xsl:when test="starts-with(@value,'${DATE, T')">
@@ -310,14 +436,58 @@
                             </xsl:choose>
                         </xsl:when>
                         <!-- DateTime zonder T-datum? -->
-                        <!-- parent is Identifier -->
-                        <xsl:when test="self::f:*/parent::f:*[local-name()='identifier' or ends-with(local-name(),'Identifier')]">Identifier</xsl:when>
-                        <!-- Reference -->
-                        <xsl:when test="self::f:reference">Reference</xsl:when>
                         <!-- Number, integer -->
                         <xsl:when test="string(number(@value)) != 'NaN'">Number</xsl:when>
                         <!-- Display, text, note-->
                         <xsl:when test="self::f:display or self::f:text or self::f:note or self::f:unit">Display</xsl:when>
+                    </xsl:choose>
+                </xsl:variable>
+                <xsl:variable name="description">
+                    <xsl:value-of select="$description-prefix"/>
+                    <xsl:text> </xsl:text>
+                    <xsl:choose>
+                        <xsl:when test="$type='Profile'">
+                            <xsl:text>equals</xsl:text>
+                            <xsl:text> '</xsl:text>
+                            <xsl:value-of select="@value"/>
+                            <xsl:text>'</xsl:text>
+                        </xsl:when>
+                        <xsl:when test="$type='Code'">
+                            <xsl:text>equals</xsl:text>
+                            <xsl:text> '</xsl:text>
+                            <xsl:value-of select="@value"/>
+                            <xsl:text>'</xsl:text>
+                        </xsl:when>
+                        <xsl:when test="$type='TVariable'">
+                            <xsl:text>equals T-reference</xsl:text>
+                            <xsl:text> '</xsl:text>
+                            <xsl:value-of select="@value"/>
+                            <xsl:text>'</xsl:text>
+                        </xsl:when>
+                        <xsl:when test="$type='TDateTime'">
+                            <xsl:text>contains a date, time and timezone.</xsl:text>
+                        </xsl:when>
+                        <xsl:when test="$type='TDate'">
+                            <xsl:text>contains a date.</xsl:text>
+                        </xsl:when>
+                        <xsl:when test="$type='TYear'">
+                            <xsl:text>contains only a year.</xsl:text>
+                        </xsl:when>
+                        <xsl:when test="$type='Number'">
+                            <xsl:text>equals value '</xsl:text>
+                            <xsl:value-of select="@value"/>
+                            <xsl:text>'</xsl:text>
+                        </xsl:when>
+                        <xsl:when test="$type='Display'">
+                            <xsl:text>exists with value matching '</xsl:text>
+                            <xsl:value-of select="@value"/>
+                            <xsl:text>'</xsl:text>
+                        </xsl:when>
+                        <xsl:otherwise>
+                            <xsl:text>exists with value '</xsl:text>
+                            <xsl:value-of select="@value"/>
+                            <xsl:text>'</xsl:text>
+                        </xsl:otherwise>
                     </xsl:choose>
                 </xsl:variable>
                 <xsl:variable name="expression">
@@ -328,13 +498,6 @@
                             <xsl:text> = '</xsl:text>
                             <xsl:value-of select="@value"/>
                             <xsl:text>'</xsl:text>
-                        </xsl:when>
-                        <xsl:when test="$type='CodeSystem'">
-                            <xsl:text>.where($this.system = '</xsl:text>
-                            <xsl:value-of select="self::f:code/parent::*[self::f:coding or ends-with(local-name(),'Coding')]/f:system/@value"/>
-                            <xsl:text>' and $this.code = '</xsl:text>
-                            <xsl:value-of select="@value"/>
-                            <xsl:text>').exists()</xsl:text>
                         </xsl:when>
                         <xsl:when test="$type='Code'">
                             <xsl:text>.where($this = '</xsl:text>
@@ -358,12 +521,6 @@
                         <xsl:when test="$type='TYear'">
                             <xsl:text>.matches('([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)')</xsl:text>
                         </xsl:when>
-                        <xsl:when test="$type='Identifier'">
-                            <xsl:text>.exists()</xsl:text>
-                        </xsl:when>
-                        <xsl:when test="$type='Reference'">
-                            <xsl:text>.exists()</xsl:text>
-                        </xsl:when>
                         <xsl:when test="$type='Number'">
                             <xsl:text> = </xsl:text>
                             <xsl:value-of select="@value"/>
@@ -381,98 +538,23 @@
                         </xsl:otherwise>
                     </xsl:choose>
                 </xsl:variable>
-                <xsl:variable name="resourceID">
-                    <xsl:call-template name="create-resourceID"/>
-                </xsl:variable>
-                <xsl:variable name="description">
-                    <xsl:variable name="expression-description">
-                        <xsl:choose>
-                            <xsl:when test="string-length(substring-after($expression-inherited,concat($resourceID,'}'').'))) eq 0 and starts-with($expression-local,'.')">
-                                <xsl:value-of select="substring-after($expression-local,'.')"/>
-                            </xsl:when>
-                            <xsl:otherwise>
-                                <xsl:value-of select="substring-after($expression-inherited,concat($resourceID,'}'').'))"/>
-                                <xsl:value-of select="$expression-local"/>
-                            </xsl:otherwise>
-                        </xsl:choose>
-                    </xsl:variable>
-                    <xsl:text>${</xsl:text>
-                    <xsl:value-of select="$resourceID"/>
-                    <xsl:text>}: </xsl:text>
-                    <xsl:value-of select="$expression-description"/>
-                    <xsl:text> </xsl:text>
-                    <xsl:choose>
-                        <xsl:when test="$type='Profile'">
-                            <xsl:text>equals</xsl:text>
-                            <xsl:text> '</xsl:text>
-                            <xsl:value-of select="@value"/>
-                            <xsl:text>'</xsl:text>
-                        </xsl:when>
-                        <xsl:when test="$type='CodeSystem'">
-                            <xsl:text>contains both system '</xsl:text>
-                            <xsl:value-of select="self::f:code/parent::*[self::f:coding or ends-with(local-name(),'Coding')]/f:system/@value"/>
-                            <xsl:text>' and value</xsl:text>
-                            <xsl:text> '</xsl:text>
-                            <xsl:value-of select="@value"/>
-                            <xsl:text>'</xsl:text>
-                        </xsl:when>
-                        <xsl:when test="$type='Code'">
-                            <xsl:text>[TBD]</xsl:text>
-                            <xsl:text> '</xsl:text>
-                            <xsl:value-of select="@value"/>
-                            <xsl:text>'</xsl:text>
-                        </xsl:when>
-                        <xsl:when test="$type='TVariable'">
-                            <xsl:text>equals T-reference</xsl:text>
-                            <xsl:text> '</xsl:text>
-                            <xsl:value-of select="@value"/>
-                            <xsl:text>'</xsl:text>
-                        </xsl:when>
-                        <xsl:when test="$type='TDateTime'">
-                            <xsl:text>contains a date, time and timezone.</xsl:text>
-                        </xsl:when>
-                        <xsl:when test="$type='TDate'">
-                            <xsl:text>contains a date.</xsl:text>
-                        </xsl:when>
-                        <xsl:when test="$type='TYear'">
-                            <xsl:text>contains only a year.</xsl:text>
-                        </xsl:when>
-                        <xsl:when test="$type='Identifier'">
-                            <xsl:text>exists. [NEEDS IMPROVEMENT]</xsl:text>
-                        </xsl:when>
-                        <xsl:when test="$type='Reference'">
-                            <xsl:text>exists. [NEEDS IMPROVEMENT]</xsl:text>
-                        </xsl:when>
-                        <xsl:when test="$type='Number'">
-                            <xsl:text>equals value '</xsl:text>
-                            <xsl:value-of select="@value"/>
-                            <xsl:text>'</xsl:text>
-                        </xsl:when>
-                        <xsl:when test="$type='Display'">
-                            <xsl:text>exists with value matching '</xsl:text>
-                            <xsl:value-of select="@value"/>
-                            <xsl:text>'</xsl:text>
-                        </xsl:when>
-                        <xsl:otherwise>
-                            <xsl:text>exists with value '</xsl:text>
-                            <xsl:value-of select="@value"/>
-                            <xsl:text>'</xsl:text>
-                        </xsl:otherwise>
-                    </xsl:choose>
-                </xsl:variable>
                 <action>
                     <assert>
-                        <label value="assert-{count(preceding::*[@value])+1}"/>
                         <description value="{$description}"/>
                         <expression value="{$expression}"/>
                         <warningOnly value="true"/>
                     </assert>
                 </action>
+                <xsl:apply-templates select="node()" mode="asserts">
+                    <xsl:with-param name="expression-inherited" select="concat($expression-inherited,$expression-local)" tunnel="yes"/>
+                </xsl:apply-templates>
             </xsl:when>
+            <xsl:otherwise>
+                <xsl:apply-templates select="node()" mode="asserts">
+                    <xsl:with-param name="expression-inherited" select="concat($expression-inherited,$expression-local)" tunnel="yes"/>
+                </xsl:apply-templates>
+            </xsl:otherwise>
         </xsl:choose>
-        <xsl:apply-templates select="node()" mode="asserts">
-            <xsl:with-param name="expression-inherited" select="concat($expression-inherited,$expression-local)" tunnel="yes"/>
-        </xsl:apply-templates>
     </xsl:template>
     
     <!-- extensions! -->
