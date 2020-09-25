@@ -29,11 +29,9 @@
         
     -->
     
-    <!--<xsl:param name="fixtureFolder" as="xs:string" required="yes"/>-->
-    <xsl:param name="fixtureFolder" as="xs:string" select="'file:/C:/Users/144189-ADM/Documents/Git/Nictiz-STU3-testscripts/Generate/src/Medication-9-0-7/_fixtures'"/>
-    <xsl:param name="scenario" as="xs:string"/>
-    
-    <xsl:param name="scenarioType" select="'MA'"/>
+    <xsl:param name="referenceFolder" as="xs:string" required="yes"/>
+    <xsl:param name="referenceGenerateFolder" as="xs:string" required="yes"/>
+    <xsl:param name="scenario" as="xs:string" required="yes"/>
     
     <xsl:output indent="yes"/>
     
@@ -88,7 +86,6 @@
                     </xsl:if>
                 </xsl:variable>
                 <xsl:variable name="test-count" select="count(preceding-sibling::f:test)+1"/>
-                <xsl:variable name="asserts-fixture" select="document(string-join(($fixtureFolder, @nts:generate-asserts-from), '/'),.)"/>
                 <xsl:variable name="fixture-id">
                     <xsl:choose>
                         <xsl:when test="$scenario = 'client'">
@@ -113,47 +110,79 @@
                         </xsl:when>
                     </xsl:choose>
                 </xsl:variable>
-                <xsl:if test="not($asserts-fixture)">
-                    <xsl:message terminate="yes">Fixture <xsl:value-of select="$asserts-fixture"/> not found.</xsl:message>
-                </xsl:if>
+                
+                <xsl:variable name="asserts-fixtures" select="tokenize(@nts:generate-asserts-from,'[,\s]+')"/>
+                <xsl:variable name="asserts-fixtures-normalized">
+                    <xsl:for-each select="$asserts-fixtures">
+                        <xsl:variable name="raw" select="."/>
+                        <xsl:variable name="check-extension">
+                            <xsl:choose>
+                                <xsl:when test="ends-with($raw,'.xml')">
+                                    <xsl:value-of select="$raw"/>
+                                </xsl:when>
+                                <xsl:otherwise>
+                                    <xsl:value-of select="concat($raw,'.xml')"/>
+                                </xsl:otherwise>
+                            </xsl:choose>
+                        </xsl:variable>
+                        
+                        <xsl:choose>
+                            <xsl:when test="doc-available(string-join(($referenceFolder,$check-extension),'/'))">
+                                <xsl:value-of select="string-join(($referenceFolder, $check-extension), '/')"/>
+                            </xsl:when>
+                            <xsl:when test="doc-available(string-join(($referenceGenerateFolder,$check-extension),'/'))">
+                                <xsl:value-of select="string-join(($referenceGenerateFolder, $check-extension), '/')"/>
+                            </xsl:when>
+                            <xsl:otherwise>
+                                <xsl:message terminate="yes">Fixture <xsl:value-of select="$check-extension"/> not found.</xsl:message>
+                            </xsl:otherwise>
+                        </xsl:choose>
+                    </xsl:for-each>
+                </xsl:variable>
+                <!--<xsl:variable name="asserts-fixture" select="document(string-join(($fixtureFolder, @nts:generate-asserts-from), '/'),.)"/>-->
+                
                 <xsl:copy>
                     <xsl:apply-templates select="node()|@*" mode="copy">
                         <xsl:with-param name="fixture-id" tunnel="yes" select="$fixture-id"/>
                     </xsl:apply-templates>
+                    
                     <xsl:variable name="idExpressionParts">
                         <nts:idExpressions>
-                            <xsl:choose>
-                                <xsl:when test="$asserts-fixture/f:Bundle">
-                                    <xsl:for-each select="$asserts-fixture/f:Bundle/f:entry/f:resource/f:*[local-name()=$generate-from-resources/@name]">
-                                        <nts:idExpression resource="{local-name()}">
-                                            <xsl:attribute name="name">
-                                                <xsl:call-template name="create-resourceID">
+                            <xsl:for-each select="$asserts-fixtures-normalized">
+                                <xsl:variable name="asserts-fixture" select="document(.)"/>
+                                <xsl:choose>
+                                    <xsl:when test="$asserts-fixture/f:Bundle">
+                                        <xsl:for-each select="$asserts-fixture/f:Bundle/f:entry/f:resource/f:*[local-name()=$generate-from-resources/@name]">
+                                            <nts:idExpression resource="{local-name()}">
+                                                <xsl:attribute name="name">
+                                                    <xsl:call-template name="create-resourceID">
+                                                        <xsl:with-param name="generate-from-resources" select="$generate-from-resources" as="element()+"/>
+                                                    </xsl:call-template>
+                                                </xsl:attribute>
+                                                <xsl:call-template name="generateExpressionParts">
+                                                    <xsl:with-param name="in" select="."/>
                                                     <xsl:with-param name="generate-from-resources" select="$generate-from-resources" as="element()+"/>
                                                 </xsl:call-template>
-                                            </xsl:attribute>
-                                            <xsl:call-template name="generateExpressionParts">
-                                                <xsl:with-param name="in" select="."/>
-                                                <xsl:with-param name="generate-from-resources" select="$generate-from-resources" as="element()+"/>
-                                            </xsl:call-template>
-                                        </nts:idExpression>
-                                    </xsl:for-each>
-                                </xsl:when>
-                                <xsl:when test="$asserts-fixture/f:*[local-name()=$generate-from-resources/@name]">
-                                    <xsl:for-each select="$asserts-fixture/f:*[local-name()=$generate-from-resources/@name]">
-                                        <nts:idExpression resource="{local-name()}">
-                                            <xsl:attribute name="name">
-                                                <xsl:call-template name="create-resourceID">
+                                            </nts:idExpression>
+                                        </xsl:for-each>
+                                    </xsl:when>
+                                    <xsl:when test="$asserts-fixture/f:*[local-name()=$generate-from-resources/@name]">
+                                        <xsl:for-each select="$asserts-fixture/f:*[local-name()=$generate-from-resources/@name]">
+                                            <nts:idExpression resource="{local-name()}">
+                                                <xsl:attribute name="name">
+                                                    <xsl:call-template name="create-resourceID">
+                                                        <xsl:with-param name="generate-from-resources" select="$generate-from-resources" as="element()+"/>
+                                                    </xsl:call-template>
+                                                </xsl:attribute>
+                                                <xsl:call-template name="generateExpressionParts">
+                                                    <xsl:with-param name="in" select="."/>
                                                     <xsl:with-param name="generate-from-resources" select="$generate-from-resources" as="element()+"/>
                                                 </xsl:call-template>
-                                            </xsl:attribute>
-                                            <xsl:call-template name="generateExpressionParts">
-                                                <xsl:with-param name="in" select="."/>
-                                                <xsl:with-param name="generate-from-resources" select="$generate-from-resources" as="element()+"/>
-                                            </xsl:call-template>
-                                        </nts:idExpression>
-                                    </xsl:for-each>
-                                </xsl:when>
-                            </xsl:choose>
+                                            </nts:idExpression>
+                                        </xsl:for-each>
+                                    </xsl:when>
+                                </xsl:choose>
+                            </xsl:for-each>
                         </nts:idExpressions>
                     </xsl:variable>
                     <xsl:variable name="filteredIdExpressionParts">
@@ -189,9 +218,12 @@
                                 <xsl:message terminate="yes">Could not determine unique expression to catch ID in a variable.</xsl:message>
                             </xsl:otherwise>
                         </xsl:choose>
-                        <xsl:apply-templates select="$asserts-fixture" mode="asserts">
-                            <xsl:with-param name="generate-from-resources" select="$generate-from-resources" tunnel="yes" as="element()+"/>
-                        </xsl:apply-templates>
+                        <xsl:for-each select="$asserts-fixtures-normalized">
+                            <xsl:variable name="asserts-fixture" select="document(.)"/>
+                            <xsl:apply-templates select="$asserts-fixture" mode="asserts">
+                                <xsl:with-param name="generate-from-resources" select="$generate-from-resources" tunnel="yes" as="element()+"/>
+                            </xsl:apply-templates>
+                        </xsl:for-each>
                     </nts:generated-asserts>
                 </xsl:copy>
             </xsl:when>

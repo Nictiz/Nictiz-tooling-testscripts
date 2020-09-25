@@ -3,16 +3,18 @@
     
     The normal use of this build script is to import it from another ANT build script, where a particular folder
     structure is expected:
-    - build.xml            : the file that imports this build script
-    - src/                 : the dir containing the source files 
-       - common-asserts/   : the common components across all projects
-       - Project1/         : a project dir
-         - InputFolder1/   : one or more dirs containg NTS files
-         - _components/    : the components specific for that project
-         - _reference/     : the fixtures for that project
-    - build/               : the dir where the output will be placed
-    - lib/                 :
-       - ant-dependencies/ : where the dependencies for ANT will be placed (you probably want to add this to .gitignore)
+    - build.xml                     : the file that imports this build script
+    - src/                          : the dir containing the source files 
+       - common-asserts/            : the common components across all projects
+       - Project1/                  : a project dir
+         - InputFolder1/            : one or more dirs containg NTS files
+         - _components/             : the components specific for that project
+         - _reference/              : the fixtures for that project - all fixtures in this folder are copied to the output dir
+         - _reference-not-copied/   : additional fixtures and files (for example fixtures from which assertions are generated) that are not copied to the output dir
+         
+    - build/                        : the dir where the output will be placed
+    - lib/                          :
+       - ant-dependencies/          : where the dependencies for ANT will be placed (you probably want to add this to .gitignore)
 
     The script will ask you for one of the project dirs inside the "src/" dir. Alternatively, this can be passed in the
     ANT call with the -Dproject= option.
@@ -202,7 +204,8 @@
             
             <saxon-transform style="${xslt.dir}/generateAsserts.xsl" in="@{testscript.path}" out="${nts.file.generated}">
                 <parameters>
-                    <param name="fixtureFolder" expression="${fixtures.dir.absolute}"/>
+                    <param name="referenceFolder" expression="${reference.dir.absolute}"/>
+                    <param name="referenceGenerateFolder" expression="${reference-not-copied.dir.absolute}"/>
                     <param name="scenario" expression="${TestScript(nts:scenario)}"/>
                 </parameters>
             </saxon-transform>
@@ -306,6 +309,7 @@
         <property name="project.dir" location="${src.dir}/${project}"/>
         <property name="commoncomponents.dir" location="${src.dir}/common-asserts"/>
         <property name="reference.dir" location="${project.dir}/_reference"/>
+        <property name="reference-not-copied.dir" location="${project.dir}/_reference-not-copied"/>
         <property name="components.dir" location="${project.dir}/_components"/>
         <property name="fixtures.dir" location="${project.dir}/_fixtures"/>
         
@@ -317,6 +321,7 @@
         <property name="components.dir.absolute" location="${components.dir}"/>
         <property name="commoncomponents.dir.absolute" location="${commoncomponents.dir}"/>
         <property name="reference.dir.absolute" location="${reference.dir}"/>
+        <property name="reference-not-copied.dir.absolute" location="${reference-not-copied.dir}"/>
         <property name="fixtures.dir.absolute" location="${fixtures.dir}"/>
         
         <!-- Collect the XML files to transform -->
