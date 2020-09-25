@@ -15,8 +15,6 @@
         - Exclude specific parts of fixture when generating?
         
         - Better readable discriptions.
-        
-        - Refactor expectedResponseFormat to be added after assertions are generated
         - Refactor 'filter' mode in generateTestScript to be matched to separate 'filterTestScript.xsl'.
         
         - '_fixtures' folder not necessary, can also be '_resources' folder. Look at generateTestScript to see how filenames are resolved.

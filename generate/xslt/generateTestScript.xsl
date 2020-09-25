@@ -19,24 +19,8 @@
     <!-- The folder where the fixtures for TestScript generation can be found. -->
     <xsl:param name="referenceComponentFolder" select="'file:/C:/Users/144189-ADM/Documents/Git/Nictiz-STU3-testscripts/Generate/src/Medication-9-0-7/_reference/'"/>
     
-    <xsl:param name="expectedResponseFormat" select="'xml'"/>
-    
-    <!-- The main template, which will call the remaining templates.
-         param expectedResponseFormat is the format for responses (either 'xml' (default) or 'json') that this 
-                                      TestScript expects when it tests a server (i.e. it has no meaning when 
-                                      nts:scenario is set to 'client'). This value is added as 'Accept' header on all
-                                      requests and to the name and id of the TestScript.
-    -->
     <xsl:template name="generate" match="f:TestScript">
         <xsl:variable name="scenario" select="@nts:scenario"/>
-        
-        <!-- Sanity check the expectedResponseFormat parameter -->
-        <xsl:if test="$expectedResponseFormat != '' and $scenario != 'server'">
-            <xsl:message select="'Parameter ''expectedResponseFormat'' only has a meaning when nts:scenario is ''server'''"></xsl:message>
-        </xsl:if>
-        <xsl:if test="$scenario = 'server' and not($expectedResponseFormat = ('xml', 'json'))">
-            <xsl:message terminate="yes" select="concat('Invalid value ''', $expectedResponseFormat, ''' for parameter ''expectedResponseFormat''; should be either ''xml'' or ''json''')"></xsl:message>
-        </xsl:if>
         
         <!-- Expand all the Nictiz inclusion elements to their FHIR representation --> 
         <xsl:variable name="expanded">
@@ -53,7 +37,9 @@
             <xsl:with-param name="variables" select="$expanded//f:variable" tunnel="yes"/>
             <xsl:with-param name="rules" select="$expanded//f:rule[@id]" tunnel="yes"/>
             <xsl:with-param name="scenario" select="$scenario" tunnel="yes"/>
-            <xsl:with-param name="expectedResponseFormat" select="$expectedResponseFormat" tunnel="yes"/>
+            <xsl:with-param name="expectedResponseFormat" tunnel="yes">
+                <xsl:if test="$scenario='server'">${expectedResponseFormat}</xsl:if>
+            </xsl:with-param>
         </xsl:apply-templates>
     </xsl:template>
 
@@ -184,9 +170,9 @@
         <xsl:param name="expectedResponseFormat" tunnel="yes"/>
         <xsl:attribute name="value">
             <xsl:value-of select="."/>
-            <xsl:if test="$scenario='server' and not(ancestor::f:TestScript/f:test/f:action/f:operation/f:accept) and not(contains(lower-case(.),$expectedResponseFormat))">
+            <xsl:if test="$scenario='server'">
                 <xsl:text>-</xsl:text>
-                <xsl:value-of select="lower-case($expectedResponseFormat)"/>
+                <xsl:value-of select="$expectedResponseFormat"/>
             </xsl:if>
         </xsl:attribute>
     </xsl:template>
@@ -197,9 +183,9 @@
         <xsl:param name="expectedResponseFormat" tunnel="yes"/>
         <xsl:attribute name="value">
             <xsl:value-of select="."/>
-            <xsl:if test="$scenario='server' and not(ancestor::f:TestScript/f:test/f:action/f:operation/f:accept) and not(contains(lower-case(.),$expectedResponseFormat))">
+            <xsl:if test="$scenario='server'">
                 <xsl:text> - </xsl:text>
-                <xsl:value-of select="upper-case($expectedResponseFormat)"/>
+                <xsl:value-of select="$expectedResponseFormat"/>
                 <xsl:text> Format</xsl:text>
             </xsl:if>
         </xsl:attribute>
@@ -216,7 +202,7 @@
             <xsl:apply-templates select="@*" mode="#current"/>
             <xsl:apply-templates select="f:*[local-name()=$pre-accept]" mode="#current"/>
             <xsl:if test="$scenario='server' and not(f:accept) and $expectedResponseFormat != ''">
-                <accept value="{lower-case($expectedResponseFormat)}"/>
+                <accept value="{$expectedResponseFormat}"/>
             </xsl:if>
             <xsl:apply-templates select="f:*[not(local-name()=$pre-accept)]" mode="#current"/>
         </xsl:copy>

@@ -125,15 +125,16 @@
 
     <macrodef name="transform-NTS-file" description="Custom task to perform the transformation of an NTS file">
         <attribute name="nts.file" description="The (full) path to the input file."/>
-        <!--<attribute name="project.dir" description="The base dir of the project."/>-->
         <attribute name="output.dir" description="The target dir (not just the base) of the transformed file. The name of the actual file will be determined by this task."/>
         <attribute name="references.file" description="The (temporary) text file to collect the list of fixtures to. See the collect-fixtures macrodef for more information."/>
 
         <sequential>
             <!-- Get the raw file name without suffix -->
             <local name="nts.file.basename"/>
+            <local name="nts.file.newname"/>
             <basename property="nts.file.basename" file="@{nts.file}" suffix="xml"/>
-           
+            <property name="nts.file.newname" value="${nts.file.basename}.xml"/>
+            
             <!-- Load the NTS file as an "xmlproperty" file. All variables extracted from xmlproperty should be
                  declared local. -->
             <local name="TestScript(nts:scenario)"/>
@@ -153,77 +154,18 @@
             <!-- Convert backslashes to forward slashes if needed -->
             <propertyregex property="reference.dir.relative.normalized" input="${reference.dir.relative}" regexp="[\\]" replace="/" global="true" defaultValue="${reference.dir.relative}"/>
             
-            <if>
-                <equals arg1="${TestScript(nts:scenario)}" arg2="server"/>
-                <then>
-                    <for param="expectedResponseFormat" list="xml,json"> <!-- XIS scripts are generated in both XML and JSON flavor -->
-                        <sequential>
-                            <local name="nts.file.newname"/>
-                            <property name="nts.file.newname" value="${nts.file.basename}-@{expectedResponseFormat}.xml"/>
-
-                            <saxon-transform style="${xslt.dir}/generateTestScript.xsl" in="@{nts.file}" out="@{output.dir}/${nts.file.newname}">
-                                <parameters>
-                                    <param name="referenceBase" expression="${reference.dir.relative.normalized}"/>
-                                    <param name="commonComponentFolder" expression="${commoncomponents.dir.absolute}"/>
-                                    <param name="projectComponentFolder" expression="${components.dir.absolute}"/>
-                                    <param name="referenceComponentFolder" expression="${reference.dir.absolute}"/>
-                                    <param name="expectedResponseFormat" expression="@{expectedResponseFormat}"/>
-                                </parameters>
-                            </saxon-transform>
-                            
-                            <collect-references testscript.path="@{output.dir}/${nts.file.newname}" references.file="@{references.file}" reference.dir.rel="@{reference.dir.rel}"/>
-                            <generate-asserts testscript.path="@{output.dir}/${nts.file.newname}" if:set="TestScript.test(nts:generate-asserts-from)"/>
-                        </sequential>
-                    </for>
-                </then>
-                <else>
-                    <local name="nts.file.newname"/>
-                    <property name="nts.file.newname" value="${nts.file.basename}.xml"/>
-                    <saxon-transform style="${xslt.dir}/generateTestScript.xsl" in="@{nts.file}" out="@{output.dir}/${nts.file.newname}">
-                        <parameters>
-                            <param name="referenceBase" expression="${reference.dir.relative.normalized}"/>
-                            <param name="commonComponentFolder" expression="${commoncomponents.dir.absolute}"/>
-                            <param name="projectComponentFolder" expression="${components.dir.absolute}"/>
-                            <param name="referenceComponentFolder" expression="${reference.dir.absolute}"/>
-                        </parameters>
-                    </saxon-transform>
-                    
-                    <collect-references testscript.path="@{output.dir}/${nts.file.newname}" references.file="@{references.file}" reference.dir.rel="@{reference.dir.rel}"/>
-                    <generate-asserts testscript.path="@{output.dir}/${nts.file.newname}" if:set="TestScript.test(nts:generate-asserts-from)"/>
-                </else>
-            </if>
-        </sequential>
-    </macrodef>
-    
-    <macrodef name="generate-asserts">
-        <attribute name="testscript.path" description="The FHIR TestScript to analyze."/>
-        
-        <sequential>
-            <local name="nts.file.temp.base"/>
-            <local name="nts.file.input"/>
-            <local name="nts.file.generated"/>
-            <local name="nts.file.filtered"/>
-            
-            <tempfile property="nts.file.temp.base" destDir="${temp.dir}"/>
-            <property name="nts.file.input" value="${nts.file.temp.base}-01-input.xml"/>
-            <property name="nts.file.generated" value="${nts.file.temp.base}-02-generated.xml"/>
-            <property name="nts.file.filtered" value="${nts.file.temp.base}-03-filtered.xml"/>
-            <!--<tempfile property="nts.file.input" destDir="${temp.dir}" prefix="01-input-" suffix=".xml"/>
-            <tempfile property="nts.file.generated" destDir="${temp.dir}" prefix="02-generated-" suffix=".xml"/>
-            <tempfile property="nts.file.filtered" destDir="${temp.dir}" prefix="03-filtered-" suffix=".xml"/>-->
-            
-            <copy file="@{testscript.path}" tofile="${nts.file.input}"/>
-            
-            <saxon-transform style="${xslt.dir}/generateAsserts.xsl" in="${nts.file.input}" out="${nts.file.generated}">
+            <saxon-transform style="${xslt.dir}/generateTestScript.xsl" in="@{nts.file}" out="@{output.dir}/${nts.file.newname}">
                 <parameters>
-                    <param name="referenceFolder" expression="${reference.dir.absolute}"/>
-                    <param name="referenceGenerateFolder" expression="${reference-not-copied.dir.absolute}"/>
-                    <param name="scenario" expression="${TestScript(nts:scenario)}"/>
+                    <param name="referenceBase" expression="${reference.dir.relative.normalized}"/>
+                    <param name="commonComponentFolder" expression="${commoncomponents.dir.absolute}"/>
+                    <param name="projectComponentFolder" expression="${components.dir.absolute}"/>
+                    <param name="referenceComponentFolder" expression="${reference.dir.absolute}"/>
                 </parameters>
             </saxon-transform>
-            <saxon-transform style="${xslt.dir}/filterTestScript.xsl" in="${nts.file.generated}" out="${nts.file.filtered}"/>
             
-            <copy file="${nts.file.filtered}" tofile="@{testscript.path}"/>
+            <collect-references testscript.path="@{output.dir}/${nts.file.newname}" references.file="@{references.file}" reference.dir.rel="@{reference.dir.rel}"/>
+            <generate-asserts testscript.path="@{output.dir}/${nts.file.newname}" if:set="TestScript.test(nts:generate-asserts-from)"/>
+            <expected-response-format testscript.path="@{output.dir}/${nts.file.newname}" output.dir="@{output.dir}"/>
         </sequential>
     </macrodef>
     
@@ -247,6 +189,58 @@
                     <param name="includesDir" expression="${reference.dir.rel}"/>
                 </parameters>
             </saxon-transform>
+        </sequential>
+    </macrodef>
+    
+    <macrodef name="generate-asserts">
+        <attribute name="testscript.path" description="The FHIR TestScript to analyze."/>
+        
+        <sequential>
+            <local name="nts.file.input"/>
+            <local name="nts.file.generated"/>
+            <local name="nts.file.filtered"/>
+            <property name="nts.file.input" value="${temp.dir}/${nts.file.basename}-01-input.xml"/>
+            <property name="nts.file.generated" value="${temp.dir}/${nts.file.basename}-02-generated.xml"/>
+            <property name="nts.file.filtered" value="${temp.dir}/${nts.file.basename}-03-filtered.xml"/>
+            
+            <copy file="@{testscript.path}" tofile="${nts.file.input}"/>
+            
+            <saxon-transform style="${xslt.dir}/generateAsserts.xsl" in="${nts.file.input}" out="${nts.file.generated}">
+                <parameters>
+                    <param name="referenceFolder" expression="${reference.dir.absolute}"/>
+                    <param name="referenceGenerateFolder" expression="${reference-not-copied.dir.absolute}"/>
+                    <param name="scenario" expression="${TestScript(nts:scenario)}"/>
+                </parameters>
+            </saxon-transform>
+            <saxon-transform style="${xslt.dir}/filterTestScript.xsl" in="${nts.file.generated}" out="${nts.file.filtered}"/>
+            
+            <copy file="${nts.file.filtered}" tofile="@{testscript.path}"/>
+        </sequential>
+    </macrodef>
+    
+    <macrodef name="expected-response-format">
+        <attribute name="testscript.path" description="The FHIR TestScript to analyze."/>
+        <attribute name="output.dir" description="The target dir (not just the base) of the transformed file. The name of the actual file will be determined by this task."/>
+        
+        <sequential>
+            <if>
+                <equals arg1="${TestScript(nts:scenario)}" arg2="server"/>
+                <then>
+                    <for param="expectedResponseFormat" list="xml,json">
+                        <sequential>
+                            <local name="nts.file.expectedResponseFormat"/>
+                            <property name="nts.file.expectedResponseFormat" value="${temp.dir}/${nts.file.basename}-04-expectedResponseFormat-@{expectedResponseFormat}.xml"/>
+                            <saxon-transform style="${xslt.dir}/expectedResponseFormat.xsl" in="@{testscript.path}" out="${nts.file.expectedResponseFormat}">
+                                <parameters>
+                                    <param name="expectedResponseFormat" expression="@{expectedResponseFormat}"/>
+                                </parameters>
+                            </saxon-transform>
+                            <copy file="${nts.file.expectedResponseFormat}" tofile="@{output.dir}/${nts.file.basename}-@{expectedResponseFormat}.xml"/>
+                        </sequential>
+                    </for>
+                    <delete file="@{testscript.path}"/>
+                </then>
+            </if>
         </sequential>
     </macrodef>
     
