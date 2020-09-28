@@ -137,7 +137,6 @@
                         </xsl:choose>
                     </xsl:for-each>
                 </xsl:variable>
-                <!--<xsl:variable name="asserts-fixture" select="document(string-join(($fixtureFolder, @nts:generate-asserts-from), '/'),.)"/>-->
                 
                 <xsl:copy>
                     <xsl:apply-templates select="node()|@*" mode="copy">
@@ -317,8 +316,6 @@
         <xsl:value-of select="count(ancestor-or-self::f:entry/preceding-sibling::f:entry/f:resource/f:*[local-name()=$resourceName])+1"/>
     </xsl:template>
     
-    <!--<xsl:template match="@nts:generate-asserts-from" mode="copy"/>-->
-    
     <xsl:template match="node()|@*" mode="copy">
         <xsl:copy>
             <xsl:apply-templates select="node()|@*" mode="#current"/>
@@ -326,10 +323,15 @@
     </xsl:template>
     
     <!-- Exclusions -->
-    <xsl:template match="f:entry/f:fullUrl" mode="asserts"/>
-    <xsl:template match="f:entry/f:resource/f:*/f:text" mode="asserts"/>
-    <xsl:template match="f:entry/f:search" mode="asserts"/>
-    <xsl:template match="f:meta/f:lastUpdated | f:meta/f:versionId" mode="asserts"/>
+    <xsl:template match="f:entry/f:fullUrl" mode="asserts expression"/>
+    <xsl:template match="f:entry/f:resource/f:*/f:text" mode="asserts expression"/>
+    <xsl:template match="f:entry/f:search" mode="asserts expression"/>
+    <xsl:template match="f:meta/f:lastUpdated | f:meta/f:versionId" mode="asserts expression"/>
+    <xsl:template match="f:resource/f:*/f:id" mode="asserts expression"/>
+    <xsl:template match="f:coding/f:userSelected" mode="asserts expression"/>
+    <xsl:template match="f:coding/f:display | f:display[preceding-sibling::f:system and preceding-sibling::f:code]" mode="asserts expression"/>
+    <xsl:template match="f:text[preceding-sibling::f:coding]" mode="asserts expression"/>
+    
     
     <xsl:template match="f:*" mode="asserts">
         <xsl:param name="generate-from-resources" tunnel="yes" as="element()+"/>
@@ -362,7 +364,7 @@
             </xsl:choose>
         </xsl:variable>
         <xsl:variable name="description-prefix">
-            <xsl:variable name="expression-description">
+            <!--<xsl:variable name="expression-description">
                 <xsl:choose>
                     <xsl:when test="string-length(substring-after($expression-inherited,concat($resourceID,'}'').'))) eq 0 and starts-with($expression-local,'.')">
                         <xsl:value-of select="substring-after($expression-local,'.')"/>
@@ -372,30 +374,28 @@
                         <xsl:value-of select="$expression-local"/>
                     </xsl:otherwise>
                 </xsl:choose>
-            </xsl:variable>
+            </xsl:variable>-->
             <xsl:value-of select="$resourceID"/>
             <xsl:text>: </xsl:text>
-            <xsl:value-of select="$expression-description"/>
+            <!--<xsl:value-of select="$expression-description"/>-->
+            <xsl:value-of select="nf:DTchoice(.)"/>
+            <!--<xsl:text> </xsl:text>-->
         </xsl:variable>
         <xsl:choose>
-            <!-- Create 1 assert for Coding.system/code pair. -->
-            <xsl:when test="self::f:coding or ends-with(local-name(),'Coding')">
+            <xsl:when test="self::f:meta/parent::f:*[local-name()=$generate-from-resources/@name]">
                 <xsl:variable name="description">
                     <xsl:value-of select="$description-prefix"/>
-                    <xsl:text> contains both system '</xsl:text>
-                    <xsl:value-of select="f:system/@value"/>
-                    <xsl:text>' and code '</xsl:text>
-                    <xsl:value-of select="f:code/@value"/>
+                    <xsl:text>.profile equals '</xsl:text>
+                    <xsl:value-of select="f:profile/@value"/>
                     <xsl:text>'.</xsl:text>
                 </xsl:variable>
                 <xsl:variable name="expression">
                     <xsl:value-of select="$expression-inherited"/>
-                    <xsl:value-of select="$expression-local"/>
-                    <xsl:text>.where($this.system = '</xsl:text>
-                    <xsl:value-of select="f:system/@value"/>
-                    <xsl:text>' and $this.code = '</xsl:text>
-                    <xsl:value-of select="f:code/@value"/>
-                    <xsl:text>').exists()</xsl:text>
+                    <xsl:text>.</xsl:text>
+                    <xsl:value-of select="nf:DTchoice(.)"/>
+                    <xsl:text>.where($this</xsl:text>
+                    <xsl:apply-templates select="f:profile" mode="expression"/>
+                    <xsl:text>).exists()</xsl:text>
                 </xsl:variable>
                 <action>
                     <assert>
@@ -404,22 +404,18 @@
                         <warningOnly value="true"/>
                     </assert>
                 </action>
-                <xsl:apply-templates select="node()[not(self::f:system or self::f:code)]" mode="asserts">
-                    <xsl:with-param name="expression-inherited" select="concat($expression-inherited,$expression-local)" tunnel="yes"/>
-                </xsl:apply-templates>
             </xsl:when>
-            <!-- Do nothing for resource.id. Is more thoroughly tested through common asserts at the moment. -->
-            <xsl:when test="self::f:id/parent::f:*[local-name()=$generate-from-resources/@name]"/>
-            <!-- If identifier is present, it should contain system and value -->
-            <xsl:when test="self::f:identifier or ends-with(local-name(),'Identifier')">
+            <xsl:when test="parent::f:*[local-name()=$generate-from-resources/@name]">
                 <xsl:variable name="description">
                     <xsl:value-of select="$description-prefix"/>
-                    <xsl:text>, if present, contains both system and value.</xsl:text>
+                    <xsl:apply-templates select="." mode="description">
+                        <xsl:with-param name="generate-from-resources" select="$generate-from-resources" as="element()+"/>
+                    </xsl:apply-templates>
                 </xsl:variable>
                 <xsl:variable name="expression">
                     <xsl:value-of select="$expression-inherited"/>
-                    <xsl:value-of select="$expression-local"/>
-                    <xsl:text>.all($this.empty() or $this.where($this.system and $this.value).exists())</xsl:text>
+                    <xsl:apply-templates select="." mode="expression"/>
+                    <xsl:text>.exists()</xsl:text>
                 </xsl:variable>
                 <action>
                     <assert>
@@ -428,177 +424,236 @@
                         <warningOnly value="true"/>
                     </assert>
                 </action>
-                <xsl:apply-templates select="node()[not(self::f:system or self::f:value)]" mode="asserts">
-                    <xsl:with-param name="expression-inherited" select="concat($expression-inherited,$expression-local)" tunnel="yes"/>
-                </xsl:apply-templates>
-            </xsl:when>
-            <!-- Reference datatype should contain display (also tested through common asserts) and (reference or identifier). Reference element is not further asserted (this is also tested through common asserts -->
-            <xsl:when test="f:display and (f:reference or f:identifier)">
-                <xsl:variable name="description">
-                    <xsl:value-of select="$description-prefix"/>
-                    <xsl:text> contains display and either reference or identifier.</xsl:text>
-                </xsl:variable>
-                <xsl:variable name="expression">
-                    <xsl:value-of select="$expression-inherited"/>
-                    <xsl:value-of select="$expression-local"/>
-                    <xsl:text>.where($this.display and ($this.reference or $this.identifier)).exists()</xsl:text>
-                </xsl:variable>
-                <action>
-                    <assert>
-                        <description value="{$description}"/>
-                        <expression value="{$expression}"/>
-                        <warningOnly value="true"/>
-                    </assert>
-                </action>
-                <xsl:apply-templates select="node()[not(self::f:reference)]" mode="asserts">
-                    <xsl:with-param name="expression-inherited" select="concat($expression-inherited,$expression-local)" tunnel="yes"/>
-                </xsl:apply-templates>
-            </xsl:when>
-            <xsl:when test="@value and ancestor::f:*[local-name()=$generate-from-resources/@name]">
-                <xsl:variable name="type">
-                    <xsl:choose>
-                        <!-- Profile -->
-                        <xsl:when test="self::f:profile/parent::f:meta">Profile</xsl:when>
-                        <!-- Code -->
-                        <xsl:when test="self::f:code">Code</xsl:when>
-                        <!-- DateTime met T-datum -->
-                        <xsl:when test="starts-with(@value,'${DATE, T')">
-                            <xsl:choose>
-                                <!-- if T-variable is present within testscript, then use it! -->
-                                <xsl:when test="ancestor::f:TestScript/f:variable/f:name/@value='T'">TVariable</xsl:when>
-                                <!-- else only check for significance -->
-                                <xsl:otherwise>
-                                    <xsl:choose>
-                                        <xsl:when test="starts-with(@value,'${DATE, T, D') and matches(@value,'(Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00))$')">TDateTime</xsl:when>
-                                        <xsl:when test="starts-with(@value,'${DATE, T, D')">TDate</xsl:when>
-                                        <!-- Separate when for year-month? -->
-                                        <xsl:when test="starts-with(@value,'${DATE, T, Y')">TYear</xsl:when>
-                                        <xsl:otherwise>
-                                            <xsl:message terminate="yes">Unhandled type</xsl:message>
-                                        </xsl:otherwise>
-                                    </xsl:choose>
-                                </xsl:otherwise>
-                                <!-- Option to introduce Test Execution-wide variables? KT-229 -->
-                            </xsl:choose>
-                        </xsl:when>
-                        <!-- DateTime zonder T-datum? -->
-                        <!-- Number, integer -->
-                        <xsl:when test="string(number(@value)) != 'NaN'">Number</xsl:when>
-                        <!-- Display, text, note-->
-                        <xsl:when test="self::f:display or self::f:text or self::f:note or self::f:unit">Display</xsl:when>
-                    </xsl:choose>
-                </xsl:variable>
-                <xsl:variable name="description">
-                    <xsl:value-of select="$description-prefix"/>
-                    <xsl:text> </xsl:text>
-                    <xsl:choose>
-                        <xsl:when test="$type='Profile'">
-                            <xsl:text>equals</xsl:text>
-                            <xsl:text> '</xsl:text>
-                            <xsl:value-of select="@value"/>
-                            <xsl:text>'</xsl:text>
-                        </xsl:when>
-                        <xsl:when test="$type='Code'">
-                            <xsl:text>equals</xsl:text>
-                            <xsl:text> '</xsl:text>
-                            <xsl:value-of select="@value"/>
-                            <xsl:text>'</xsl:text>
-                        </xsl:when>
-                        <xsl:when test="$type='TVariable'">
-                            <xsl:text>equals T-reference</xsl:text>
-                            <xsl:text> '</xsl:text>
-                            <xsl:value-of select="@value"/>
-                            <xsl:text>'</xsl:text>
-                        </xsl:when>
-                        <xsl:when test="$type='TDateTime'">
-                            <xsl:text>contains a date, time and timezone.</xsl:text>
-                        </xsl:when>
-                        <xsl:when test="$type='TDate'">
-                            <xsl:text>contains a date.</xsl:text>
-                        </xsl:when>
-                        <xsl:when test="$type='TYear'">
-                            <xsl:text>contains only a year.</xsl:text>
-                        </xsl:when>
-                        <xsl:when test="$type='Number'">
-                            <xsl:text>equals value '</xsl:text>
-                            <xsl:value-of select="@value"/>
-                            <xsl:text>'</xsl:text>
-                        </xsl:when>
-                        <xsl:when test="$type='Display'">
-                            <xsl:text>exists with value matching '</xsl:text>
-                            <xsl:value-of select="@value"/>
-                            <xsl:text>'</xsl:text>
-                        </xsl:when>
-                        <xsl:otherwise>
-                            <xsl:text>exists with value '</xsl:text>
-                            <xsl:value-of select="@value"/>
-                            <xsl:text>'</xsl:text>
-                        </xsl:otherwise>
-                    </xsl:choose>
-                </xsl:variable>
-                <xsl:variable name="expression">
-                    <xsl:value-of select="$expression-inherited"/>
-                    <xsl:value-of select="$expression-local"/>
-                    <xsl:choose>
-                        <xsl:when test="$type='Profile'">
-                            <xsl:text> = '</xsl:text>
-                            <xsl:value-of select="@value"/>
-                            <xsl:text>'</xsl:text>
-                        </xsl:when>
-                        <xsl:when test="$type='Code'">
-                            <xsl:text>.where($this = '</xsl:text>
-                            <xsl:value-of select="@value"/>
-                            <xsl:text>').exists()</xsl:text>
-                        </xsl:when>
-                        <xsl:when test="$type='TVariable'">
-                            <xsl:text> = </xsl:text>
-                            <xsl:value-of select="@value"/>
-                        </xsl:when>
-                        <xsl:when test="$type='TDateTime'">
-                            <!-- Regex modified from FHIR dateTime datatype - made time non-optional -->
-                            <!-- Original: ([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1])(T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?(Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)))?)?)? -->
-                            <xsl:text>.matches('([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1])(T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)([.][0-9]+)?(Z|([+]|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)))))')</xsl:text>
-                        </xsl:when>
-                        <xsl:when test="$type='TDate'">
-                            <!-- Regex copied from FHIR date datatype -->
-                            <!-- ([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1]))?)? -->
-                            <xsl:text>.matches('([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1]))?)')</xsl:text>
-                        </xsl:when>
-                        <xsl:when test="$type='TYear'">
-                            <xsl:text>.matches('([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)')</xsl:text>
-                        </xsl:when>
-                        <xsl:when test="$type='Number'">
-                            <xsl:text> = </xsl:text>
-                            <xsl:value-of select="@value"/>
-                        </xsl:when>
-                        <xsl:when test="$type='Display'">
-                            <xsl:text>.where($this.matches('(?i)</xsl:text>
-                            <xsl:value-of select="replace(@value,
-                                '(\.|\[|\]|\\|\||\-|\^|\$|\?|\*|\+|\{|\}|\(|\))','[$1]')"/>
-                            <xsl:text>')).exists()</xsl:text>
-                        </xsl:when>
-                        <xsl:otherwise>
-                            <xsl:text>.where($this = '</xsl:text>
-                            <xsl:value-of select="@value"/>
-                            <xsl:text>').exists()</xsl:text>
-                        </xsl:otherwise>
-                    </xsl:choose>
-                </xsl:variable>
-                <action>
-                    <assert>
-                        <description value="{$description}"/>
-                        <expression value="{$expression}"/>
-                        <warningOnly value="true"/>
-                    </assert>
-                </action>
-                <xsl:apply-templates select="node()" mode="asserts">
-                    <xsl:with-param name="expression-inherited" select="concat($expression-inherited,$expression-local)" tunnel="yes"/>
-                </xsl:apply-templates>
             </xsl:when>
             <xsl:otherwise>
                 <xsl:apply-templates select="node()" mode="asserts">
                     <xsl:with-param name="expression-inherited" select="concat($expression-inherited,$expression-local)" tunnel="yes"/>
                 </xsl:apply-templates>
+            </xsl:otherwise>
+        </xsl:choose>
+    </xsl:template>
+    
+    <xsl:template match="f:*" mode="description">
+        <xsl:param name="generate-from-resources" tunnel="yes"/>
+        <xsl:if test="parent::f:*[local-name()=$generate-from-resources/@name]">
+            <xsl:text> </xsl:text>
+        </xsl:if>
+        <xsl:choose>
+            <!-- If identifier is present, it should contain system and value -->
+            <xsl:when test="self::f:identifier or ends-with(local-name(),'Identifier')">
+                <xsl:text>contains Identifier.</xsl:text>
+            </xsl:when>
+            <!--Reference datatype should contain display (also tested through common asserts) and (reference or identifier). Reference element is not further asserted (this is also tested through common asserts-->
+            <xsl:when test="f:display and (f:reference or f:identifier)">
+                <xsl:text>contains Reference.</xsl:text>
+            </xsl:when>
+            <xsl:when test="self::f:extension">
+                <xsl:text>is extension.</xsl:text>
+            </xsl:when>
+            <xsl:when test="f:coding">
+                <xsl:text>contains CodableConcept.</xsl:text>
+            </xsl:when>
+            <xsl:when test="@value">
+                <xsl:call-template name="get-description-based-on-type"/>
+                <!--<xsl:text>equals '</xsl:text>
+                <xsl:value-of select="@value"/>
+                <xsl:text>'.</xsl:text>-->
+            </xsl:when>
+            <xsl:when test="f:*">
+                <xsl:text>contains nested element.</xsl:text>
+                <!--<xsl:for-each select="f:*">
+                    <xsl:apply-templates select="." mode="description"></xsl:apply-templates>
+                </xsl:for-each>-->
+                <!--<xsl:text>)</xsl:text>-->
+            </xsl:when>
+            <xsl:otherwise>
+                <xsl:message terminate="yes"></xsl:message>
+            </xsl:otherwise>
+            <!--<xsl:when test="*">
+                <xsl:text>.where(</xsl:text>
+                <xsl:for-each select="*">
+                    <xsl:text>$this</xsl:text>
+                    <xsl:apply-templates select="." mode="#current"/>
+                    <xsl:if test="following-sibling::*">
+                        <xsl:text> and </xsl:text>
+                    </xsl:if>
+                </xsl:for-each>
+                <xsl:text>)</xsl:text>
+            </xsl:when>-->
+        </xsl:choose>
+    </xsl:template>
+    
+    <xsl:template match="f:*" mode="expression">
+        <xsl:text>.</xsl:text>
+        <xsl:value-of select="nf:DTchoice(.)"/>
+        <xsl:choose>
+            <!-- If identifier is present, it should contain system and value -->
+            <xsl:when test="self::f:identifier or ends-with(local-name(),'Identifier')">
+                <xsl:text>.where($this.system and $this.value)</xsl:text>
+            </xsl:when>
+            <!--Reference datatype should contain display (also tested through common asserts) and (reference or identifier). Reference element is not further asserted (this is also tested through common asserts-->
+            <xsl:when test="f:display and (f:reference or f:identifier)">
+                <xsl:text>.where($this.display and ($this.reference or $this.identifier))</xsl:text>
+            </xsl:when>
+            <xsl:when test="@value">
+                <xsl:call-template name="get-expression-based-on-type"/>
+            </xsl:when>
+            <xsl:when test="*">
+                <xsl:text>.where(</xsl:text>
+                <xsl:for-each select="*">
+                    <xsl:variable name="and-this-check">
+                        <xsl:if test="preceding-sibling::*">
+                            <xsl:text> and </xsl:text>
+                        </xsl:if>
+                        <xsl:text>$this</xsl:text>
+                        <xsl:apply-templates select="." mode="#current"/>
+                    </xsl:variable>
+                    <xsl:if test="not($and-this-check=' and $this')">
+                        <xsl:value-of select="$and-this-check"/>
+                    </xsl:if>
+                </xsl:for-each>
+                <xsl:text>)</xsl:text>
+            </xsl:when>
+        </xsl:choose>
+    </xsl:template>
+    
+    <xsl:template name="get-type">
+        <xsl:choose>
+            <!-- Profile -->
+            <xsl:when test="self::f:profile/parent::f:meta">Profile</xsl:when>
+            <!-- Code -->
+            <xsl:when test="self::f:code">Code</xsl:when>
+            <!-- DateTime met T-datum -->
+            <xsl:when test="starts-with(@value,'${DATE, T')">
+                <xsl:choose>
+                    <!-- if T-variable is present within testscript, then use it! -->
+                    <xsl:when test="ancestor::f:TestScript/f:variable/f:name/@value='T'">TVariable</xsl:when>
+                    <!-- else only check for significance -->
+                    <xsl:otherwise>
+                        <xsl:choose>
+                            <xsl:when test="starts-with(@value,'${DATE, T, D') and matches(@value,'(Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00))$')">TDateTime</xsl:when>
+                            <xsl:when test="starts-with(@value,'${DATE, T, D')">TDate</xsl:when>
+                            <!-- Separate when for year-month? -->
+                            <xsl:when test="starts-with(@value,'${DATE, T, Y')">TYear</xsl:when>
+                            <xsl:otherwise>
+                                <xsl:message terminate="yes">Unhandled type</xsl:message>
+                            </xsl:otherwise>
+                        </xsl:choose>
+                    </xsl:otherwise>
+                    <!-- Option to introduce Test Execution-wide variables? KT-229 -->
+                </xsl:choose>
+            </xsl:when>
+            <!-- DateTime zonder T-datum? -->
+            <!-- Number, integer -->
+            <xsl:when test="string(number(@value)) != 'NaN'">Number</xsl:when>
+            <!-- Display, text, note-->
+            <xsl:when test="self::f:display or self::f:text or self::f:note or self::f:unit">Display</xsl:when>
+            <xsl:when test="@value=('true','false')">Boolean</xsl:when>
+        </xsl:choose>
+    </xsl:template>
+    
+    <xsl:template name="get-description-based-on-type">
+        <xsl:variable name="type">
+            <xsl:call-template name="get-type"/>
+        </xsl:variable>
+        <xsl:choose>
+            <xsl:when test="$type='Profile'">
+                <xsl:text> equals '</xsl:text>
+                <xsl:value-of select="@value"/>
+                <xsl:text>'.</xsl:text>
+            </xsl:when>
+            <xsl:when test="$type='Code'">
+                <xsl:text> with value '</xsl:text>
+                <xsl:value-of select="@value"/>
+                <xsl:text>' exists.</xsl:text>
+            </xsl:when>
+            <xsl:when test="$type='TVariable'">
+                <xsl:text> equals '</xsl:text>
+                <xsl:value-of select="@value"/>
+                <xsl:text>'.</xsl:text>
+            </xsl:when>
+            <xsl:when test="$type='TDateTime'">
+                <xsl:text> contains date, time and timezone.</xsl:text>
+            </xsl:when>
+            <xsl:when test="$type='TDate'">
+                <xsl:text> contains date.</xsl:text>
+            </xsl:when>
+            <xsl:when test="$type='TYear'">
+                <xsl:text> contains year.</xsl:text>
+            </xsl:when>
+            <xsl:when test="$type='Number'">
+                <xsl:text> equals '</xsl:text>
+                <xsl:value-of select="@value"/>
+                <xsl:text>'.</xsl:text>
+            </xsl:when>
+            <xsl:when test="$type='Display'">
+                <xsl:text> exists.</xsl:text>
+            </xsl:when>
+            <xsl:when test="$type='Boolean'">
+                <xsl:text> equals </xsl:text>
+                <xsl:value-of select="@value"/>
+                <xsl:text>.</xsl:text>
+            </xsl:when>
+            <xsl:otherwise>
+                <xsl:text> equals '</xsl:text>
+                <xsl:value-of select="@value"/>
+                <xsl:text>'.</xsl:text>
+            </xsl:otherwise>
+        </xsl:choose>
+    </xsl:template>
+    
+    <xsl:template name="get-expression-based-on-type">
+        <xsl:variable name="type">
+            <xsl:call-template name="get-type"/>
+        </xsl:variable>
+        <xsl:choose>
+            <xsl:when test="$type='Profile'">
+                <xsl:text> = '</xsl:text>
+                <xsl:value-of select="@value"/>
+                <xsl:text>'</xsl:text>
+            </xsl:when>
+            <xsl:when test="$type='Code'">
+                <xsl:text>.where($this = '</xsl:text>
+                <xsl:value-of select="@value"/>
+                <xsl:text>').exists()</xsl:text>
+            </xsl:when>
+            <xsl:when test="$type='TVariable'">
+                <xsl:text> = </xsl:text>
+                <xsl:value-of select="@value"/>
+            </xsl:when>
+            <xsl:when test="$type='TDateTime'">
+                <!-- Regex modified from FHIR dateTime datatype - made time non-optional -->
+                <!-- Original: ([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1])(T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?(Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)))?)?)? -->
+                <xsl:text>.matches('([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1])(T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)([.][0-9]+)?(Z|([+]|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)))))')</xsl:text>
+            </xsl:when>
+            <xsl:when test="$type='TDate'">
+                <!-- Regex copied from FHIR date datatype -->
+                <!-- ([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1]))?)? -->
+                <xsl:text>.matches('([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1]))?)')</xsl:text>
+            </xsl:when>
+            <xsl:when test="$type='TYear'">
+                <xsl:text>.matches('([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)')</xsl:text>
+            </xsl:when>
+            <xsl:when test="$type='Number'">
+                <xsl:text> = </xsl:text>
+                <xsl:value-of select="@value"/>
+            </xsl:when>
+            <xsl:when test="$type='Display'">
+                <xsl:text>.exists()</xsl:text>
+                <!--<xsl:text>.where($this.matches('(?i)</xsl:text>
+                <xsl:value-of select="replace(@value,
+                    '(\.|\[|\]|\\|\||\-|\^|\$|\?|\*|\+|\{|\}|\(|\))','[$1]')"/>
+                <xsl:text>')).exists()</xsl:text>-->
+            </xsl:when>
+            <xsl:when test="$type='Boolean'">
+                <xsl:text>.where($this = </xsl:text>
+                <xsl:value-of select="@value"/>
+                <xsl:text>).exists()</xsl:text>
+            </xsl:when>
+            <xsl:otherwise>
+                <xsl:text>.where($this = '</xsl:text>
+                <xsl:value-of select="@value"/>
+                <xsl:text>').exists()</xsl:text>
             </xsl:otherwise>
         </xsl:choose>
     </xsl:template>
