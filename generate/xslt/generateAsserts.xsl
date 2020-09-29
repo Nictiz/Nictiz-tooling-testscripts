@@ -121,6 +121,16 @@
                         </xsl:when>
                     </xsl:choose>
                 </xsl:variable>
+                <xsl:variable name="direction">
+                    <xsl:choose>
+                        <xsl:when test="$generate-from-all">
+                            <xsl:value-of select="'request'"/>
+                        </xsl:when>
+                        <xsl:otherwise>
+                            <xsl:value-of select="'response'"/>
+                        </xsl:otherwise>
+                    </xsl:choose>
+                </xsl:variable>
                 
                 <xsl:variable name="asserts-fixtures" select="tokenize(@nts:generate-asserts-from,'[,\s]+')"/>
                 <xsl:variable name="asserts-fixtures-normalized">
@@ -218,6 +228,7 @@
                                     <action>
                                         <assert>
                                             <description value="Check if variable '{@name}' can be matched to exactly one resource."/>
+                                            <direction value="{$direction}"/>
                                             <expression value="Bundle.entry.select(resource as {@resource}).where(id = '${{{@name}}}').count() = 1"/>
                                             <!-- Should be warning or not? <warningOnly value="true"/>-->
                                         </assert>
@@ -234,6 +245,7 @@
                             </xsl:variable>
                             <xsl:apply-templates select="." mode="asserts">
                                 <xsl:with-param name="resourceID" select="$resourceID" tunnel="yes"/>
+                                <xsl:with-param name="direction" select="$direction" tunnel="yes"/>
                             </xsl:apply-templates>
                         </xsl:for-each>
                     </nts:generated-asserts>
@@ -349,6 +361,7 @@
     
     <xsl:template match="f:*" mode="asserts">
         <xsl:param name="resourceID" tunnel="yes"/>
+        <xsl:param name="direction" tunnel="yes"/>
         <xsl:param name="expression-inherited" tunnel="yes"/>
         <xsl:variable name="expression-local">
             <xsl:choose>
@@ -390,6 +403,7 @@
                 <action>
                     <assert>
                         <description value="{$description}"/>
+                        <direction value="{$direction}"/>
                         <expression value="{$expression}"/>
                         <warningOnly value="true"/>
                     </assert>
@@ -408,6 +422,7 @@
                 <action>
                     <assert>
                         <description value="{$description}"/>
+                        <direction value="{$direction}"/>
                         <expression value="{$expression}"/>
                         <warningOnly value="true"/>
                     </assert>
