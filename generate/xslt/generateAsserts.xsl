@@ -47,19 +47,31 @@
     </xsl:template>
     
     <xsl:template match="f:TestScript/f:test[@nts:generate-asserts-from]" mode="copy">
+        <xsl:variable name="operation-code" select="f:action/f:operation/f:type[f:system/@value = 'http://hl7.org/fhir/testscript-operation-codes']/f:code/@value"/>
         <xsl:choose>
             <!-- Make sure @nts:generate-asserts-from is only added to tests where it is relevant, otherwise ignore. -->
             <!-- Edge case: when a server receives a POST or PUT, asserts are generated, but as it is supposed to send back the complete resource (with only resource.id added), perhaps using minimumId is more elegant. -->
             <xsl:when test="$scenario = 'server' or 
-                f:action/f:operation/f:type[f:system/@value = 'http://hl7.org/fhir/testscript-operation-codes']/
-                f:code/@value=('batch','transaction','create','update','updateCreate')">
-                <xsl:variable name="generate-from-resources" as="element()+">
+                $operation-code = ('batch','transaction','create','update','updateCreate')">
+                <xsl:variable name="generate-from-all" as="xs:boolean">
+                    <xsl:choose>
+                        <xsl:when test="not($operation-code = ('read','vread','search'))">
+                            <xsl:value-of select="true()"/>
+                        </xsl:when>
+                        <xsl:otherwise>
+                            <xsl:value-of select="false()"/>
+                        </xsl:otherwise>
+                    </xsl:choose>
+                </xsl:variable>
+                <xsl:variable name="generate-from-resources" as="element()*">
+                    <!-- resource is specified for 'read', 'vread' and 'search' operations. -->
                     <xsl:variable name="resource" select="f:action/f:operation/f:resource/@value"/>
+                    <xsl:variable name="params" select="f:action/f:operation/f:params/@value"/>
                     <xsl:if test="$resource">
                         <resource name="{$resource}"/>
                     </xsl:if>
-                    <xsl:if test="contains(f:action/f:operation/f:params/@value,'_include=')">
-                        <xsl:variable name="after-include" select="substring-after(f:action/f:operation/f:params/@value,'_include=')"/>
+                    <xsl:if test="contains($params,'_include=')">
+                        <xsl:variable name="after-include" select="substring-after($params,'_include=')"/>
                         <xsl:variable name="before-amp">
                             <xsl:choose>
                                 <xsl:when test="contains($after-include,'&amp;')">
@@ -83,6 +95,7 @@
                         </xsl:if>
                     </xsl:if>
                 </xsl:variable>
+                
                 <xsl:variable name="test-count" select="count(preceding-sibling::f:test)+1"/>
                 <xsl:variable name="fixture-id">
                     <xsl:choose>
@@ -137,74 +150,74 @@
                         </xsl:choose>
                     </xsl:for-each>
                 </xsl:variable>
+                <!-- Extract all resources, from Bundle if necessary -->
+                <xsl:variable name="asserts-fixtures-resources">
+                    <xsl:for-each select="$asserts-fixtures-normalized">
+                        <xsl:variable name="asserts-fixture" select="document(.)"/>
+                        <xsl:choose>
+                            <xsl:when test="$asserts-fixture/f:Bundle">
+                                <xsl:for-each select="$asserts-fixture/f:Bundle/f:entry/f:resource/f:*[$generate-from-all or local-name()=$generate-from-resources/@name]">
+                                    <xsl:copy-of select="."/>
+                                </xsl:for-each>
+                            </xsl:when>
+                            <xsl:when test="$asserts-fixture/f:*[$generate-from-all or local-name()=$generate-from-resources/@name]">
+                                <xsl:for-each select="$asserts-fixture/f:*[$generate-from-all or local-name()=$generate-from-resources/@name]">
+                                    <xsl:copy-of select="."/>
+                                </xsl:for-each>
+                            </xsl:when>
+                        </xsl:choose>
+                    </xsl:for-each>
+                </xsl:variable>
                 
                 <xsl:copy>
                     <xsl:apply-templates select="node()|@*" mode="copy">
                         <xsl:with-param name="fixture-id" tunnel="yes" select="$fixture-id"/>
                     </xsl:apply-templates>
-                    
-                    <xsl:variable name="idExpressionParts">
-                        <nts:idExpressions>
-                            <xsl:for-each select="$asserts-fixtures-normalized">
-                                <xsl:variable name="asserts-fixture" select="document(.)"/>
-                                <xsl:choose>
-                                    <xsl:when test="$asserts-fixture/f:Bundle">
-                                        <xsl:for-each select="$asserts-fixture/f:Bundle/f:entry/f:resource/f:*[local-name()=$generate-from-resources/@name]">
-                                            <nts:idExpression resource="{local-name()}">
-                                                <xsl:attribute name="name">
-                                                    <xsl:call-template name="create-resourceID">
-                                                        <xsl:with-param name="generate-from-resources" select="$generate-from-resources" as="element()+"/>
-                                                    </xsl:call-template>
-                                                </xsl:attribute>
-                                                <xsl:call-template name="generateExpressionParts">
-                                                    <xsl:with-param name="in" select="."/>
-                                                    <xsl:with-param name="generate-from-resources" select="$generate-from-resources" as="element()+"/>
-                                                </xsl:call-template>
-                                            </nts:idExpression>
-                                        </xsl:for-each>
-                                    </xsl:when>
-                                    <xsl:when test="$asserts-fixture/f:*[local-name()=$generate-from-resources/@name]">
-                                        <xsl:for-each select="$asserts-fixture/f:*[local-name()=$generate-from-resources/@name]">
-                                            <nts:idExpression resource="{local-name()}">
-                                                <xsl:attribute name="name">
-                                                    <xsl:call-template name="create-resourceID">
-                                                        <xsl:with-param name="generate-from-resources" select="$generate-from-resources" as="element()+"/>
-                                                    </xsl:call-template>
-                                                </xsl:attribute>
-                                                <xsl:call-template name="generateExpressionParts">
-                                                    <xsl:with-param name="in" select="."/>
-                                                    <xsl:with-param name="generate-from-resources" select="$generate-from-resources" as="element()+"/>
-                                                </xsl:call-template>
-                                            </nts:idExpression>
-                                        </xsl:for-each>
-                                    </xsl:when>
-                                </xsl:choose>
-                            </xsl:for-each>
-                        </nts:idExpressions>
-                    </xsl:variable>
-                    <xsl:variable name="filteredIdExpressionParts">
-                        <xsl:apply-templates select="$idExpressionParts" mode="filterExpressions"/>
-                    </xsl:variable>
-                    <xsl:variable name="combinedIdExpressionParts">
-                        <xsl:apply-templates select="$filteredIdExpressionParts" mode="combineExpressions"/>
-                    </xsl:variable>
                     <nts:generated-asserts>
+                        <xsl:variable name="idExpressionParts">
+                            <nts:idExpressions>
+                                <xsl:for-each select="$asserts-fixtures-resources/*">
+                                    <nts:idExpression resource="{local-name()}">
+                                        <xsl:attribute name="name">
+                                            <xsl:call-template name="create-resourceID"/>
+                                        </xsl:attribute>
+                                        <xsl:call-template name="generateExpressionParts">
+                                            <xsl:with-param name="in" select="."/>
+                                        </xsl:call-template>
+                                    </nts:idExpression>
+                                </xsl:for-each>
+                            </nts:idExpressions>
+                        </xsl:variable>
+                        <xsl:variable name="filteredIdExpressionParts">
+                            <xsl:apply-templates select="$idExpressionParts" mode="filterExpressions"/>
+                        </xsl:variable>
+                        <xsl:variable name="combinedIdExpressionParts">
+                            <xsl:apply-templates select="$filteredIdExpressionParts" mode="combineExpressions"/>
+                        </xsl:variable>
                         <xsl:choose>
                             <xsl:when test="count($combinedIdExpressionParts/nts:idExpression) = count(distinct-values($combinedIdExpressionParts/nts:idExpression))">
                                 <xsl:for-each select="$combinedIdExpressionParts/nts:idExpression">
-                                    <xsl:variable name="resourceID">
-                                        <xsl:call-template name="create-resourceID">
-                                            <xsl:with-param name="generate-from-resources" select="$generate-from-resources" as="element()+"/>
-                                        </xsl:call-template>
+                                    <xsl:variable name="resource" select="@resource"/>
+                                    <xsl:variable name="expression">
+                                        <xsl:text>Bundle.entry.select(resource as </xsl:text>
+                                        <xsl:value-of select="$resource"/>
+                                        <xsl:text>)</xsl:text>
+                                        <!-- Only use the expression if there are multiple of the same resources in the generated asserts. This is more loose approach to prevent the whole resource contents being tested in this expression -->
+                                        <xsl:if test="count($combinedIdExpressionParts/nts:idExpression[@resource = $resource]) gt 1">
+                                            <xsl:text>.where(</xsl:text>
+                                            <xsl:value-of select="text()"/>
+                                            <xsl:text>)</xsl:text>
+                                        </xsl:if>
+                                        <xsl:text>.id</xsl:text>
                                     </xsl:variable>
                                     <variable>
                                         <name value="{@name}"/>
-                                        <expression value="Bundle.entry.select(resource as {@resource}).where({./text()}).id"/>
+                                        <expression value="{$expression}"/>
                                         <sourceId value="{$fixture-id}"/>
                                     </variable>
                                     <action>
                                         <assert>
-                                            <description value="CONTENT ASSERTION ID MATCH - Check if variable '{@name}' can be matched to a resource in the response."/>
+                                            <description value="Check if variable '{@name}' can be matched to exactly one resource."/>
                                             <expression value="Bundle.entry.select(resource as {@resource}).where(id = '${{{@name}}}').count() = 1"/>
                                             <!-- Should be warning or not? <warningOnly value="true"/>-->
                                         </assert>
@@ -215,10 +228,12 @@
                                 <xsl:message terminate="yes">Could not determine unique expression to catch ID in a variable.</xsl:message>
                             </xsl:otherwise>
                         </xsl:choose>
-                        <xsl:for-each select="$asserts-fixtures-normalized">
-                            <xsl:variable name="asserts-fixture" select="document(.)"/>
-                            <xsl:apply-templates select="$asserts-fixture" mode="asserts">
-                                <xsl:with-param name="generate-from-resources" select="$generate-from-resources" tunnel="yes" as="element()+"/>
+                        <xsl:for-each select="$asserts-fixtures-resources/*">
+                            <xsl:variable name="resourceID">
+                                <xsl:call-template name="create-resourceID"/>
+                            </xsl:variable>
+                            <xsl:apply-templates select="." mode="asserts">
+                                <xsl:with-param name="resourceID" select="$resourceID" tunnel="yes"/>
                             </xsl:apply-templates>
                         </xsl:for-each>
                     </nts:generated-asserts>
@@ -255,10 +270,12 @@
     
     <xsl:template name="generateExpressionParts">
         <xsl:param name="in" select="."/>
-        <xsl:param name="generate-from-resources" as="element()+"/>
-        <xsl:for-each select="$in//@value[string(number(.)) != 'NaN' or parent::f:code][not(parent::f:versionId)]"><!-- only apply values that are numbers (integers) and codes. prevent ambiguity -->
+        <xsl:param name="resourcename" select="$in/local-name()"></xsl:param>
+        <!--<xsl:param name="generate-from-all" as="xs:boolean"/>
+        <xsl:param name="generate-from-resources" as="element()*"/>-->
+        <xsl:for-each select="$in//@value[string(number(.)) != 'NaN' or parent::f:code][not(parent::f:versionId) and not(ancestor::f:identifier)]"><!-- only apply values that are numbers (integers) and codes. prevent ambiguity -->
             <nts:expressionPart>
-                <xsl:for-each select="ancestor::*[ancestor::f:*[local-name()=$generate-from-resources/@name]]">
+                <xsl:for-each select="ancestor::*[ancestor::*[local-name()=$resourcename]]">
                     <xsl:value-of select="nf:DTchoice(.)"/>
                     <xsl:if test="not(position()=last())">
                         <xsl:text>.</xsl:text>
@@ -309,11 +326,10 @@
     </xsl:template>
     
     <xsl:template name="create-resourceID">
-        <xsl:param name="generate-from-resources" as="element()+"/>
-        <xsl:variable name="resourceName" select="ancestor-or-self::f:*[local-name()=$generate-from-resources/@name]/local-name()"/>
+        <xsl:variable name="resourceName" select="local-name()"/>
         <xsl:value-of select="$resourceName"/>
         <xsl:text>-</xsl:text>
-        <xsl:value-of select="count(ancestor-or-self::f:entry/preceding-sibling::f:entry/f:resource/f:*[local-name()=$resourceName])+1"/>
+        <xsl:value-of select="count(preceding::f:*[local-name()=$resourceName])+1"/>
     </xsl:template>
     
     <xsl:template match="node()|@*" mode="copy">
@@ -323,40 +339,27 @@
     </xsl:template>
     
     <!-- Exclusions -->
-    <xsl:template match="f:entry/f:fullUrl" mode="asserts expression"/>
-    <xsl:template match="f:entry/f:resource/f:*/f:text" mode="asserts expression"/>
-    <xsl:template match="f:entry/f:search" mode="asserts expression"/>
+    <xsl:template match="f:text[parent::f:*[not(ancestor::f:*)]]" mode="asserts expression"/>
     <xsl:template match="f:meta/f:lastUpdated | f:meta/f:versionId" mode="asserts expression"/>
-    <xsl:template match="f:resource/f:*/f:id" mode="asserts expression"/>
+    <xsl:template match="f:id[parent::f:*[not(ancestor::f:*)]]" mode="asserts expression"/>
     <xsl:template match="f:coding/f:userSelected" mode="asserts expression"/>
     <xsl:template match="f:coding/f:display | f:display[preceding-sibling::f:system and preceding-sibling::f:code]" mode="asserts expression"/>
     <xsl:template match="f:text[preceding-sibling::f:coding]" mode="asserts expression"/>
     
     
     <xsl:template match="f:*" mode="asserts">
-        <xsl:param name="generate-from-resources" tunnel="yes" as="element()+"/>
+        <xsl:param name="resourceID" tunnel="yes"/>
         <xsl:param name="expression-inherited" tunnel="yes"/>
-        <xsl:variable name="resourceID">
-            <xsl:call-template name="create-resourceID">
-                <xsl:with-param name="generate-from-resources" select="$generate-from-resources" as="element()+"/>
-            </xsl:call-template>
-        </xsl:variable>
         <xsl:variable name="expression-local">
             <xsl:choose>
-                <xsl:when test="self::f:Bundle">
-                    <xsl:value-of select="nf:DTchoice(.)"/>
-                </xsl:when>
-                <xsl:when test="self::f:*[local-name()=$generate-from-resources/@name]">
-                    <xsl:if test="not(ancestor::f:Bundle)">
-                        <xsl:text>Bundle.entry</xsl:text>
-                    </xsl:if>
+                <xsl:when test="not(ancestor::f:*)">
+                    <xsl:text>Bundle.entry</xsl:text>
                     <xsl:text>.select(resource as </xsl:text>
                     <xsl:value-of select="local-name()"/>
                     <xsl:text>).where(id = '${</xsl:text>
                     <xsl:value-of select="$resourceID"/>
                     <xsl:text>}')</xsl:text>
                 </xsl:when>
-                <xsl:when test="self::f:resource"/>
                 <xsl:otherwise>
                     <xsl:text>.</xsl:text>
                     <xsl:value-of select="nf:DTchoice(.)"/>
@@ -364,25 +367,12 @@
             </xsl:choose>
         </xsl:variable>
         <xsl:variable name="description-prefix">
-            <!--<xsl:variable name="expression-description">
-                <xsl:choose>
-                    <xsl:when test="string-length(substring-after($expression-inherited,concat($resourceID,'}'').'))) eq 0 and starts-with($expression-local,'.')">
-                        <xsl:value-of select="substring-after($expression-local,'.')"/>
-                    </xsl:when>
-                    <xsl:otherwise>
-                        <xsl:value-of select="substring-after($expression-inherited,concat($resourceID,'}'').'))"/>
-                        <xsl:value-of select="$expression-local"/>
-                    </xsl:otherwise>
-                </xsl:choose>
-            </xsl:variable>-->
             <xsl:value-of select="$resourceID"/>
             <xsl:text>: </xsl:text>
-            <!--<xsl:value-of select="$expression-description"/>-->
             <xsl:value-of select="nf:DTchoice(.)"/>
-            <!--<xsl:text> </xsl:text>-->
         </xsl:variable>
         <xsl:choose>
-            <xsl:when test="self::f:meta/parent::f:*[local-name()=$generate-from-resources/@name]">
+            <xsl:when test="self::f:meta/parent::f:*[not(ancestor::f:*)]">
                 <xsl:variable name="description">
                     <xsl:value-of select="$description-prefix"/>
                     <xsl:text>.profile equals '</xsl:text>
@@ -405,12 +395,10 @@
                     </assert>
                 </action>
             </xsl:when>
-            <xsl:when test="parent::f:*[local-name()=$generate-from-resources/@name]">
+            <xsl:when test="parent::f:*[not(ancestor::f:*)]">
                 <xsl:variable name="description">
                     <xsl:value-of select="$description-prefix"/>
-                    <xsl:apply-templates select="." mode="description">
-                        <xsl:with-param name="generate-from-resources" select="$generate-from-resources" as="element()+"/>
-                    </xsl:apply-templates>
+                    <xsl:apply-templates select="." mode="description"/>
                 </xsl:variable>
                 <xsl:variable name="expression">
                     <xsl:value-of select="$expression-inherited"/>
@@ -434,8 +422,7 @@
     </xsl:template>
     
     <xsl:template match="f:*" mode="description">
-        <xsl:param name="generate-from-resources" tunnel="yes"/>
-        <xsl:if test="parent::f:*[local-name()=$generate-from-resources/@name]">
+        <xsl:if test="parent::f:*[not(ancestor::f:*)]">
             <xsl:text> </xsl:text>
         </xsl:if>
         <xsl:choose>
@@ -451,35 +438,17 @@
                 <xsl:text>is extension.</xsl:text>
             </xsl:when>
             <xsl:when test="f:coding">
-                <xsl:text>contains CodableConcept.</xsl:text>
+                <xsl:text>contains CodeableConcept with correct system and code.</xsl:text>
             </xsl:when>
             <xsl:when test="@value">
                 <xsl:call-template name="get-description-based-on-type"/>
-                <!--<xsl:text>equals '</xsl:text>
-                <xsl:value-of select="@value"/>
-                <xsl:text>'.</xsl:text>-->
             </xsl:when>
             <xsl:when test="f:*">
                 <xsl:text>contains nested element.</xsl:text>
-                <!--<xsl:for-each select="f:*">
-                    <xsl:apply-templates select="." mode="description"></xsl:apply-templates>
-                </xsl:for-each>-->
-                <!--<xsl:text>)</xsl:text>-->
             </xsl:when>
             <xsl:otherwise>
                 <xsl:message terminate="yes"></xsl:message>
             </xsl:otherwise>
-            <!--<xsl:when test="*">
-                <xsl:text>.where(</xsl:text>
-                <xsl:for-each select="*">
-                    <xsl:text>$this</xsl:text>
-                    <xsl:apply-templates select="." mode="#current"/>
-                    <xsl:if test="following-sibling::*">
-                        <xsl:text> and </xsl:text>
-                    </xsl:if>
-                </xsl:for-each>
-                <xsl:text>)</xsl:text>
-            </xsl:when>-->
         </xsl:choose>
     </xsl:template>
     
@@ -687,7 +656,7 @@
             <xsl:when test="ends-with($localName,'Coding')">
                 <xsl:value-of select="substring-before($localName,'Coding')"/>
             </xsl:when>
-            <xsl:when test="ends-with($localName,'Code')">
+            <xsl:when test="ends-with($localName,'Code') and not($localName='postalCode')">
                 <xsl:value-of select="substring-before($localName,'Code')"/>
             </xsl:when>
             <xsl:when test="ends-with($localName,'ContactPoint')">
