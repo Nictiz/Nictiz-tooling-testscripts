@@ -455,8 +455,13 @@
             <xsl:when test="f:coding">
                 <xsl:text>contains CodeableConcept with correct system and code.</xsl:text>
             </xsl:when>
+            <xsl:when test="@value and f:*">
+                <xsl:call-template name="get-description-based-on-type"/>
+                <xsl:text> and contains nested element.</xsl:text>
+            </xsl:when>
             <xsl:when test="@value">
                 <xsl:call-template name="get-description-based-on-type"/>
+                <xsl:text>.</xsl:text>
             </xsl:when>
             <xsl:when test="f:*">
                 <xsl:text>contains nested element.</xsl:text>
@@ -479,24 +484,69 @@
             <xsl:when test="f:display and (f:reference or f:identifier)">
                 <xsl:text>.where($this.display and ($this.reference or $this.identifier))</xsl:text>
             </xsl:when>
-            <xsl:when test="@value">
-                <xsl:call-template name="get-expression-based-on-type"/>
-            </xsl:when>
-            <xsl:when test="*">
-                <xsl:text>.where(</xsl:text>
-                <xsl:for-each select="*">
-                    <xsl:variable name="and-this-check">
-                        <xsl:if test="preceding-sibling::*">
-                            <xsl:text> and </xsl:text>
-                        </xsl:if>
-                        <xsl:text>$this</xsl:text>
-                        <xsl:apply-templates select="." mode="#current"/>
-                    </xsl:variable>
-                    <xsl:if test="not($and-this-check=' and $this')">
-                        <xsl:value-of select="$and-this-check"/>
-                    </xsl:if>
-                </xsl:for-each>
+            <xsl:when test="@value and f:*">
+                <xsl:text>.where($this</xsl:text>
+                <xsl:call-template name="get-expression-based-on-type">
+                    <xsl:with-param name="include-where-this" select="false()"/>
+                </xsl:call-template>
+                <xsl:text> and $this</xsl:text>
+                <xsl:choose>
+                    <xsl:when test="count(f:*) = 1">
+                        <xsl:apply-templates select="f:*" mode="#current"/>
+                    </xsl:when>
+                    <xsl:otherwise>
+                        <xsl:for-each select="*">
+                            <xsl:variable name="and-this-check">
+                                <xsl:if test="preceding-sibling::*">
+                                    <xsl:text> and </xsl:text>
+                                </xsl:if>
+                                <xsl:text>$this</xsl:text>
+                                <xsl:apply-templates select="." mode="#current"/>
+                            </xsl:variable>
+                            <xsl:if test="not($and-this-check=' and $this')">
+                                <xsl:value-of select="$and-this-check"/>
+                            </xsl:if>
+                        </xsl:for-each>
+                    </xsl:otherwise>
+                </xsl:choose>
                 <xsl:text>)</xsl:text>
+            </xsl:when>
+            <xsl:when test="@value">
+                <xsl:choose>
+                    <xsl:when test="parent::f:*[not(ancestor::f:*)]">
+                        <xsl:call-template name="get-expression-based-on-type">
+                            <xsl:with-param name="include-where-this" select="true()"/>
+                        </xsl:call-template>
+                    </xsl:when>
+                    <xsl:otherwise>
+                        <xsl:call-template name="get-expression-based-on-type">
+                            <xsl:with-param name="include-where-this" select="false()"/>
+                        </xsl:call-template>
+                    </xsl:otherwise>
+                </xsl:choose>
+            </xsl:when>
+            <xsl:when test="f:*">
+                <xsl:choose>
+                    <xsl:when test="count(f:*) = 1">
+                        <xsl:apply-templates select="f:*" mode="#current"/>
+                    </xsl:when>
+                    <xsl:otherwise>
+                        <xsl:text>.where(</xsl:text>
+                        <xsl:for-each select="*">
+                            <xsl:variable name="and-this-check">
+                                <xsl:if test="preceding-sibling::*">
+                                    <xsl:text> and </xsl:text>
+                                </xsl:if>
+                                <xsl:text>$this</xsl:text>
+                                <xsl:apply-templates select="." mode="#current"/>
+                            </xsl:variable>
+                            <xsl:if test="not($and-this-check=' and $this')">
+                                <xsl:value-of select="$and-this-check"/>
+                            </xsl:if>
+                        </xsl:for-each>
+                        <xsl:text>)</xsl:text>
+                    </xsl:otherwise>
+                </xsl:choose>
             </xsl:when>
         </xsl:choose>
     </xsl:template>
@@ -528,6 +578,7 @@
                 </xsl:choose>
             </xsl:when>
             <!-- DateTime zonder T-datum? -->
+            <xsl:when test="matches(@value,'^([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1])(T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)([.][0-9]+)?(Z|([+]|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)))?)?)?$')">DateTime</xsl:when>
             <!-- Number, integer -->
             <xsl:when test="string(number(@value)) != 'NaN'">Number</xsl:when>
             <!-- Display, text, note-->
@@ -542,54 +593,62 @@
         </xsl:variable>
         <xsl:choose>
             <xsl:when test="$type='Profile'">
-                <xsl:text> equals '</xsl:text>
+                <xsl:text>equals '</xsl:text>
                 <xsl:value-of select="@value"/>
-                <xsl:text>'.</xsl:text>
+                <xsl:text>'</xsl:text>
             </xsl:when>
             <xsl:when test="$type='Code'">
-                <xsl:text> with value '</xsl:text>
+                <xsl:text>with value '</xsl:text>
                 <xsl:value-of select="@value"/>
-                <xsl:text>' exists.</xsl:text>
+                <xsl:text>' exists</xsl:text>
             </xsl:when>
             <xsl:when test="$type='TVariable'">
-                <xsl:text> equals '</xsl:text>
+                <xsl:text>equals '</xsl:text>
                 <xsl:value-of select="@value"/>
-                <xsl:text>'.</xsl:text>
+                <xsl:text>'</xsl:text>
             </xsl:when>
             <xsl:when test="$type='TDateTime'">
-                <xsl:text> contains date, time and timezone.</xsl:text>
+                <xsl:text>equals date, time and timezone</xsl:text>
             </xsl:when>
             <xsl:when test="$type='TDate'">
-                <xsl:text> contains date.</xsl:text>
+                <xsl:text>equals date</xsl:text>
             </xsl:when>
             <xsl:when test="$type='TYear'">
-                <xsl:text> contains year.</xsl:text>
+                <xsl:text>equals year</xsl:text>
+            </xsl:when>
+            <xsl:when test="$type='DateTime'">
+                <xsl:text>equals DateTime '</xsl:text>
+                <xsl:value-of select="@value"/>
+                <xsl:text>'</xsl:text>
             </xsl:when>
             <xsl:when test="$type='Number'">
-                <xsl:text> equals '</xsl:text>
+                <xsl:text>equals '</xsl:text>
                 <xsl:value-of select="@value"/>
-                <xsl:text>'.</xsl:text>
+                <xsl:text>'</xsl:text>
             </xsl:when>
             <xsl:when test="$type='Display'">
-                <xsl:text> exists.</xsl:text>
+                <xsl:text>exists</xsl:text>
             </xsl:when>
             <xsl:when test="$type='Boolean'">
-                <xsl:text> equals </xsl:text>
+                <xsl:text>equals </xsl:text>
                 <xsl:value-of select="@value"/>
-                <xsl:text>.</xsl:text>
             </xsl:when>
             <xsl:otherwise>
-                <xsl:text> equals '</xsl:text>
+                <xsl:text>equals '</xsl:text>
                 <xsl:value-of select="@value"/>
-                <xsl:text>'.</xsl:text>
+                <xsl:text>'</xsl:text>
             </xsl:otherwise>
         </xsl:choose>
     </xsl:template>
     
     <xsl:template name="get-expression-based-on-type">
+        <xsl:param name="include-where-this" select="true()"/>
         <xsl:variable name="type">
             <xsl:call-template name="get-type"/>
         </xsl:variable>
+        <xsl:if test="$include-where-this">
+            <xsl:text>.where($this</xsl:text>
+        </xsl:if>
         <xsl:choose>
             <xsl:when test="$type='Profile'">
                 <xsl:text> = '</xsl:text>
@@ -597,17 +656,18 @@
                 <xsl:text>'</xsl:text>
             </xsl:when>
             <xsl:when test="$type='Code'">
-                <xsl:text>.where($this = '</xsl:text>
+                <xsl:text> = '</xsl:text>
                 <xsl:value-of select="@value"/>
-                <xsl:text>').exists()</xsl:text>
+                <xsl:text>'</xsl:text>
             </xsl:when>
             <xsl:when test="$type='TVariable'">
                 <xsl:text> = </xsl:text>
                 <xsl:value-of select="@value"/>
+                <xsl:text>'</xsl:text>
             </xsl:when>
             <xsl:when test="$type='TDateTime'">
                 <!-- Regex modified from FHIR dateTime datatype - made time non-optional -->
-                <!-- Original: ([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1])(T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?(Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)))?)?)? -->
+                <!-- Original: ([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1])(T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?(Z|(+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)))?)?)? -->
                 <xsl:text>.matches('([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1])(T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)([.][0-9]+)?(Z|([+]|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)))))')</xsl:text>
             </xsl:when>
             <xsl:when test="$type='TDate'">
@@ -618,28 +678,36 @@
             <xsl:when test="$type='TYear'">
                 <xsl:text>.matches('([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)')</xsl:text>
             </xsl:when>
+            <xsl:when test="$type='DateTime'">
+                <xsl:text> = @</xsl:text>
+                <xsl:value-of select="@value"/>
+            </xsl:when>
             <xsl:when test="$type='Number'">
                 <xsl:text> = </xsl:text>
                 <xsl:value-of select="@value"/>
+                <xsl:text></xsl:text>
             </xsl:when>
             <xsl:when test="$type='Display'">
-                <xsl:text>.exists()</xsl:text>
+                <!--<xsl:text>.exists()</xsl:text>-->
                 <!--<xsl:text>.where($this.matches('(?i)</xsl:text>
                 <xsl:value-of select="replace(@value,
                     '(\.|\[|\]|\\|\||\-|\^|\$|\?|\*|\+|\{|\}|\(|\))','[$1]')"/>
                 <xsl:text>')).exists()</xsl:text>-->
             </xsl:when>
             <xsl:when test="$type='Boolean'">
-                <xsl:text>.where($this = </xsl:text>
+                <xsl:text> = </xsl:text>
                 <xsl:value-of select="@value"/>
-                <xsl:text>).exists()</xsl:text>
+                <xsl:text></xsl:text>
             </xsl:when>
             <xsl:otherwise>
-                <xsl:text>.where($this = '</xsl:text>
+                <xsl:text> = '</xsl:text>
                 <xsl:value-of select="@value"/>
-                <xsl:text>').exists()</xsl:text>
+                <xsl:text>'</xsl:text>
             </xsl:otherwise>
         </xsl:choose>
+        <xsl:if test="$include-where-this">
+            <xsl:text>)</xsl:text>
+        </xsl:if>
     </xsl:template>
     
     <!-- extensions! -->
@@ -680,7 +748,7 @@
             <xsl:when test="ends-with($localName,'Count')">
                 <xsl:value-of select="substring-before($localName,'Count')"/>
             </xsl:when>
-            <xsl:when test="ends-with($localName,'Date')">
+            <xsl:when test="ends-with($localName,'Date') and not($localName='assertedDate')">
                 <xsl:value-of select="substring-before($localName,'Date')"/>
             </xsl:when>
             <xsl:when test="ends-with($localName,'DateTime')">
