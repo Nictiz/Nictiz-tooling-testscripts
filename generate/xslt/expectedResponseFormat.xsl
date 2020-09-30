@@ -26,21 +26,23 @@
                 </xsl:otherwise>
             </xsl:choose>
         </xsl:variable>
-        <xsl:analyze-string select="." regex="[$][{{]expectedResponseFormat[}}]">
-            <xsl:matching-substring>
-                <xsl:choose>
-                    <xsl:when test="$upper=true()">
-                        <xsl:value-of select="upper-case($expectedResponseFormat)"/>
-                    </xsl:when>
-                    <xsl:otherwise>
-                        <xsl:value-of select="lower-case($expectedResponseFormat)"/>
-                    </xsl:otherwise>
-                </xsl:choose>
-            </xsl:matching-substring>
-            <xsl:non-matching-substring>
-                <xsl:value-of select="."/>
-            </xsl:non-matching-substring>
-        </xsl:analyze-string>
+        <xsl:attribute name="value">
+            <xsl:analyze-string select="." regex="[$][{{]expectedResponseFormat[}}]">
+                <xsl:matching-substring>
+                    <xsl:choose>
+                        <xsl:when test="$upper=true()">
+                            <xsl:value-of select="upper-case($expectedResponseFormat)"/>
+                        </xsl:when>
+                        <xsl:otherwise>
+                            <xsl:value-of select="lower-case($expectedResponseFormat)"/>
+                        </xsl:otherwise>
+                    </xsl:choose>
+                </xsl:matching-substring>
+                <xsl:non-matching-substring>
+                    <xsl:value-of select="."/>
+                </xsl:non-matching-substring>
+            </xsl:analyze-string>
+        </xsl:attribute>
     </xsl:template>
     
 </xsl:stylesheet>
