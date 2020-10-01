@@ -151,9 +151,13 @@ nts:scenario="server|client"
 
 ### Generating assertions based on fixture
 
-For each `test` element within `TestScript`, an `nts:generate-asserts-from` attribute can be added to generate assertions based on the contents of the fixture referenced in the attribute. The contents of the attribute can both be a single file or a comma separated list. The fixture can be both a Bundle or a single resource. The fixture can be placed in either the "_reference" (if the fixtures should also be copied to the output folder) or alternatively the "_references-not-copied" folder (if for example the assertions are generated from bundles that are not used as fixtures). Which resource types to generate assertions from is based on the test.action.operation.resource value _and_ _include search parameter contents (if possible).
+In each `test` element within `TestScript`, one or more `<nts:generate-asserts-from>` element can be added to generate assertions based on the contents of the fixture referenced in the  `@href` attribute. The fixture can be both a Bundle or a single resource. The fixture can be placed in either the "_reference" (if the fixtures should also be copied to the output folder) or alternatively the "_references-not-copied" folder (if for example the assertions are generated from bundles that are not used as fixtures). Which resource types to generate assertions from is based on the test.action.operation.resource value _and_ _include search parameter contents (if possible).
 ```xml
-<test id="…" nts:generate-asserts-from="[filename1].xml,[filename2].xml">
+<test id="…">
+    <nts:generate-asserts-from href="[filename1].xml"/>
+    <nts:generate-asserts-from href="[filename2].xml"/>
+    …
+</test>
 ```
 
 The `test` element where this attribute is added to will be duplicated (because responses cannot be transferred between tests); the duplicate will be filled with (warning only) assertions to check the contents of the response.

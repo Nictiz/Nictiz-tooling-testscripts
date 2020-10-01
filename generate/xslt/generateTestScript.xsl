@@ -215,6 +215,11 @@
         </xsl:attribute>
     </xsl:template>
     
+    <!-- Do not filter nts:generate-asserts-from -->
+    <xsl:template match="f:TestScript/f:test/nts:generate-asserts-from" mode="filter">
+        <xsl:copy-of select="."/>
+    </xsl:template>
+    
     <!-- Expand a nts:profile element to a FHIR profile element -->
     <xsl:template match="nts:profile" mode="expand">
         <profile id="{@id}">

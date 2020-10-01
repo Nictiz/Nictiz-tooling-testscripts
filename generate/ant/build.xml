@@ -138,7 +138,7 @@
             <!-- Load the NTS file as an "xmlproperty" file. All variables extracted from xmlproperty should be
                  declared local. -->
             <local name="TestScript(nts:scenario)"/>
-            <local name="TestScript.test(nts:generate-asserts-from)"/>
+            <local name="TestScript.test.nts:generate-asserts-from"/>
             <!--<local name="TestScript.test(id)"/>-->
             <xmlproperty file="@{nts.file}"/>
             
@@ -164,7 +164,7 @@
             </saxon-transform>
             
             <collect-references testscript.path="@{output.dir}/${nts.file.newname}" references.file="@{references.file}" reference.dir.rel="@{reference.dir.rel}"/>
-            <generate-asserts testscript.path="@{output.dir}/${nts.file.newname}" if:set="TestScript.test(nts:generate-asserts-from)"/>
+            <generate-asserts testscript.path="@{output.dir}/${nts.file.newname}" if:set="TestScript.test.nts:generate-asserts-from"/>
             <expected-response-format testscript.path="@{output.dir}/${nts.file.newname}" output.dir="@{output.dir}"/>
         </sequential>
     </macrodef>

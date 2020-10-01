@@ -16,7 +16,7 @@
         
         - Better readable discriptions.
         - Refactor 'filter' mode in generateTestScript to be matched to separate 'filterTestScript.xsl'.
-        
+
         - '_fixtures' folder not necessary, can also be '_resources' folder. Look at generateTestScript to see how filenames are resolved.
         - Look at expression parts: is it possible to have a resource that has no unique content per se, but still is unique in the combination of everything.
         
@@ -46,10 +46,10 @@
         </xsl:copy>
     </xsl:template>
     
-    <xsl:template match="f:TestScript/f:test[@nts:generate-asserts-from]" mode="copy">
+    <xsl:template match="f:TestScript/f:test[nts:generate-asserts-from]" mode="copy">
         <xsl:variable name="operation-code" select="f:action/f:operation/f:type[f:system/@value = 'http://hl7.org/fhir/testscript-operation-codes']/f:code/@value"/>
         <xsl:choose>
-            <!-- Make sure @nts:generate-asserts-from is only added to tests where it is relevant, otherwise ignore. -->
+            <!-- Make sure nts:generate-asserts-from is only added to tests where it is relevant, otherwise ignore. -->
             <!-- Edge case: when a server receives a POST or PUT, asserts are generated, but as it is supposed to send back the complete resource (with only resource.id added), perhaps using minimumId is more elegant. -->
             <xsl:when test="$scenario = 'server' or 
                 $operation-code = ('batch','transaction','create','update','updateCreate')">
@@ -85,8 +85,17 @@
                         <xsl:if test="not(substring-after($before-amp,concat($resource,':'))='')">
                             <xsl:variable name="search-param" select="substring-after($before-amp,concat($resource,':'))"/>
                             <xsl:choose>
+                                <xsl:when test="$search-param='general-practitioner'">
+                                    <resource name="Practitioner"/>
+                                    <resource name="Organization"/>
+                                </xsl:when>
                                 <xsl:when test="$search-param='medication'">
                                     <resource name="Medication"/>
+                                </xsl:when>
+                                <xsl:when test="$search-param='related-target'">
+                                    <resource name="Observation"/>
+                                    <resource name="Sequence"/>
+                                    <resource name="QuestionnaireResponse"/>
                                 </xsl:when>
                                 <xsl:otherwise>
                                     <xsl:message terminate="yes">Unknown _include search param</xsl:message>
@@ -132,10 +141,9 @@
                     </xsl:choose>
                 </xsl:variable>
                 
-                <xsl:variable name="asserts-fixtures" select="tokenize(@nts:generate-asserts-from,'[,\s]+')"/>
                 <xsl:variable name="asserts-fixtures-normalized">
-                    <xsl:for-each select="$asserts-fixtures">
-                        <xsl:variable name="raw" select="."/>
+                    <xsl:for-each select="nts:generate-asserts-from">
+                        <xsl:variable name="raw" select="@href"/>
                         <xsl:variable name="check-extension">
                             <xsl:choose>
                                 <xsl:when test="ends-with($raw,'.xml')">
@@ -204,6 +212,9 @@
                         <xsl:variable name="combinedIdExpressionParts">
                             <xsl:apply-templates select="$filteredIdExpressionParts" mode="combineExpressions"/>
                         </xsl:variable>
+                        <!--<xsl:copy-of select="$asserts-fixtures-resources"></xsl:copy-of>-->
+                        <!--<xsl:copy-of select="$combinedIdExpressionParts/nts:idExpression"></xsl:copy-of>-->
+                        <!--<xsl:copy-of select="$combinedIdExpressionParts/nts:idExpression[./text() = preceding-sibling::nts:idExpression/text()]"></xsl:copy-of>-->
                         <xsl:choose>
                             <xsl:when test="count($combinedIdExpressionParts/nts:idExpression) = count(distinct-values($combinedIdExpressionParts/nts:idExpression))">
                                 <xsl:for-each select="$combinedIdExpressionParts/nts:idExpression">
@@ -236,7 +247,7 @@
                                 </xsl:for-each>
                             </xsl:when>
                             <xsl:otherwise>
-                                <xsl:message terminate="yes">Could not determine unique expression to catch ID in a variable.</xsl:message>
+                                <xsl:message terminate="yes"><xsl:value-of select="document-uri(/)"/>: Could not determine unique expression to catch ID in a variable.</xsl:message>
                             </xsl:otherwise>
                         </xsl:choose>
                         <xsl:for-each select="$asserts-fixtures-resources/*">
@@ -283,9 +294,7 @@
     <xsl:template name="generateExpressionParts">
         <xsl:param name="in" select="."/>
         <xsl:param name="resourcename" select="$in/local-name()"></xsl:param>
-        <!--<xsl:param name="generate-from-all" as="xs:boolean"/>
-        <xsl:param name="generate-from-resources" as="element()*"/>-->
-        <xsl:for-each select="$in//@value[string(number(.)) != 'NaN' or parent::f:code][not(parent::f:versionId) and not(ancestor::f:identifier)]"><!-- only apply values that are numbers (integers) and codes. prevent ambiguity -->
+        <xsl:for-each select="$in//@value[string(number(.)) != 'NaN' or parent::f:code][not(parent::f:versionId)]"><!-- only apply values that are numbers (integers) and codes. prevent ambiguity -->
             <nts:expressionPart>
                 <xsl:for-each select="ancestor::*[ancestor::*[local-name()=$resourcename]]">
                     <xsl:value-of select="nf:DTchoice(.)"/>
@@ -306,6 +315,19 @@
                 </xsl:choose>
             </nts:expressionPart>
         </xsl:for-each>
+        <xsl:for-each select="$in/f:identifier/f:value/@value">
+            <nts:expressionPartIdentifier>
+                <xsl:for-each select="ancestor::*[ancestor::*[local-name()=$resourcename]]">
+                    <xsl:value-of select="nf:DTchoice(.)"/>
+                    <xsl:if test="not(position()=last())">
+                        <xsl:text>.</xsl:text>
+                    </xsl:if>
+                </xsl:for-each>
+                <xsl:text> = '</xsl:text>
+                <xsl:value-of select="."/>
+                <xsl:text>'</xsl:text>
+            </nts:expressionPartIdentifier>
+        </xsl:for-each>
     </xsl:template>
     
     <xsl:template match="nts:idExpression" mode="filterExpressions">
@@ -324,16 +346,30 @@
                     </xsl:otherwise>
                 </xsl:choose>
             </xsl:for-each>
+            <xsl:for-each select="nts:expressionPartIdentifier">
+                <xsl:copy-of select="."/>
+            </xsl:for-each>
         </xsl:copy>
     </xsl:template>
     
     <xsl:template match="nts:idExpression" mode="combineExpressions">
         <xsl:copy>
             <xsl:copy-of select="@*"/>
-            <xsl:for-each select="nts:expressionPart">
-                <xsl:value-of select="."/>
-                <xsl:if test="not(position()=last())"> and </xsl:if>
-            </xsl:for-each>
+            <xsl:choose>
+                <xsl:when test="nts:expressionPart">
+                    <xsl:for-each select="nts:expressionPart">
+                        <xsl:value-of select="."/>
+                        <xsl:if test="not(position()=last())"> and </xsl:if>
+                    </xsl:for-each>
+                </xsl:when>
+                <xsl:when test="nts:expressionPartIdentifier">
+                    <xsl:for-each select="nts:expressionPartIdentifier">
+                        <xsl:value-of select="."/>
+                        <xsl:if test="not(position()=last())"> and </xsl:if>
+                    </xsl:for-each>
+                </xsl:when>
+            </xsl:choose>
+            
         </xsl:copy>
     </xsl:template>
     
