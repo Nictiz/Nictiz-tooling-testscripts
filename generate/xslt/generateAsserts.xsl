@@ -157,10 +157,10 @@
                         
                         <xsl:choose>
                             <xsl:when test="doc-available(string-join(($referenceFolder,$check-extension),'/'))">
-                                <xsl:value-of select="string-join(($referenceFolder, $check-extension), '/')"/>
+                                <fixture href="{string-join(($referenceFolder, $check-extension), '/')}"/>
                             </xsl:when>
                             <xsl:when test="doc-available(string-join(($referenceGenerateFolder,$check-extension),'/'))">
-                                <xsl:value-of select="string-join(($referenceGenerateFolder, $check-extension), '/')"/>
+                                <fixture href="{string-join(($referenceGenerateFolder, $check-extension), '/')}"/>
                             </xsl:when>
                             <xsl:otherwise>
                                 <xsl:message terminate="yes">Fixture <xsl:value-of select="$check-extension"/> not found.</xsl:message>
@@ -170,8 +170,8 @@
                 </xsl:variable>
                 <!-- Extract all resources, from Bundle if necessary -->
                 <xsl:variable name="asserts-fixtures-resources">
-                    <xsl:for-each select="$asserts-fixtures-normalized">
-                        <xsl:variable name="asserts-fixture" select="document(.)"/>
+                    <xsl:for-each select="$asserts-fixtures-normalized/*">
+                        <xsl:variable name="asserts-fixture" select="document(@href)"/>
                         <xsl:choose>
                             <xsl:when test="$asserts-fixture/f:Bundle">
                                 <xsl:for-each select="$asserts-fixture/f:Bundle/f:entry/f:resource/f:*[$generate-from-all or local-name()=$generate-from-resources/@name]">
