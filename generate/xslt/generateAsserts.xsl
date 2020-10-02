@@ -48,6 +48,16 @@
     
     <xsl:template match="f:TestScript/f:test[nts:generate-asserts-from]" mode="copy">
         <xsl:variable name="operation-code" select="f:action/f:operation/f:type[f:system/@value = 'http://hl7.org/fhir/testscript-operation-codes']/f:code/@value"/>
+        <xsl:variable name="TestScript-has-T">
+            <xsl:choose>
+                <xsl:when test="parent::f:Testscript/f:variable/f:name/@value='T'">
+                    <xsl:value-of select="true()"/>
+                </xsl:when>
+                <xsl:otherwise>
+                    <xsl:value-of select="false()"/>
+                </xsl:otherwise>
+            </xsl:choose>
+        </xsl:variable>
         <xsl:choose>
             <!-- Make sure nts:generate-asserts-from is only added to tests where it is relevant, otherwise ignore. -->
             <!-- Edge case: when a server receives a POST or PUT, asserts are generated, but as it is supposed to send back the complete resource (with only resource.id added), perhaps using minimumId is more elegant. -->
@@ -262,7 +272,7 @@
                                         <xsl:text>' selected with expression can be matched to exactly one resource.</xsl:text>
                                     </xsl:variable>
                                     
-                                    <xsl:if test="contains(text(),'${DATE, T') and not(ancestor::f:Testscript/f:variable/f:name/@value='T') and not(preceding-sibling::nts:idExpression[contains(text(),'${DATE, T')])">
+                                    <xsl:if test="contains(text(),'${DATE, T') and $TestScript-has-T = false() and not(preceding-sibling::nts:idExpression[contains(text(),'${DATE, T')])">
                                     <variable>
                                             <name value="T"/>
                                             <defaultValue value="${{CURRENTDATE}}"/>
@@ -287,6 +297,16 @@
                                 <xsl:with-param name="direction" select="$direction" tunnel="yes"/>
                                             <xsl:with-param name="resource-expression" select="$resource-expression" tunnel="yes"/>
                                             <xsl:with-param name="level" select="'element'" tunnel="yes"/>
+                                            <xsl:with-param name="has-T" as="xs:boolean" tunnel="yes">
+                                                <xsl:choose>
+                                                    <xsl:when test="$TestScript-has-T = true() or $combinedIdExpressionParts/nts:idExpression[contains(text(),'${DATE, T')]">
+                                                        <xsl:value-of select="true()"/>
+                                                    </xsl:when>
+                                                    <xsl:otherwise>
+                                                        <xsl:value-of select="false()"/>
+                                                    </xsl:otherwise>
+                                                </xsl:choose>
+                                            </xsl:with-param>
                             </xsl:apply-templates>
                         </xsl:for-each>
                                 </xsl:when>
@@ -723,6 +743,7 @@
     </xsl:template>
     
     <xsl:template name="get-type">
+        <xsl:param name="has-T" tunnel="yes" select="false()"/>
         <xsl:choose>
             <!-- Profile -->
             <xsl:when test="self::f:profile/parent::f:meta">Profile</xsl:when>
@@ -734,7 +755,7 @@
             <xsl:when test="starts-with(@value,'${DATE, T')">
                 <xsl:choose>
                     <!-- if T-variable is present within testscript, then use it! -->
-                    <xsl:when test="ancestor::f:TestScript/f:variable/f:name/@value='T'">TVariable</xsl:when>
+                    <xsl:when test="ancestor::f:TestScript/f:variable/f:name/@value='T' or $has-T=true()">TVariable</xsl:when>
                     <!-- else only check for significance -->
                     <xsl:otherwise>
                         <xsl:choose>
@@ -814,6 +835,7 @@
     
     <xsl:template name="get-expression-based-on-type">
         <xsl:param name="include-where-this" select="true()"/>
+        <xsl:param name="has-T" tunnel="yes" select="false()"/>
         <xsl:variable name="type">
             <xsl:call-template name="get-type"/>
         </xsl:variable>
@@ -839,9 +861,8 @@
                 <xsl:text>'</xsl:text>
             </xsl:when>
             <xsl:when test="$type='TVariable'">
-                <xsl:text> = </xsl:text>
+                <xsl:text> = @</xsl:text>
                 <xsl:value-of select="@value"/>
-                <xsl:text>'</xsl:text>
             </xsl:when>
             <xsl:when test="$type='TDateTime'">
                 <!-- Regex modified from FHIR dateTime datatype - made time non-optional -->
