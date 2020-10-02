@@ -206,58 +206,90 @@
                                 </xsl:for-each>
                             </nts:idExpressions>
                         </xsl:variable>
+                        <xsl:variable name="uniqueIdExpressionParts">
+                            <xsl:apply-templates select="$idExpressionParts" mode="uniqueExpressions"/>
+                        </xsl:variable>
                         <xsl:variable name="filteredIdExpressionParts">
-                            <xsl:apply-templates select="$idExpressionParts" mode="filterExpressions"/>
+                            <xsl:apply-templates select="$uniqueIdExpressionParts" mode="filterExpressions"/>
                         </xsl:variable>
                         <xsl:variable name="combinedIdExpressionParts">
                             <xsl:apply-templates select="$filteredIdExpressionParts" mode="combineExpressions"/>
                         </xsl:variable>
-                        <!--<xsl:copy-of select="$asserts-fixtures-resources"></xsl:copy-of>-->
-                        <!--<xsl:copy-of select="$combinedIdExpressionParts/nts:idExpression"></xsl:copy-of>-->
-                        <!--<xsl:copy-of select="$combinedIdExpressionParts/nts:idExpression[./text() = preceding-sibling::nts:idExpression/text()]"></xsl:copy-of>-->
-                        <xsl:choose>
-                            <xsl:when test="count($combinedIdExpressionParts/nts:idExpression) = count(distinct-values($combinedIdExpressionParts/nts:idExpression))">
+                        <!--<xsl:copy-of select="$idExpressionParts"/>-->
+                        <!--<xsl:copy-of select="$uniqueIdExpressionParts"/>-->
+                        <!--<xsl:copy-of select="$filteredIdExpressionParts"/>-->
+                        <!--<xsl:copy-of select="$combinedIdExpressionParts"/>-->
+                        
                                 <xsl:for-each select="$combinedIdExpressionParts/nts:idExpression">
+                            <xsl:variable name="is-unique">
+                                <xsl:variable name="contents" select="text()"/>
+                                <xsl:choose>
+                                    <xsl:when test="count($combinedIdExpressionParts/nts:idExpression[text()=$contents]) = 1">
+                                        <xsl:value-of select="true()"/>
+                                    </xsl:when>
+                                    <xsl:otherwise>
+                                        <xsl:value-of select="false()"/>
+                                    </xsl:otherwise>
+                                </xsl:choose>
+                            </xsl:variable>
+                            <xsl:variable name="position" select="count(preceding-sibling::nts:idExpression)+1"/>
                                     <xsl:variable name="resource" select="@resource"/>
+                            
+                            <xsl:choose>
+                                <xsl:when test="$is-unique=true()">
                                     <xsl:variable name="expression">
-                                        <xsl:text>Bundle.entry.select(resource as </xsl:text>
-                                        <xsl:value-of select="$resource"/>
-                                        <xsl:text>)</xsl:text>
-                                        <!-- Only use the expression if there are multiple of the same resources in the generated asserts. This is more loose approach to prevent the whole resource contents being tested in this expression -->
                                         <xsl:if test="count($combinedIdExpressionParts/nts:idExpression[@resource = $resource]) gt 1">
                                             <xsl:text>.where(</xsl:text>
                                             <xsl:value-of select="text()"/>
                                             <xsl:text>)</xsl:text>
                                         </xsl:if>
-                                        <xsl:text>.id</xsl:text>
                                     </xsl:variable>
+                                    
+                                    <xsl:variable name="resource-expression">
+                                        <xsl:text>Bundle.entry.select(resource as </xsl:text>
+                                        <xsl:value-of select="$resource"/>
+                                        <xsl:text>)</xsl:text>
+                                        <xsl:value-of select="$expression"/>
+                                    </xsl:variable>
+                                    
+                                    <xsl:variable name="description">
+                                        <xsl:text>Check if resource '</xsl:text>
+                                        <xsl:value-of select="@name"/>
+                                        <xsl:text>' selected with expression can be matched to exactly one resource.</xsl:text>
+                                    </xsl:variable>
+                                    
+                                    <xsl:if test="contains(text(),'${DATE, T') and not(ancestor::f:Testscript/f:variable/f:name/@value='T') and not(preceding-sibling::nts:idExpression[contains(text(),'${DATE, T')])">
                                     <variable>
-                                        <name value="{@name}"/>
-                                        <expression value="{$expression}"/>
-                                        <sourceId value="{$fixture-id}"/>
+                                            <name value="T"/>
+                                            <defaultValue value="${{CURRENTDATE}}"/>
+                                            <description value="Date that data and queries are expected to be relative to."/>
                                     </variable>
+                                    </xsl:if>
                                     <action>
                                         <assert>
-                                            <description value="Check if variable '{@name}' can be matched to exactly one resource."/>
+                                            <description value="{$description}"/>
                                             <direction value="{$direction}"/>
-                                            <expression value="Bundle.entry.select(resource as {@resource}).where(id = '${{{@name}}}').count() = 1"/>
-                                            <!-- Should be warning or not? <warningOnly value="true"/>-->
+                                            <expression value="{$resource-expression}.count() = 1"/>
+                                            <warningOnly value="true"/>
                                         </assert>
                                     </action>
-                                </xsl:for-each>
-                            </xsl:when>
-                            <xsl:otherwise>
-                                <xsl:message terminate="yes"><xsl:value-of select="document-uri(/)"/>: Could not determine unique expression to catch ID in a variable.</xsl:message>
-                            </xsl:otherwise>
-                        </xsl:choose>
-                        <xsl:for-each select="$asserts-fixtures-resources/*">
+                                    
+                                    <xsl:for-each select="$asserts-fixtures-resources/*[$position]">
                             <xsl:variable name="resourceID">
                                 <xsl:call-template name="create-resourceID"/>
                             </xsl:variable>
                             <xsl:apply-templates select="." mode="asserts">
                                 <xsl:with-param name="resourceID" select="$resourceID" tunnel="yes"/>
                                 <xsl:with-param name="direction" select="$direction" tunnel="yes"/>
+                                            <xsl:with-param name="resource-expression" select="$resource-expression" tunnel="yes"/>
+                                            <xsl:with-param name="level" select="'element'" tunnel="yes"/>
                             </xsl:apply-templates>
+                        </xsl:for-each>
+                                </xsl:when>
+                                <xsl:otherwise>
+                                    <xsl:message terminate="yes"/>
+                                </xsl:otherwise>
+                            </xsl:choose>
                         </xsl:for-each>
                     </nts:generated-asserts>
                 </xsl:copy>
@@ -269,6 +301,8 @@
             </xsl:otherwise>
         </xsl:choose>
     </xsl:template>
+    
+    <xsl:template match="nts:generate-asserts-from"/>
     
     <xsl:template match="f:operation" mode="copy">
         <xsl:param name="fixture-id" tunnel="yes"/>
@@ -294,14 +328,17 @@
     <xsl:template name="generateExpressionParts">
         <xsl:param name="in" select="."/>
         <xsl:param name="resourcename" select="$in/local-name()"></xsl:param>
-        <xsl:for-each select="$in//@value[string(number(.)) != 'NaN' or parent::f:code][not(parent::f:versionId)]"><!-- only apply values that are numbers (integers) and codes. prevent ambiguity -->
-            <nts:expressionPart>
+        <xsl:for-each select="$in//@value[string(number(.)) != 'NaN' or parent::f:code][not(parent::f:versionId)][not(parent::f:value/parent::f:identifier)]"><!-- only apply values that are numbers (integers) and codes. prevent ambiguity -->
+            <xsl:variable name="element-id">
                 <xsl:for-each select="ancestor::*[ancestor::*[local-name()=$resourcename]]">
                     <xsl:value-of select="nf:DTchoice(.)"/>
                     <xsl:if test="not(position()=last())">
                         <xsl:text>.</xsl:text>
                     </xsl:if>
                 </xsl:for-each>
+            </xsl:variable>
+            <nts:expressionPart element-id="{$element-id}">
+                <xsl:value-of select="$element-id"/>
                 <xsl:choose>
                     <xsl:when test="parent::f:code">
                         <xsl:text>.where($this = '</xsl:text>
@@ -315,61 +352,97 @@
                 </xsl:choose>
             </nts:expressionPart>
         </xsl:for-each>
-        <xsl:for-each select="$in/f:identifier/f:value/@value">
-            <nts:expressionPartIdentifier>
+        <xsl:for-each select="$in//@value[starts-with(.,'${DATE, T')]">
+            <xsl:variable name="element-id">
                 <xsl:for-each select="ancestor::*[ancestor::*[local-name()=$resourcename]]">
                     <xsl:value-of select="nf:DTchoice(.)"/>
                     <xsl:if test="not(position()=last())">
                         <xsl:text>.</xsl:text>
                     </xsl:if>
                 </xsl:for-each>
-                <xsl:text> = '</xsl:text>
+            </xsl:variable>
+            <nts:expressionPart element-id="{$element-id}">
+                <xsl:value-of select="$element-id"/>
+                <xsl:text> = @</xsl:text>
                 <xsl:value-of select="."/>
-                <xsl:text>'</xsl:text>
-            </nts:expressionPartIdentifier>
+            </nts:expressionPart>
         </xsl:for-each>
     </xsl:template>
     
-    <xsl:template match="nts:idExpression" mode="filterExpressions">
+    <xsl:template match="nts:idExpression" mode="uniqueExpressions">
+        <xsl:variable name="resource" select="@resource"/>
         <xsl:copy>
             <xsl:copy-of select="@*"/>
             <xsl:for-each select="nts:expressionPart">
                 <xsl:variable name="contents" select="./text()"/>
-                <xsl:variable name="resource" select="parent::nts:idExpression/@resource"/>
+                <xsl:variable name="element-id" select="@element-id"/>
                 <xsl:choose>
-                    <xsl:when test="count(ancestor::nts:idExpressions/nts:idExpression[@resource = $resource]) gt 1 and count(ancestor::nts:idExpressions/nts:idExpression[@resource = $resource]) = count(ancestor::nts:idExpressions/nts:idExpression[@resource = $resource]/nts:expressionPart[text()=$contents])"/>
-                    <xsl:when test="count(ancestor::nts:idExpressions/nts:idExpression[@resource = $resource]) = 1">
-                        <xsl:copy-of select="."/>
+                    <!-- if there is one differentiating expression for all resources of a type, only use that one for all resources -->
+                    <xsl:when test="count(ancestor::nts:idExpressions/nts:idExpression[@resource = $resource]) = count(distinct-values(ancestor::nts:idExpressions/nts:idExpression[@resource = $resource]/nts:expressionPart[@element-id = $element-id]/text()))">
+                        <xsl:copy>
+                            <xsl:attribute name="unique">resource-type</xsl:attribute>
+                            <xsl:copy-of select="@*|node()"/>
+                        </xsl:copy>
+                    </xsl:when>
+                    <!-- if there is one expressionpart that only exists in this resource, only use that one for this resource -->
+                    <xsl:when test="count(ancestor::nts:idExpressions/nts:idExpression[@resource = $resource]/nts:expressionPart[@element-id = $element-id]) = 1">
+                        <xsl:copy>
+                            <xsl:attribute name="unique">this-resource</xsl:attribute>
+                            <xsl:copy-of select="@*|node()"/>
+                        </xsl:copy>
                     </xsl:when>
                     <xsl:otherwise>
                         <xsl:copy-of select="."/>
                     </xsl:otherwise>
                 </xsl:choose>
             </xsl:for-each>
-            <xsl:for-each select="nts:expressionPartIdentifier">
+        </xsl:copy>
+    </xsl:template>
+    
+    <xsl:template match="nts:idExpressions" mode="filterExpressions uniqueExpressions">
+        <xsl:copy>
+            <xsl:apply-templates select="node()" mode="#current"/>
+        </xsl:copy>
+    </xsl:template>
+    
+    <xsl:template match="nts:idExpression" mode="filterExpressions">
+        <xsl:variable name="resource" select="@resource"/>
+        <xsl:copy>
+            <xsl:copy-of select="@*"/>
+            <xsl:choose>
+                <xsl:when test="nts:expressionPart[@unique = 'resource-type']">
+                    <xsl:copy-of select="nts:expressionPart[@unique = 'resource-type']"/>
+                </xsl:when>
+                <xsl:when test="nts:expressionPart[@unique = 'this-resource']">
+                    <xsl:copy-of select="nts:expressionPart[@unique = 'this-resource'][1]"/>
+                </xsl:when>
+                <xsl:otherwise>
+                    <xsl:for-each select="nts:*">
+                        <xsl:variable name="contents" select="./text()"/>
+                        <xsl:variable name="element-id" select="@element-id"/>
+                        <xsl:choose>
+                            <!-- if there is only one resource of this type -->
+                            <xsl:when test="count(ancestor::nts:idExpressions/nts:idExpression[@resource = $resource]) = 1"/>
+                            <!-- if the same expression is present in all resources of a type -->
+                            <xsl:when test="count(ancestor::nts:idExpressions/nts:idExpression[@resource = $resource]) gt 1 and count(ancestor::nts:idExpressions/nts:idExpression[@resource = $resource]) = count(ancestor::nts:idExpressions/nts:idExpression[@resource = $resource]/nts:*[text()=$contents])"/>
+                            
+                            <xsl:otherwise>
                 <xsl:copy-of select="."/>
+                            </xsl:otherwise>
+                        </xsl:choose>
             </xsl:for-each>
+                </xsl:otherwise>
+            </xsl:choose>
         </xsl:copy>
     </xsl:template>
     
     <xsl:template match="nts:idExpression" mode="combineExpressions">
         <xsl:copy>
             <xsl:copy-of select="@*"/>
-            <xsl:choose>
-                <xsl:when test="nts:expressionPart">
                     <xsl:for-each select="nts:expressionPart">
                         <xsl:value-of select="."/>
                         <xsl:if test="not(position()=last())"> and </xsl:if>
                     </xsl:for-each>
-                </xsl:when>
-                <xsl:when test="nts:expressionPartIdentifier">
-                    <xsl:for-each select="nts:expressionPartIdentifier">
-                        <xsl:value-of select="."/>
-                        <xsl:if test="not(position()=last())"> and </xsl:if>
-                    </xsl:for-each>
-                </xsl:when>
-            </xsl:choose>
-            
         </xsl:copy>
     </xsl:template>
     
@@ -399,15 +472,12 @@
         <xsl:param name="resourceID" tunnel="yes"/>
         <xsl:param name="direction" tunnel="yes"/>
         <xsl:param name="expression-inherited" tunnel="yes"/>
+        <xsl:param name="resource-expression" tunnel="yes"/>
+        <xsl:param name="level" tunnel="yes"/>
         <xsl:variable name="expression-local">
             <xsl:choose>
                 <xsl:when test="not(ancestor::f:*)">
-                    <xsl:text>Bundle.entry</xsl:text>
-                    <xsl:text>.select(resource as </xsl:text>
-                    <xsl:value-of select="local-name()"/>
-                    <xsl:text>).where(id = '${</xsl:text>
-                    <xsl:value-of select="$resourceID"/>
-                    <xsl:text>}')</xsl:text>
+                    <xsl:value-of select="$resource-expression"/>
                 </xsl:when>
                 <xsl:otherwise>
                     <xsl:text>.</xsl:text>
@@ -435,6 +505,25 @@
                     <xsl:text>.where($this</xsl:text>
                     <xsl:apply-templates select="f:profile" mode="expression"/>
                     <xsl:text>).exists()</xsl:text>
+                </xsl:variable>
+                <action>
+                    <assert>
+                        <description value="{$description}"/>
+                        <direction value="{$direction}"/>
+                        <expression value="{$expression}"/>
+                        <warningOnly value="true"/>
+                    </assert>
+                </action>
+            </xsl:when>
+            <xsl:when test="$level = 'resource'">
+                <xsl:variable name="description">
+                    <xsl:value-of select="$description-prefix"/>
+                    <xsl:text> resource tested in one assertion.</xsl:text>
+                </xsl:variable>
+                <xsl:variable name="expression">
+                    <xsl:value-of select="$resource-expression"/>
+                    <xsl:apply-templates select="." mode="expression"/>
+                    <xsl:text>.exists()</xsl:text>
                 </xsl:variable>
                 <action>
                     <assert>
@@ -509,8 +598,10 @@
     </xsl:template>
     
     <xsl:template match="f:*" mode="expression">
+        <xsl:if test="ancestor::f:*">
         <xsl:text>.</xsl:text>
         <xsl:value-of select="nf:DTchoice(.)"/>
+        </xsl:if>
         <xsl:choose>
             <!-- If identifier is present, it should contain system and value -->
             <xsl:when test="self::f:identifier or ends-with(local-name(),'Identifier')">
@@ -525,9 +616,10 @@
                 <xsl:call-template name="get-expression-based-on-type">
                     <xsl:with-param name="include-where-this" select="false()"/>
                 </xsl:call-template>
-                <xsl:text> and $this</xsl:text>
+                <xsl:text> and <!--$this--></xsl:text>
                 <xsl:choose>
                     <xsl:when test="count(f:*) = 1">
+                        <xsl:text>$this</xsl:text>
                         <xsl:apply-templates select="f:*" mode="#current"/>
                     </xsl:when>
                     <xsl:otherwise>
@@ -568,6 +660,7 @@
                     </xsl:when>
                     <xsl:otherwise>
                         <xsl:text>.where(</xsl:text>
+                        <xsl:variable name="starts-with-this-and">
                         <xsl:for-each select="*">
                             <xsl:variable name="and-this-check">
                                 <xsl:if test="preceding-sibling::*">
@@ -580,6 +673,15 @@
                                 <xsl:value-of select="$and-this-check"/>
                             </xsl:if>
                         </xsl:for-each>
+                        </xsl:variable>
+                        <xsl:choose>
+                            <xsl:when test="starts-with($starts-with-this-and,'$this and ')">
+                                <xsl:value-of select="substring-after($starts-with-this-and,'$this and ')"/>
+                            </xsl:when>
+                            <xsl:otherwise>
+                                <xsl:value-of select="$starts-with-this-and"/>
+                            </xsl:otherwise>
+                        </xsl:choose>
                         <xsl:text>)</xsl:text>
                     </xsl:otherwise>
                 </xsl:choose>
@@ -591,6 +693,8 @@
         <xsl:choose>
             <!-- Profile -->
             <xsl:when test="self::f:profile/parent::f:meta">Profile</xsl:when>
+            <!-- Display, text, note-->
+            <xsl:when test="self::f:display or self::f:text or self::f:note or self::f:unit or self::f:title or ends-with(local-name(),'String')">String</xsl:when>
             <!-- Code -->
             <xsl:when test="self::f:code">Code</xsl:when>
             <!-- DateTime met T-datum -->
@@ -617,8 +721,6 @@
             <xsl:when test="matches(@value,'^([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1])(T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)([.][0-9]+)?(Z|([+]|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)))?)?)?$')">DateTime</xsl:when>
             <!-- Number, integer -->
             <xsl:when test="string(number(@value)) != 'NaN'">Number</xsl:when>
-            <!-- Display, text, note-->
-            <xsl:when test="self::f:display or self::f:text or self::f:note or self::f:unit">Display</xsl:when>
             <xsl:when test="@value=('true','false')">Boolean</xsl:when>
         </xsl:choose>
     </xsl:template>
@@ -662,7 +764,7 @@
                 <xsl:value-of select="@value"/>
                 <xsl:text>'</xsl:text>
             </xsl:when>
-            <xsl:when test="$type='Display'">
+            <xsl:when test="$type='String'">
                 <xsl:text>exists</xsl:text>
             </xsl:when>
             <xsl:when test="$type='Boolean'">
@@ -686,6 +788,13 @@
             <xsl:text>.where($this</xsl:text>
         </xsl:if>
         <xsl:choose>
+            <xsl:when test="$type='String'">
+                <!--<xsl:text>.exists()</xsl:text>-->
+                <!--<xsl:text>.where($this.toString().matches('(?i)</xsl:text>
+                <xsl:value-of select="replace(@value,
+                    '(\.|\[|\]|\\|\||\-|\^|\$|\?|\*|\+|\{|\}|\(|\))','[$1]')"/>
+                <xsl:text>')).exists()</xsl:text>-->
+            </xsl:when>
             <xsl:when test="$type='Profile'">
                 <xsl:text> = '</xsl:text>
                 <xsl:value-of select="@value"/>
@@ -704,15 +813,15 @@
             <xsl:when test="$type='TDateTime'">
                 <!-- Regex modified from FHIR dateTime datatype - made time non-optional -->
                 <!-- Original: ([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1])(T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?(Z|(+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)))?)?)? -->
-                <xsl:text>.matches('([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1])(T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)([.][0-9]+)?(Z|([+]|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)))))')</xsl:text>
+                <xsl:text>.toString().matches('([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1])(T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)([.][0-9]+)?(Z|([+]|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)))))')</xsl:text>
             </xsl:when>
             <xsl:when test="$type='TDate'">
                 <!-- Regex copied from FHIR date datatype -->
                 <!-- ([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1]))?)? -->
-                <xsl:text>.matches('([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1]))?)')</xsl:text>
+                <xsl:text>.toString().matches('([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1]))?)')</xsl:text>
             </xsl:when>
             <xsl:when test="$type='TYear'">
-                <xsl:text>.matches('([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)')</xsl:text>
+                <xsl:text>.toString().matches('([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)')</xsl:text>
             </xsl:when>
             <xsl:when test="$type='DateTime'">
                 <xsl:text> = @</xsl:text>
@@ -722,13 +831,6 @@
                 <xsl:text> = </xsl:text>
                 <xsl:value-of select="@value"/>
                 <xsl:text></xsl:text>
-            </xsl:when>
-            <xsl:when test="$type='Display'">
-                <!--<xsl:text>.exists()</xsl:text>-->
-                <!--<xsl:text>.where($this.matches('(?i)</xsl:text>
-                <xsl:value-of select="replace(@value,
-                    '(\.|\[|\]|\\|\||\-|\^|\$|\?|\*|\+|\{|\}|\(|\))','[$1]')"/>
-                <xsl:text>')).exists()</xsl:text>-->
             </xsl:when>
             <xsl:when test="$type='Boolean'">
                 <xsl:text> = </xsl:text>
@@ -784,7 +886,7 @@
             <xsl:when test="ends-with($localName,'Count')">
                 <xsl:value-of select="substring-before($localName,'Count')"/>
             </xsl:when>
-            <xsl:when test="ends-with($localName,'Date') and not($localName='assertedDate')">
+            <xsl:when test="ends-with($localName,'Date') and not($localName = ('assertedDate','birthDate'))">
                 <xsl:value-of select="substring-before($localName,'Date')"/>
             </xsl:when>
             <xsl:when test="ends-with($localName,'DateTime')">
