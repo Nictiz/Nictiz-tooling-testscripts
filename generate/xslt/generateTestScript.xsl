@@ -16,8 +16,6 @@
     <!-- The folder where the common components for TestScript generation can be found. -->
     <xsl:param name="commonComponentFolder" select="'../../common-asserts/'"/>
     
-    <xsl:param name="expectedResponseFormat"/>
-    
     <!-- The main template, which will call the remaining templates.
          param expectedResponseFormat is the format for responses (either 'xml' (default) or 'json') that this 
                                       TestScript expects when it tests a server (i.e. it has no meaning when 
@@ -26,14 +24,6 @@
     -->
     <xsl:template name="generate" match="f:TestScript">
         <xsl:variable name="scenario" select="@nts:scenario"/>
-        
-        <!-- Sanity check the expectedResponseFormat parameter -->
-        <xsl:if test="$expectedResponseFormat != '' and $scenario != 'server'">
-            <xsl:message select="'Parameter ''expectedResponseFormat'' only has a meaning when nts:scenario is ''server'''"></xsl:message>
-        </xsl:if>
-        <xsl:if test="$scenario = 'server' and not($expectedResponseFormat = ('xml', 'json'))">
-            <xsl:message terminate="yes" select="concat('Invalid value ''', $expectedResponseFormat, ''' for parameter ''expectedResponseFormat''; should be either ''xml'' or ''json''')"></xsl:message>
-        </xsl:if>
         
         <!-- Expand all the Nictiz inclusion elements to their FHIR representation --> 
         <xsl:variable name="expanded">
@@ -50,7 +40,9 @@
             <xsl:with-param name="variables" select="$expanded//f:variable" tunnel="yes"/>
             <xsl:with-param name="rules" select="$expanded//f:rule[@id]" tunnel="yes"/>
             <xsl:with-param name="scenario" select="$scenario" tunnel="yes"/>
-            <xsl:with-param name="expectedResponseFormat" select="$expectedResponseFormat" tunnel="yes"/>
+            <xsl:with-param name="expectedResponseFormat" tunnel="yes">
+                <xsl:if test="$scenario='server'">${expectedResponseFormat}</xsl:if>
+            </xsl:with-param>
         </xsl:apply-templates>
     </xsl:template>
 
@@ -173,11 +165,7 @@
         
         <!-- Write back the element we matched on -->
         <xsl:element name="{local-name()}">
-            <xsl:for-each select="@*">
-                <xsl:attribute name="{local-name()}">
-                    <xsl:value-of select="."/>
-                </xsl:attribute>
-            </xsl:for-each>
+            <xsl:copy-of select="@*"/>
             <xsl:apply-templates select="./(*|comment())" mode="filter"/>
         </xsl:element>
     </xsl:template>
@@ -188,9 +176,9 @@
         <xsl:param name="expectedResponseFormat" tunnel="yes"/>
         <xsl:attribute name="value">
             <xsl:value-of select="."/>
-            <xsl:if test="$scenario='server' and not(ancestor::f:TestScript/f:test/f:action/f:operation/f:accept) and not(contains(lower-case(.),$expectedResponseFormat))">
+            <xsl:if test="$scenario='server'">
                 <xsl:text>-</xsl:text>
-                <xsl:value-of select="lower-case($expectedResponseFormat)"/>
+                <xsl:value-of select="$expectedResponseFormat"/>
             </xsl:if>
         </xsl:attribute>
     </xsl:template>
@@ -201,9 +189,9 @@
         <xsl:param name="expectedResponseFormat" tunnel="yes"/>
         <xsl:attribute name="value">
             <xsl:value-of select="."/>
-            <xsl:if test="$scenario='server' and not(ancestor::f:TestScript/f:test/f:action/f:operation/f:accept) and not(contains(lower-case(.),$expectedResponseFormat))">
+            <xsl:if test="$scenario='server'">
                 <xsl:text> - </xsl:text>
-                <xsl:value-of select="upper-case($expectedResponseFormat)"/>
+                <xsl:value-of select="$expectedResponseFormat"/>
                 <xsl:text> Format</xsl:text>
             </xsl:if>
         </xsl:attribute>
@@ -220,7 +208,7 @@
             <xsl:apply-templates select="@*" mode="#current"/>
             <xsl:apply-templates select="f:*[local-name()=$pre-accept]" mode="#current"/>
             <xsl:if test="$scenario='server' and not(f:accept) and $expectedResponseFormat != ''">
-                <accept value="{lower-case($expectedResponseFormat)}"/>
+                <accept value="{$expectedResponseFormat}"/>
             </xsl:if>
             <xsl:apply-templates select="f:*[not(local-name()=$pre-accept)]" mode="#current"/>
         </xsl:copy>
@@ -251,6 +239,11 @@
         <xsl:attribute name="value">
             <xsl:value-of select="normalize-space(.)"/>
         </xsl:attribute>
+    </xsl:template>
+    
+    <!-- Do not filter nts:generate-asserts-from -->
+    <xsl:template match="f:TestScript/f:test/nts:generate-asserts-from" mode="filter">
+        <xsl:copy-of select="."/>
     </xsl:template>
     
     <!-- Expand a nts:profile element to a FHIR profile element -->

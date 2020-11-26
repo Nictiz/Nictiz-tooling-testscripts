@@ -3,25 +3,29 @@
     
     The normal use of this build script is to import it from another ANT build script, where a particular folder
     structure is expected:
-    - build.xml            : the file that imports this build script
-    - src/                 : the dir containing the source files 
-       - common-asserts/   : the common components across all projects
-       - Project1/         : a project dir
-         - InputFolder1/   : one or more dirs containg NTS files
-         - _components/    : the components specific for that project
-         - _reference/     : the fixtures for that project
-    - build/               : the dir where the output will be placed
-    - lib/                 :
-       - ant-dependencies/ : where the dependencies for ANT will be placed (you probably want to add this to .gitignore)
+    - build.xml                     : the file that imports this build script
+    - src/                          : the dir containing the source files 
+       - common-asserts/            : the common components across all projects
+       - Project1/                  : a project dir
+         - InputFolder1/            : one or more dirs containg NTS files
+         - _components/             : the components specific for that project
+         - _reference/              : the fixtures for that project - all fixtures in this folder are copied to the output dir
+         - _reference-not-copied/   : additional fixtures and files (for example fixtures from which assertions are generated) that are not copied to the output dir
+         
+    - build/                        : the dir where the output will be placed
+    - lib/                          :
+       - ant-dependencies/          : where the dependencies for ANT will be placed (you probably want to add this to .gitignore)
 
     The script will ask you for one of the project dirs inside the "src/" dir. Alternatively, this can be passed in the
     ANT call with the -Dproject= option.
 -->
 
-<project xmlns:ivy="antlib:org.apache.ivy.ant" basedir="." name="generateTestScripts" default="build">
+<project xmlns:ivy="antlib:org.apache.ivy.ant" xmlns:if="ant:if" basedir="." name="generateTestScripts" default="build">
     
     <!-- Set testscripttools.dir if it is not supplied by including build file. -->
     <dirname property="testscripttools.dir" file="${ant.file.generateTestScripts}/.."/>
+    
+    <property name="debug" value="true"/>
     
     <property name="ivy.install.version" value="2.5.0-rc1" />
     <property name="ivy.jar.file" value="${ant.library.dir}/ivy.jar" />
@@ -129,56 +133,40 @@
         <sequential>
             <!-- Get the raw file name without suffix -->
             <local name="nts.file.basename"/>
+            <local name="nts.file.newname"/>
             <basename property="nts.file.basename" file="@{nts.file}" suffix="xml"/>
            
+            <property name="nts.file.newname" value="${nts.file.basename}.xml"/>
+            
             <!-- Load the NTS file as an "xmlproperty" file. All variables extracted from xmlproperty should be
                  declared local. -->
             <local name="TestScript(nts:scenario)"/>
+            <local name="TestScript.test.nts:generate-asserts-from"/>
+            <!--<local name="TestScript.test(id)"/>-->
             <xmlproperty file="@{nts.file}"/>
             
             <!-- Calculate the relative path to the reference dir from the NTS file-->
             <local name="nts.file.dir"/>
             <local name="reference.dir.relative"/>
             <local name="reference.dir.relative.normalized"/>
+            <local name="nts.file.generated"/>
             <dirname property="nts.file.dir" file="@{nts.file}"/>
             <property name="reference.dir.relative" location="${reference.dir}" relative="true" basedir="${nts.file.dir}"/>
             <!-- Convert backslashes to forward slashes if needed -->
             <propertyregex property="reference.dir.relative.normalized" input="${reference.dir.relative}" regexp="[\\]" replace="/" global="true" defaultValue="${reference.dir.relative}"/>
             
-            <if>
-                <equals arg1="${TestScript(nts:scenario)}" arg2="server"/>
-                <then>
-                    <for param="expectedResponseFormat" list="xml,json"> <!-- XIS scripts are generated in both XML and JSON flavor -->
-                        <sequential>
-                            <local name="nts.file.newname"/>
-                            <property name="nts.file.newname" value="${nts.file.basename}-@{expectedResponseFormat}.xml"/>
-
-                            <saxon-transform style="${xslt.dir}/generateTestScript.xsl" in="@{nts.file}" out="@{output.dir}/${nts.file.newname}">
-                                <parameters>
-                                    <param name="referenceBase" expression="${reference.dir.relative.normalized}"/>
-                                    <param name="commonComponentFolder" expression="${commoncomponents.dir.absolute}"/>
-                                    <param name="projectComponentFolder" expression="${components.dir.absolute}"/>
-                                    <param name="expectedResponseFormat" expression="@{expectedResponseFormat}"/>
-                                </parameters>
-                            </saxon-transform>
-                            
-                            <collect-references testscript.path="@{output.dir}/${nts.file.newname}" references.file="@{references.file}" reference.dir.rel="@{reference.dir.rel}"/>
-                        </sequential>
-                    </for>
-                </then>
-                <else>
-                    <local name="nts.file.newname"/>
-                    <property name="nts.file.newname" value="${nts.file.basename}.xml"/>
-                    <saxon-transform style="${xslt.dir}/generateTestScript.xsl" in="@{nts.file}" out="@{output.dir}/${nts.file.newname}">
-                        <parameters>
-                            <param name="referenceBase" expression="${reference.dir.relative.normalized}"/>
-                            <param name="commonComponentFolder" expression="${commoncomponents.dir.absolute}"/>
-                            <param name="projectComponentFolder" expression="${components.dir.absolute}"/>
-                        </parameters>
-                    </saxon-transform>
-                    <collect-references testscript.path="@{output.dir}/${nts.file.newname}" references.file="@{references.file}" reference.dir.rel="@{reference.dir.rel}"/>
-                </else>
-            </if>
+            <saxon-transform style="${xslt.dir}/generateTestScript.xsl" in="@{nts.file}" out="@{output.dir}/${nts.file.newname}">
+                <parameters>
+                    <param name="referenceBase" expression="${reference.dir.relative.normalized}"/>
+                    <param name="commonComponentFolder" expression="${commoncomponents.dir.absolute}"/>
+                    <param name="projectComponentFolder" expression="${components.dir.absolute}"/>
+                    <param name="referenceComponentFolder" expression="${reference.dir.absolute}"/>
+                    </parameters>
+            </saxon-transform>
+            
+            <collect-references testscript.path="@{output.dir}/${nts.file.newname}" references.file="@{references.file}" reference.dir.rel="@{reference.dir.rel}"/>
+            <generate-asserts testscript.path="@{output.dir}/${nts.file.newname}" if:set="TestScript.test.nts:generate-asserts-from"/>
+            <expected-response-format testscript.path="@{output.dir}/${nts.file.newname}" output.dir="@{output.dir}"/>
         </sequential>
     </macrodef>
     
@@ -202,6 +190,58 @@
                     <param name="includesDir" expression="${reference.dir.rel}"/>
                 </parameters>
             </saxon-transform>
+        </sequential>
+    </macrodef>
+    
+    <macrodef name="generate-asserts">
+        <attribute name="testscript.path" description="The FHIR TestScript to analyze."/>
+        
+        <sequential>
+            <local name="nts.file.input"/>
+            <local name="nts.file.generated"/>
+            <local name="nts.file.filtered"/>
+            <property name="nts.file.input" value="${temp.dir}/${nts.file.basename}-01-input.xml"/>
+            <property name="nts.file.generated" value="${temp.dir}/${nts.file.basename}-02-generated.xml"/>
+            <property name="nts.file.filtered" value="${temp.dir}/${nts.file.basename}-03-filtered.xml"/>
+            
+            <copy file="@{testscript.path}" tofile="${nts.file.input}"/>
+            
+            <saxon-transform style="${xslt.dir}/generateAsserts.xsl" in="${nts.file.input}" out="${nts.file.generated}">
+                <parameters>
+                    <param name="referenceFolder" expression="${reference.dir.absolute}"/>
+                    <param name="referenceGenerateFolder" expression="${reference-not-copied.dir.absolute}"/>
+                    <param name="scenario" expression="${TestScript(nts:scenario)}"/>
+                </parameters>
+            </saxon-transform>
+            <saxon-transform style="${xslt.dir}/filterTestScript.xsl" in="${nts.file.generated}" out="${nts.file.filtered}"/>
+            
+            <copy file="${nts.file.filtered}" tofile="@{testscript.path}"/>
+        </sequential>
+    </macrodef>
+    
+    <macrodef name="expected-response-format">
+        <attribute name="testscript.path" description="The FHIR TestScript to analyze."/>
+        <attribute name="output.dir" description="The target dir (not just the base) of the transformed file. The name of the actual file will be determined by this task."/>
+        
+        <sequential>
+            <if>
+                <equals arg1="${TestScript(nts:scenario)}" arg2="server"/>
+                <then>
+                    <for param="expectedResponseFormat" list="xml,json">
+                        <sequential>
+                            <local name="nts.file.expectedResponseFormat"/>
+                            <property name="nts.file.expectedResponseFormat" value="${temp.dir}/${nts.file.basename}-04-expectedResponseFormat-@{expectedResponseFormat}.xml"/>
+                            <saxon-transform style="${xslt.dir}/expectedResponseFormat.xsl" in="@{testscript.path}" out="${nts.file.expectedResponseFormat}">
+                                <parameters>
+                                    <param name="expectedResponseFormat" expression="@{expectedResponseFormat}"/>
+                                </parameters>
+                            </saxon-transform>
+                            <copy file="${nts.file.expectedResponseFormat}" tofile="@{output.dir}/${nts.file.basename}-@{expectedResponseFormat}.xml"/>
+                        </sequential>
+                    </for>
+                    <delete file="@{testscript.path}"/>
+                </then>
+            </if>
         </sequential>
     </macrodef>
     
@@ -305,11 +345,18 @@
         
         <property name="commoncomponents.dir" location="${src.dir}/common-asserts"/>
         <property name="reference.dir" location="${project.dir}/_reference"/>
+        <property name="reference-not-copied.dir" location="${project.dir}/_reference-not-copied"/>
         <property name="components.dir" location="${project.dir}/_components"/>
+        
+        <!--<tempfile property="temp.dir" destDir="${java.io.tmpdir}" prefix="generateTestScripts-${project}-" deleteonexit="true" createfile="true"/>-->
+        <tempfile property="temp.dir" destDir="${build.dir}/temp" deleteonexit="true"/>
+        <mkdir dir="${temp.dir}"/>
         
         <!-- Convert relative paths given on the command line to absolute paths -->
         <property name="components.dir.absolute" location="${components.dir}"/>
         <property name="commoncomponents.dir.absolute" location="${commoncomponents.dir}"/>
+        <property name="reference.dir.absolute" location="${reference.dir}"/>
+        <property name="reference-not-copied.dir.absolute" location="${reference-not-copied.dir}"/>
         
         <!-- Set default loadresources.exclude to nothing -->
         <property name="loadresources.exclude" value=""/>
@@ -321,7 +368,7 @@
         </fileset>
         
         <!-- Create a temporary file to collect all the used fixtures -->
-        <tempfile property="references.file" suffix=".txt" createfile="true" deleteonexit="true"/>
+        <tempfile property="references.file" destDir="${temp.dir}" suffix=".txt" createfile="true" deleteonexit="true"/>
         
         <!-- Check if there are files in the fileset. -->
         <condition property="nts.files.available">
@@ -366,6 +413,13 @@
                     <echo message="Copying fixtures"/>
                     <copy-references references.file="${references.file}"/>
                     <generate-loadresources/>
+                    
+                    <if>
+                        <equals arg1="${debug}" arg2="false"/>
+                        <then>
+                            <delete dir="${build.dir}/temp"/>
+                        </then>
+                    </if>
                 </sequential>
             </then>
             <else>

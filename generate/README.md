@@ -162,6 +162,16 @@ The TouchStone assert-stopTestOnFail extension is added to each assert with a de
 </assert>
 ```
 
+### Generating assertions based on fixture
+In each `test` element within `TestScript`, one or more `<nts:generate-asserts-from>` element can be added to generate assertions based on the contents of the fixture referenced in the  `@href` attribute. The fixture can be both a Bundle or a single resource. The fixture can be placed in either the "_reference" (if the fixtures should also be copied to the output folder) or alternatively the "_references-not-copied" folder (if for example the assertions are generated from bundles that are not used as fixtures). Which resource types to generate assertions from is based on the test.action.operation.resource value _and_ _include search parameter contents (if possible).
+```xml
+<test id="…">
+    <nts:generate-asserts-from href="path/to/[filename1].xml"/>
+    <nts:generate-asserts-from href="path/to/[filename2].xml"/>
+    …
+</test>
+```
+
 ## Running the transformation
 
 The transformation is called by the ANT build in `ant/build.xml`. For more information on the location of the inputs and outputs, see [the readme in the TestScripts repository](https://github.com/Nictiz/Nictiz-STU3-testscripts/blob/master/Generate/README.md).
@@ -239,7 +249,7 @@ Because of the verbosity of the ANT build, the logging level is set to 1 (warnin
 - Fixed a bug where an attribute in a non nts-namespace (for example `@xsi:*`) caused the process to crash.
 
 ### 1.1.3
-- Fixed a bug where the `-Dtestscripttools.localdir` property did not work as expected. 
+- Fixed a bug where the `-Dtestscripttools.local` property did not work as expected. 
 
 ### 1.1.2
 - Enabled `<nts:parameter>` within `<nts:component>` to be given an empty value.
