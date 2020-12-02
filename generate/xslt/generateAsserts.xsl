@@ -8,38 +8,31 @@
     exclude-result-prefixes="#all"
     version="2.0">
     
+    <xsl:template match="comment()" mode="#all" priority="1"/>
+    
     <xsl:output method="xml" indent="yes"/>
     <xsl:strip-space elements="*"/>
     <!-- Fix to pretty print output - strip-space does not seem to function when being called from ANT -->
     <xsl:template match="text()[not(normalize-space(.))]" mode="#all"/>
     
-    <!-- 
+    <!-- TO-DO/WISH LIST:
         
-        TO-DO/WISH LIST:
-        
+        - Handle T-dates relative to each other if no T-date variable is filled by the user 
+        - Handle dateTimes and T-dates when determining uniqueness
+        - Edit readme: "The `test` element where this element is added to will be duplicated"
         - Exclude specific parts of fixture when generating?
         
         - Better readable discriptions.
         - Refactor 'filter' mode in generateTestScript to be matched to separate 'filterTestScript.xsl'.
-
+        
+        - '_resources_not_copied' folder?
         - '_fixtures' folder not necessary, can also be '_resources' folder. Look at generateTestScript to see how filenames are resolved.
-        - Look at expression parts: is it possible to have a resource that has no unique content per se, but still is unique in the combination of everything.
-        
         - Handle client POST/PUTs that a server receives with minimumId instead of generating asserts. Depends on KT-198.
-        
-        - A simple Practitioner with only a name gives an error
-        
-        DEPENDS ON KT-226:
-        - Edit readme: "The `test` element where this attribute is added to will be duplicated (because responses cannot be transferred between tests)"
-        
     -->
     
-    <!--<xsl:param name="referenceFolder" as="xs:string" required="yes"/>
+    <xsl:param name="referenceFolder" as="xs:string" required="yes"/>
     <xsl:param name="referenceGenerateFolder" as="xs:string" required="yes"/>
-    <xsl:param name="scenario" as="xs:string" required="yes"/>-->
-    <xsl:param name="referenceFolder" as="xs:string" select="'file:/C:\Users\144189-ADM\Documents\Git\Nictiz-STU3-testscripts\Generate\src\BgLZ-2-0\_reference'"/>
-    <xsl:param name="referenceGenerateFolder" as="xs:string" select="''"/>
-    <xsl:param name="scenario" as="xs:string" select="'server'"/>
+    <xsl:param name="scenario" as="xs:string" required="yes"/>
     
     <xsl:template match="node()|@*" mode="#all" priority="-1">
         <xsl:apply-templates select="node()|@*" mode="#current"/>
@@ -191,10 +184,10 @@
                             
                             <xsl:choose>
                                 <xsl:when test="doc-available(string-join(($referenceFolder, $fixtureWithExtension),'/'))">
-                                    <fixture href="{string-join(($referenceFolder, $fixtureWithExtension), '/')}"/>
+                                    <nts:fixture href="{string-join(($referenceFolder, $fixtureWithExtension), '/')}"/>
                                 </xsl:when>
                                 <xsl:when test="doc-available(string-join(($referenceGenerateFolder,$fixtureWithExtension),'/'))">
-                                    <fixture href="{string-join(($referenceGenerateFolder, $fixtureWithExtension), '/')}"/>
+                                    <nts:fixture href="{string-join(($referenceGenerateFolder, $fixtureWithExtension), '/')}"/>
                                 </xsl:when>
                                 <xsl:otherwise>
                                     <xsl:message terminate="yes">Fixture <xsl:value-of select="$fixtureWithExtension"/> not found.</xsl:message>
@@ -234,45 +227,207 @@
                     
                     <!-- We want to determine the shortest FHIRpath expression possible to uniquely identify each resource within the set of fixtures. Evaluating only the individual elements generated in $generateAsserts does in some cases not lead to a unique excperssion, so we combine expressions to increase the chance of one of them being unique -->
                     
-                    <!-- Generate expressions for codes and integers -->
-                    <xsl:variable name="idExpressionParts">
-                        <nts:idExpressions>
+                    <!-- Evaluate all resources (add type, id and generate some sort of user friendly name) and, if there are multiple resources of a type, add expressionParts for all codes, integers and dateTimes. Each expressionPart has an elementId with only the expression to the element
+                        Expected output:
+                        <nts:generateAsserts>
+                            <nts:resource type="Patient" id="XXX-Kesters" name="Patient-1">
+                                <nts:expressionPart elementId="category.coding.code">category.coding.code.where($this = '282291009')</nts:expressionPart>
+                                ...
+                            </nts:resource>
+                            <nts:resource type="..." id="..." name="..."/>
+                        </nts:generateAsserts>
+                    -->
+                    <xsl:variable name="generateResource">
+                        <nts:generateAsserts>
                             <xsl:for-each select="$fixturesResources/*">
-                                <nts:idExpression resource="{local-name()}" id="{f:id/@value}">
+                                <xsl:variable name="resourceType" select="local-name()"/>
+                                <nts:resource type="{$resourceType}" id="{f:id/@value}">
                                     <xsl:attribute name="name">
                                         <xsl:call-template name="createResourceName"/>
                                     </xsl:attribute>
-                                    <xsl:call-template name="generate-expression-parts">
-                                        <xsl:with-param name="in" select="."/>
-                                    </xsl:call-template>
-                                </nts:idExpression>
+                                    <!-- If there are multiple resources of the same type, look for codes, integers and dateTimes to create parts of a FHIRpath expression that could be used to identify the resource -->
+                                    <xsl:if test="not(count($fixturesResources/*[local-name() = $resourceType]) = 1)">
+                                        <xsl:for-each select=".//@value[string(number(.)) != 'NaN' or parent::f:code][not(parent::f:versionId)][not(parent::f:value/parent::f:*[matches(local-name(), '[Ii]dentifier$')])]">
+                                            <!-- only apply values that are numbers (integers) and codes. prevent ambiguity -->
+                                            <xsl:variable name="elementId">
+                                                <xsl:for-each select="ancestor::*[ancestor::*[local-name() = $resourceType]]">
+                                                    <xsl:value-of select="nf:DTchoice(.)"/>
+                                                    <xsl:if test="not(position() = last())">
+                                                        <xsl:text>.</xsl:text>
+                                                    </xsl:if>
+                                                </xsl:for-each>
+                                            </xsl:variable>
+                                            <nts:expressionPart elementId="{$elementId}">
+                                                <xsl:value-of select="$elementId"/>
+                                                <xsl:choose>
+                                                    <xsl:when test="parent::f:code">
+                                                        <xsl:text>.where($this = '</xsl:text>
+                                                        <xsl:value-of select="."/>
+                                                        <xsl:text>')</xsl:text>
+                                                    </xsl:when>
+                                                    <xsl:otherwise>
+                                                        <xsl:text> = </xsl:text>
+                                                        <xsl:value-of select="."/>
+                                                    </xsl:otherwise>
+                                                </xsl:choose>
+                                            </nts:expressionPart>
+                                        </xsl:for-each>
+                                            <!--<xsl:for-each select=".//@value[starts-with(.,'${DATE, T')]">
+                                                <xsl:variable name="elementId">
+                                                    <xsl:for-each select="ancestor::*[ancestor::*[local-name()=$resourceType]]">
+                                                        <xsl:value-of select="nf:DTchoice(.)"/>
+                                                        <xsl:if test="not(position()=last())">
+                                                            <xsl:text>.</xsl:text>
+                                                        </xsl:if>
+                                                    </xsl:for-each>
+                                                </xsl:variable>
+                                                <nts:expressionPart elementId="{$elementId}">
+                                                    <xsl:value-of select="$elementId"/>
+                                                    <xsl:text> = @</xsl:text>
+                                                    <xsl:value-of select="."/>
+                                                </nts:expressionPart>
+                                            </xsl:for-each>-->
+                                    </xsl:if>
+                                </nts:resource>
                             </xsl:for-each>
-                        </nts:idExpressions>
+                        </nts:generateAsserts>
                     </xsl:variable>
-                    <!-- Add doubled combinations to increase the chance that there is a unique expression possible -->
-                    <xsl:variable name="doubledIdExpressionParts">
-                        <xsl:apply-templates select="$idExpressionParts" mode="generateDoubleExpressions"/>
+                    <!--<xsl:copy-of select="$generateResource"/>-->
+                    
+                    <xsl:variable name="generateResourceDoubleExpressions">
+                        <nts:generateAsserts>
+                            <xsl:for-each select="$generateResource/nts:generateAsserts/nts:resource">
+                                <xsl:copy>
+                                    <xsl:copy-of select="@*"/>
+                                    <xsl:for-each select="nts:expressionPart">
+                                        <xsl:copy-of select="."/>
+                                        <xsl:variable name="contents" select="text()"/>
+                                        <xsl:variable name="elementId" select="@elementId"/>
+                                        <xsl:for-each select="following-sibling::nts:expressionPart">
+                                            <xsl:variable name="expression" select="concat($contents,' and ',./text())"/>
+                                            <xsl:variable name="elementId2" select="@elementId"/>
+                                            <nts:expressionPart elementId="{concat($elementId,'|',$elementId2)}">
+                                                <xsl:value-of select="$expression"/>
+                                            </nts:expressionPart>
+                                        </xsl:for-each>
+                                    </xsl:for-each>
+                                </xsl:copy>
+                            </xsl:for-each>
+                        </nts:generateAsserts>
                     </xsl:variable>
-                    <!-- Find the possible unique expressions per resource -->
-                    <xsl:variable name="uniqueIdExpressionParts">
-                        <xsl:apply-templates select="$doubledIdExpressionParts" mode="uniqueExpressions"/>
+                    <!--<xsl:copy-of select="$generateResourceDoubleExpressions"/>-->
+                    
+                    <!-- Determine which scenario for filtering is possible for each expressionPart and tag these by attribute 'unique':
+                        1. If the expression with current elementId is present and unique for all resources of this type, flag it 'resource-type'
+                        2. If this is the only expressionPart with this elementId within all resources of this e, flag it 'this-resource'
+                        3. If the expression with current elementId is unique whenever it is present in resources of this type, flag it 'elementId'
+                    -->
+                    <xsl:variable name="generateIdentifyUniqueExpressionParts">
+                        <nts:generateAsserts>
+                            <xsl:for-each select="$generateResource/nts:generateAsserts/nts:resource">
+                                <xsl:variable name="resourceType" select="@type"/>
+                                <xsl:copy>
+                                    <xsl:copy-of select="@*"/>
+                                    <xsl:for-each select="nts:expressionPart">
+                                        <xsl:variable name="contents" select="./text()"/>
+                                        <xsl:variable name="elementId" select="@elementId"/>
+                                        <xsl:choose>
+                                            <!-- scenario 1 -->
+                                            <xsl:when test="count(ancestor::nts:generateAsserts/nts:resource[@type = $resourceType]) = count(distinct-values(ancestor::nts:generateAsserts/nts:resource[@type = $resourceType]/nts:expressionPart[@elementId = $elementId]/text()))">
+                                                <xsl:copy>
+                                                    <xsl:attribute name="unique">resource-type</xsl:attribute>
+                                                    <xsl:copy-of select="@*|node()"/>
+                                                </xsl:copy>
+                                            </xsl:when>
+                                            <!-- scenario 2 -->
+                                            <xsl:when test="count(ancestor::nts:generateAsserts/nts:resource[@type = $resourceType]/nts:expressionPart[@elementId = $elementId]) = 1">
+                                                <xsl:copy>
+                                                    <xsl:attribute name="unique">this-resource</xsl:attribute>
+                                                    <xsl:copy-of select="@*|node()"/>
+                                                </xsl:copy>
+                                            </xsl:when>
+                                            <!-- scenario 3 -->
+                                            <xsl:when test="count(ancestor::nts:generateAsserts/nts:resource[@type = $resourceType]//nts:expressionPart[@elementId = $elementId]) = count(distinct-values(ancestor::nts:generateAsserts/nts:resource[@type = $resourceType]/nts:expressionPart[@elementId = $elementId]/text()))">
+                                                <xsl:copy>
+                                                    <xsl:attribute name="unique">elementId</xsl:attribute>
+                                                    <xsl:copy-of select="@*|node()"/>
+                                                </xsl:copy>
+                                            </xsl:when>
+                                            <!-- otherwise, the expressionPart isn't 'unique enough' -->
+                                            <xsl:otherwise>
+                                                <xsl:copy-of select="."/>
+                                            </xsl:otherwise>
+                                        </xsl:choose>
+                                    </xsl:for-each>
+                                </xsl:copy>
+                            </xsl:for-each>
+                        </nts:generateAsserts>
                     </xsl:variable>
-                    <!-- Filter these -->
-                    <xsl:variable name="filteredIdExpressionParts">
-                        <xsl:apply-templates select="$uniqueIdExpressionParts" mode="filterExpressions"/>
+                    <!--<xsl:copy-of select="$generateIdentifyUniqueExpressionParts"/>-->
+                    
+                    <xsl:variable name="generateFilterExpressionParts">
+                        <nts:generateAsserts>
+                            <xsl:for-each select="$generateIdentifyUniqueExpressionParts/nts:generateAsserts/nts:resource">
+                                <xsl:variable name="resourceType" select="@type"/>
+                                <xsl:copy>
+                                    <xsl:copy-of select="@*"/>
+                                    <xsl:choose>
+                                        <xsl:when test="nts:expressionPart[@unique = 'resource-type']">
+                                            <xsl:copy-of select="nts:expressionPart[@unique = 'resource-type'][1]"/>
+                                        </xsl:when>
+                                        <xsl:when test="nts:expressionPart[@unique = 'this-resource']">
+                                            <xsl:copy-of select="nts:expressionPart[@unique = 'this-resource'][1]"/>
+                                        </xsl:when>
+                                        <xsl:when test="nts:expressionPart[@unique = 'elementId']">
+                                            <xsl:copy-of select="nts:expressionPart[@unique = 'elementId'][1]"/>
+                                        </xsl:when>
+                                        <xsl:otherwise>
+                                            <xsl:for-each select="nts:expressionPart">
+                                                <xsl:variable name="contents" select="./text()"/>
+                                                <xsl:variable name="elementId" select="@elementId"/>
+                                                <xsl:choose>
+                                                    <!-- if the elementId contains '|' (e.g. it is generated by 'generateResourceDoubleExpressions'), filter it out -->
+                                                    <xsl:when test="contains($elementId,'|')"/>
+                                                    <!-- if the same expression is present in all resources of a type -->
+                                                    <xsl:when test="count(ancestor::nts:idExpressions/nts:idExpression[@type = $resourceType]) = count(ancestor::nts:idExpressions/nts:idExpression[@type = $resourceType]/nts:*[text()=$contents])"/>
+                                                    <xsl:otherwise>
+                                                        <xsl:copy-of select="."/>
+                                                    </xsl:otherwise>
+                                                </xsl:choose>
+                                            </xsl:for-each>
+                                        </xsl:otherwise>
+                                    </xsl:choose>
+                                </xsl:copy>
+                            </xsl:for-each>
+                        </nts:generateAsserts>
                     </xsl:variable>
-                    <!-- And combine these in one expression -->
-                    <xsl:variable name="combinedIdExpressionParts">
-                        <xsl:apply-templates select="$filteredIdExpressionParts" mode="combineExpressions"/>
+                    <!--<xsl:copy-of select="$generateFilterExpressionParts"/>-->
+                    
+                    <!-- Combine all expressionParts in one FHIRpath expression string -->
+                    <xsl:variable name="generateCombinedExpression">
+                        <nts:generateAsserts>
+                            <xsl:for-each select="$generateFilterExpressionParts/nts:generateAsserts/nts:resource">
+                                <xsl:copy>
+                                    <xsl:copy-of select="@*"/>
+                                    <xsl:for-each select="nts:expressionPart">
+                                        <xsl:value-of select="replace(., '[|]', ' and ')"/>
+                                        <xsl:if test="not(position()=last())"> and </xsl:if>
+                                    </xsl:for-each>
+                                </xsl:copy>
+                            </xsl:for-each>
+                        </nts:generateAsserts>
                     </xsl:variable>
+                    <!--<xsl:copy-of select="$generateCombinedExpression"/>-->
                     
                     <!-- For each resource -->
-                    <xsl:for-each select="$combinedIdExpressionParts/nts:idExpression">
-                        <!-- Check if the expression is really unique  -->
+                    <xsl:for-each select="$generateCombinedExpression/nts:generateAsserts/nts:resource">
+                        <xsl:variable name="resource" select="@resource"/>
+                        
+                        <!-- Check if the expression is really unique, as a backup -->
                         <xsl:variable name="is-unique">
                             <xsl:variable name="contents" select="text()"/>
                             <xsl:choose>
-                                <xsl:when test="count($combinedIdExpressionParts/nts:idExpression[text() = $contents]) = 1">
+                                <xsl:when test="count($combinedIdExpressionParts/nts:idExpression[text() = $contents]) = 1 or count($combinedIdExpressionParts/nts:idExpression[@resource = $resource]) = 1">
                                     <xsl:value-of select="true()"/>
                                 </xsl:when>
                                 <xsl:otherwise>
@@ -281,7 +436,6 @@
                             </xsl:choose>
                         </xsl:variable>
                         <xsl:variable name="position" select="count(preceding-sibling::nts:idExpression) + 1"/>
-                        <xsl:variable name="resource" select="@resource"/>
                         
                         <!-- Break if there is not a unique expression -->
                         <xsl:choose>
@@ -385,156 +539,6 @@
                         <xsl:apply-templates select="node()|@*" mode="#current"/>
                 </xsl:otherwise>
             </xsl:choose>
-        </xsl:copy>
-    </xsl:template>
-    
-    <xsl:template name="generate-expression-parts">
-        <xsl:param name="in" select="."/>
-        <xsl:param name="resourcename" select="$in/local-name()"></xsl:param>
-        <xsl:for-each select="$in//@value[string(number(.)) != 'NaN' or parent::f:code][not(parent::f:versionId)][not(parent::f:value/parent::f:*[matches(local-name(),'[Ii]dentifier$')])]"><!-- only apply values that are numbers (integers) and codes. prevent ambiguity -->
-            <xsl:variable name="element-id">
-                <xsl:for-each select="ancestor::*[ancestor::*[local-name()=$resourcename]]">
-                    <xsl:value-of select="nf:DTchoice(.)"/>
-                    <xsl:if test="not(position()=last())">
-                        <xsl:text>.</xsl:text>
-                    </xsl:if>
-                </xsl:for-each>
-            </xsl:variable>
-            <nts:expressionPart element-id="{$element-id}">
-                <xsl:value-of select="$element-id"/>
-                <xsl:choose>
-                    <xsl:when test="parent::f:code">
-                        <xsl:text>.where($this = '</xsl:text>
-                        <xsl:value-of select="."/>
-                        <xsl:text>')</xsl:text>
-                    </xsl:when>
-                    <xsl:otherwise>
-                        <xsl:text> = </xsl:text>
-                        <xsl:value-of select="."/>
-                    </xsl:otherwise>
-                </xsl:choose>
-            </nts:expressionPart>
-        </xsl:for-each>
-        <xsl:for-each select="$in//@value[starts-with(.,'${DATE, T')]">
-            <xsl:variable name="element-id">
-                <xsl:for-each select="ancestor::*[ancestor::*[local-name()=$resourcename]]">
-                    <xsl:value-of select="nf:DTchoice(.)"/>
-                    <xsl:if test="not(position()=last())">
-                        <xsl:text>.</xsl:text>
-                    </xsl:if>
-                </xsl:for-each>
-            </xsl:variable>
-            <nts:expressionPart element-id="{$element-id}">
-                <xsl:value-of select="$element-id"/>
-                <xsl:text> = @</xsl:text>
-                <xsl:value-of select="."/>
-            </nts:expressionPart>
-        </xsl:for-each>
-    </xsl:template>
-    
-    <xsl:template match="nts:idExpression" mode="generateDoubleExpressions">
-        <xsl:variable name="resource" select="@resource"/>
-        <xsl:copy>
-            <xsl:copy-of select="@*|node()"/>
-            <xsl:for-each select="nts:expressionPart">
-                <xsl:variable name="contents" select="./text()"/>
-                <xsl:variable name="element-id" select="@element-id"/>
-                <xsl:for-each select="following-sibling::nts:expressionPart">
-                    <xsl:variable name="expression" select="concat($contents,' and ',./text())"/>
-                    <xsl:variable name="element-id2" select="@element-id"/>
-                    <nts:expressionPart element-id="{concat($element-id,'|',$element-id2)}">
-                        <xsl:value-of select="$expression"/>
-                    </nts:expressionPart>
-                </xsl:for-each>
-            </xsl:for-each>
-        </xsl:copy>
-    </xsl:template>
-    
-    <xsl:template match="nts:idExpression" mode="uniqueExpressions">
-        <xsl:variable name="resource" select="@resource"/>
-        <xsl:copy>
-            <xsl:copy-of select="@*"/>
-            <xsl:for-each select="nts:expressionPart">
-                <xsl:variable name="contents" select="./text()"/>
-                <xsl:variable name="element-id" select="@element-id"/>
-                <xsl:choose>
-                    <!-- if there is one differentiating expression for all resources of a type, only use that one for all resources -->
-                    <xsl:when test="count(ancestor::nts:idExpressions/nts:idExpression[@resource = $resource]) = count(distinct-values(ancestor::nts:idExpressions/nts:idExpression[@resource = $resource]/nts:expressionPart[@element-id = $element-id]/text()))">
-                        <xsl:copy>
-                            <xsl:attribute name="unique">resource-type</xsl:attribute>
-                            <xsl:copy-of select="@*|node()"/>
-                        </xsl:copy>
-                    </xsl:when>
-                    <!-- if there is one expressionpart that only exists in this resource, only use that one for this resource -->
-                    <xsl:when test="count(ancestor::nts:idExpressions/nts:idExpression[@resource = $resource]/nts:expressionPart[@element-id = $element-id]) = 1">
-                        <xsl:copy>
-                            <xsl:attribute name="unique">this-resource</xsl:attribute>
-                            <xsl:copy-of select="@*|node()"/>
-                        </xsl:copy>
-                    </xsl:when>
-                    <!-- if there is one differentiating element id expression for all resources of a type, only use that one for those resources -->
-                    <xsl:when test="count(ancestor::nts:idExpressions/nts:idExpression[@resource = $resource]//nts:expressionPart[@element-id = $element-id]) = count(distinct-values(ancestor::nts:idExpressions/nts:idExpression[@resource = $resource]/nts:expressionPart[@element-id = $element-id]/text()))">
-                        <xsl:copy>
-                            <xsl:attribute name="unique">element-id</xsl:attribute>
-                            <xsl:copy-of select="@*|node()"/>
-                        </xsl:copy>
-                    </xsl:when>
-                    <xsl:otherwise>
-                        <xsl:copy-of select="."/>
-                    </xsl:otherwise>
-                </xsl:choose>
-            </xsl:for-each>
-        </xsl:copy>
-    </xsl:template>
-    
-    <xsl:template match="nts:idExpressions" mode="filterExpressions uniqueExpressions generateDoubleExpressions">
-        <xsl:copy>
-            <xsl:apply-templates select="node()" mode="#current"/>
-        </xsl:copy>
-    </xsl:template>
-    
-    <xsl:template match="nts:idExpression" mode="filterExpressions">
-        <xsl:variable name="resource" select="@resource"/>
-        <xsl:copy>
-            <xsl:copy-of select="@*"/>
-            <xsl:choose>
-                <xsl:when test="nts:expressionPart[@unique = 'resource-type']">
-                    <xsl:copy-of select="nts:expressionPart[@unique = 'resource-type'][1]"/>
-                </xsl:when>
-                <xsl:when test="nts:expressionPart[@unique = 'this-resource']">
-                    <xsl:copy-of select="nts:expressionPart[@unique = 'this-resource'][1]"/>
-                </xsl:when>
-                <xsl:when test="nts:expressionPart[@unique = 'element-id']">
-                    <xsl:copy-of select="nts:expressionPart[@unique = 'element-id'][1]"/>
-                </xsl:when>
-                <xsl:otherwise>
-                    <xsl:for-each select="nts:*">
-                        <xsl:variable name="contents" select="./text()"/>
-                        <xsl:variable name="element-id" select="@element-id"/>
-                        <xsl:choose>
-                            <xsl:when test="contains($element-id,'|')"/>
-                            <!-- if there is only one resource of this type -->
-                            <xsl:when test="count(ancestor::nts:idExpressions/nts:idExpression[@resource = $resource]) = 1"/>
-                            <!-- if the same expression is present in all resources of a type -->
-                            <xsl:when test="count(ancestor::nts:idExpressions/nts:idExpression[@resource = $resource]) gt 1 and count(ancestor::nts:idExpressions/nts:idExpression[@resource = $resource]) = count(ancestor::nts:idExpressions/nts:idExpression[@resource = $resource]/nts:*[text()=$contents])"/>
-                            
-                            <xsl:otherwise>
-                <xsl:copy-of select="."/>
-                            </xsl:otherwise>
-                        </xsl:choose>
-            </xsl:for-each>
-                </xsl:otherwise>
-            </xsl:choose>
-        </xsl:copy>
-    </xsl:template>
-    
-    <xsl:template match="nts:idExpression" mode="combineExpressions">
-        <xsl:copy>
-            <xsl:copy-of select="@*"/>
-                    <xsl:for-each select="nts:expressionPart">
-                        <xsl:value-of select="."/>
-                        <xsl:if test="not(position()=last())"> and </xsl:if>
-                    </xsl:for-each>
         </xsl:copy>
     </xsl:template>
     
