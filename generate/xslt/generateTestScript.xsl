@@ -16,6 +16,9 @@
     <!-- The folder where the common components for TestScript generation can be found. -->
     <xsl:param name="commonComponentFolder" select="'../../common-asserts/'"/>
     
+    <!-- The format for responses (either 'xml' (default) or 'json') that this TestScript expects when it tests a 
+         server (i.e. it has no meaning when nts:scenario is set to 'client'). This value is added as 'Accept' header
+         on all requests and to the name and id of the TestScript. -->
     <xsl:param name="expectedResponseFormat"/>
     
     <!-- An NTS input file can nominate elements to only be included in specific named targets using the nts:only-in
@@ -23,12 +26,11 @@
          target that always applies if nothing else is specified. -->
     <xsl:param name="target" select="'#default'"/>
 
-    <!-- The main template, which will call the remaining templates.
-         param expectedResponseFormat is the format for responses (either 'xml' (default) or 'json') that this 
-                                      TestScript expects when it tests a server (i.e. it has no meaning when 
-                                      nts:scenario is set to 'client'). This value is added as 'Accept' header on all
-                                      requests and to the name and id of the TestScript.
-    -->
+    <!-- Optional string that will be appended verbatim to the verson string. If there is no version element in the
+         input, this parameter has no effect. -->
+    <xsl:param name="versionAddition" select="''"/>
+    
+    <!-- The main template, which will call the remaining templates. -->
     <xsl:template name="generate" match="f:TestScript">
         <xsl:variable name="scenario" select="@nts:scenario"/>
         
@@ -80,7 +82,11 @@
         <url value="{$url}"/>
     </xsl:template>
 
-    <!-- Use the name element as hook to include status. date, publisher and contact information --> 
+    <xsl:template match="f:TestScript/f:version" mode="filter">
+        <version value="{concat(./@value, $versionAddition)}"/>        
+    </xsl:template>
+    
+    <!-- Use the name element as hook to include status. publisher and contact information --> 
     <xsl:template match="f:TestScript/f:name" mode="filter">
         <xsl:copy>
             <xsl:apply-templates select="node()|@*" mode="#current"/>
@@ -94,7 +100,6 @@
                 <status value="active"/>
             </xsl:otherwise>
         </xsl:choose>
-        <date value="{format-date(current-date(), '[Y0001]-[M01]-[D01]')}"/>
         <publisher value="Nictiz"/>
         <contact>
             <name value="Nictiz"/>
