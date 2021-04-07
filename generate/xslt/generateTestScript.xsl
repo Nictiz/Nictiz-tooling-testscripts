@@ -27,7 +27,7 @@
     <xsl:param name="target" select="'#default'"/>
 
     <!-- Optional string that will be appended verbatim to the verson string. If there is no version element in the
-         input, this parameter has no effect. -->
+         input, it will be set to this parameter. -->
     <xsl:param name="versionAddition" select="''"/>
     
     <!-- The main template, which will call the remaining templates. -->
@@ -96,7 +96,14 @@
             </xsl:if>
             <url value="{$url}"/>
             <!-- Always add version -->
-            <version value="{concat(f:version/@value, $versionAddition)}"/>
+            <xsl:choose>
+                <xsl:when test="normalize-space($versionAddition)">
+                    <version value="{concat(f:version/@value, $versionAddition)}"/>
+                </xsl:when>
+                <xsl:when test="f:version[@value]">
+                    <xsl:copy-of select="f:version"/>                    
+                </xsl:when>
+            </xsl:choose>
             <xsl:apply-templates select="f:name | f:title" mode="#current"/>
             <xsl:choose>
                 <xsl:when test="f:status">
