@@ -60,47 +60,57 @@
             <xsl:with-param name="expectedResponseFormat" select="$expectedResponseFormat" tunnel="yes"/>
         </xsl:apply-templates>
     </xsl:template>
-
-    <!-- Use the id element as hook to include a matching url -->
-    <xsl:template match="f:TestScript/f:id" mode="filter">
+    
+    <!-- Match the root to organize and/or edit all children -->
+    <xsl:template match="f:TestScript" mode="filter">
         <xsl:param name="scenario" tunnel="yes"/>
         <xsl:param name="expectedResponseFormat" tunnel="yes"/>
+        <xsl:param name="fixtures" tunnel="yes"/>
+        <xsl:param name="profiles" tunnel="yes"/>
+        <xsl:param name="variables" tunnel="yes"/>
+        <xsl:param name="rules" tunnel="yes"/>
+        
         <xsl:variable name="url">
             <xsl:text>http://nictiz.nl/fhir/TestScript/</xsl:text>
-            <xsl:value-of select="@value"/>
+            <xsl:value-of select="f:id/@value"/>
             <xsl:if test="$scenario='server'">
                 <xsl:text>-</xsl:text>
                 <xsl:value-of select="$expectedResponseFormat"/>
             </xsl:if>
         </xsl:variable>
-        <xsl:copy>
-            <xsl:apply-templates select="node()|@*" mode="#current"/>
-        </xsl:copy>
+        <xsl:apply-templates select="f:id" mode="#current"/>
+        <xsl:if test="f:meta/f:profile/@value">
+            <xsl:message>Overriding meta.profile to Aegis TestScript profile</xsl:message>
+        </xsl:if>
         <meta>
+            <xsl:apply-templates select="f:meta/f:versionId | f:meta/f:lastUpdated" mode="#current"/>
             <profile value="http://touchstone.aegis.net/touchstone/fhir/testing/StructureDefinition/testscript"/>
+            <xsl:apply-templates select="f:meta/f:security | f:meta/f:tag" mode="#current"/>
         </meta>
+        <!-- Apply all templates that can exist between f:meta and f:url -->
+        <xsl:apply-templates select="f:implicitRules | f:language | f:text | f:contained | f:extension | f:modifierExtension" mode="#current"/>
+        <xsl:if test="f:url/@value">
+            <xsl:message>Overriding url to conform to convention</xsl:message>
+        </xsl:if>
         <url value="{$url}"/>
-    </xsl:template>
-
-    <xsl:template match="f:TestScript/f:version" mode="filter">
-        <version value="{concat(./@value, $versionAddition)}"/>        
-    </xsl:template>
-    
-    <!-- Use the name element as hook to include status. publisher and contact information --> 
-    <xsl:template match="f:TestScript/f:name" mode="filter">
-        <xsl:copy>
-            <xsl:apply-templates select="node()|@*" mode="#current"/>
-        </xsl:copy>
-        
+        <!-- Always add version -->
+        <version value="{concat(f:version/@value, $versionAddition)}"/>
+        <xsl:apply-templates select="f:name | f:title" mode="#current"/>
         <xsl:choose>
-            <xsl:when test="../f:status">
-                <xsl:copy-of select="../f:status"/>
+            <xsl:when test="f:status">
+                <xsl:apply-templates select="f:status"/>
             </xsl:when>
             <xsl:otherwise>
                 <status value="active"/>
             </xsl:otherwise>
         </xsl:choose>
+        <xsl:if test="f:publisher/@value">
+            <xsl:message>Overriding publisher to 'Nictiz'</xsl:message>
+        </xsl:if>
         <publisher value="Nictiz"/>
+        <xsl:if test="f:contact/@value">
+            <xsl:message>Overriding contact to 'Nictiz'</xsl:message>
+        </xsl:if>
         <contact>
             <name value="Nictiz"/>
             <telecom>
@@ -109,11 +119,8 @@
                 <use value="work"/>
             </telecom>
         </contact>
-    </xsl:template>
-    
-    <!-- Use description element as hook to include the origin and destination elements -->
-    <xsl:template match="f:TestScript/f:description" mode="filter">
-        <xsl:copy-of select="."/>
+        <xsl:apply-templates select="f:description | f:useContext | f:jurisdiction | f:purpose | f:copyright" mode="#current"/>
+        <!-- Include origin and destination elements -->
         <origin>
             <index value="1"/>
             <profile>
@@ -128,26 +135,7 @@
                 <code value="FHIR-Server"/>
             </profile>
         </destination>
-    </xsl:template>
-    
-    <!-- Silence status, fixture, profile, variable and rule elements, because they are already handled elsewhere -->
-    <xsl:template match="f:TestScript/f:status" mode="filter" />
-    <xsl:template match="f:TestScript//f:fixture" mode="filter" />
-    <xsl:template match="f:TestScript//f:profile" mode="filter" />
-    <xsl:template match="f:TestScript//f:variable" mode="filter" />
-    <xsl:template match="f:TestScript//f:rule[@id]" mode="filter" />
-
-    <!-- Silence all remaining nts: elements and attributes (that have been read but are not transformed) -->
-    <xsl:template match="nts:*" mode="filter"/>
-    <xsl:template match="@nts:*" mode="filter"/>
-    
-    <!-- Use the setup or (if absent) first test as a hook to inject the fixture, profile, variable and rule elements -->  
-    <xsl:template match="f:TestScript/f:setup | f:TestScript/f:test[not(preceding-sibling::f:setup) and not(preceding-sibling::f:test)]" mode="filter">
-        <xsl:param name="fixtures" tunnel="yes"/>
-        <xsl:param name="profiles" tunnel="yes"/>
-        <xsl:param name="variables" tunnel="yes"/>
-        <xsl:param name="rules" tunnel="yes"/>
-
+        <xsl:apply-templates select="f:metadata" mode="#current"/>
         <xsl:for-each-group select="$fixtures" group-by="@id">
             <xsl:for-each select="subsequence(current-group(), 2)">
                 <xsl:if test="not(deep-equal(current-group()[1], .))">
@@ -180,13 +168,18 @@
             </xsl:for-each>
             <xsl:copy-of select="current-group()[1]"/>
         </xsl:for-each-group>
-        
-        <!-- Write back the element we matched on -->
-        <xsl:element name="{local-name()}">
-            <xsl:apply-templates select="@*" mode="filter"/>
-            <xsl:apply-templates select="./(*|comment())" mode="filter"/>
-        </xsl:element>
+        <xsl:apply-templates select="f:ruleset | f:setup | f:test | f:teardown" mode="#current"/>
     </xsl:template>
+    
+    <!-- Silence fixture, profile, variable and rule elements, because they are already handled elsewhere -->
+    <xsl:template match="f:TestScript//f:fixture" mode="filter" />
+    <xsl:template match="f:TestScript//f:profile" mode="filter" />
+    <xsl:template match="f:TestScript//f:variable" mode="filter" />
+    <xsl:template match="f:TestScript//f:rule[@id]" mode="filter" />
+
+    <!-- Silence all remaining nts: elements and attributes (that have been read but are not transformed) -->
+    <xsl:template match="nts:*" mode="filter"/>
+    <xsl:template match="@nts:*" mode="filter"/>
     
     <!-- Add the format for requests to the TestScript id, if specified -->
     <xsl:template match="f:TestScript/f:id/@value" mode="filter">
