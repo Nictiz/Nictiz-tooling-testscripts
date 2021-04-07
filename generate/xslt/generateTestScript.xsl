@@ -78,97 +78,100 @@
                 <xsl:value-of select="$expectedResponseFormat"/>
             </xsl:if>
         </xsl:variable>
-        <xsl:apply-templates select="f:id" mode="#current"/>
-        <xsl:if test="f:meta/f:profile/@value">
-            <xsl:message>Overriding meta.profile to Aegis TestScript profile</xsl:message>
-        </xsl:if>
-        <meta>
-            <xsl:apply-templates select="f:meta/f:versionId | f:meta/f:lastUpdated" mode="#current"/>
-            <profile value="http://touchstone.aegis.net/touchstone/fhir/testing/StructureDefinition/testscript"/>
-            <xsl:apply-templates select="f:meta/f:security | f:meta/f:tag" mode="#current"/>
-        </meta>
-        <!-- Apply all templates that can exist between f:meta and f:url -->
-        <xsl:apply-templates select="f:implicitRules | f:language | f:text | f:contained | f:extension | f:modifierExtension" mode="#current"/>
-        <xsl:if test="f:url/@value">
-            <xsl:message>Overriding url to conform to convention</xsl:message>
-        </xsl:if>
-        <url value="{$url}"/>
-        <!-- Always add version -->
-        <version value="{concat(f:version/@value, $versionAddition)}"/>
-        <xsl:apply-templates select="f:name | f:title" mode="#current"/>
-        <xsl:choose>
-            <xsl:when test="f:status">
-                <xsl:apply-templates select="f:status"/>
-            </xsl:when>
-            <xsl:otherwise>
-                <status value="active"/>
-            </xsl:otherwise>
-        </xsl:choose>
-        <xsl:if test="f:publisher/@value">
-            <xsl:message>Overriding publisher to 'Nictiz'</xsl:message>
-        </xsl:if>
-        <publisher value="Nictiz"/>
-        <xsl:if test="f:contact/@value">
-            <xsl:message>Overriding contact to 'Nictiz'</xsl:message>
-        </xsl:if>
-        <contact>
-            <name value="Nictiz"/>
-            <telecom>
-                <system value="email"/>
-                <value value="kwalificatie@nictiz.nl"/>
-                <use value="work"/>
-            </telecom>
-        </contact>
-        <xsl:apply-templates select="f:description | f:useContext | f:jurisdiction | f:purpose | f:copyright" mode="#current"/>
-        <!-- Include origin and destination elements -->
-        <origin>
-            <index value="1"/>
-            <profile>
-                <system value="http://hl7.org/fhir/testscript-profile-origin-types"/>
-                <code value="FHIR-Client"/>
-            </profile>
-        </origin>
-        <destination>
-            <index value="1"/>
-            <profile>
-                <system value="http://hl7.org/fhir/testscript-profile-destination-types"/>
-                <code value="FHIR-Server"/>
-            </profile>
-        </destination>
-        <xsl:apply-templates select="f:metadata" mode="#current"/>
-        <xsl:for-each-group select="$fixtures" group-by="@id">
-            <xsl:for-each select="subsequence(current-group(), 2)">
-                <xsl:if test="not(deep-equal(current-group()[1], .))">
-                    <xsl:message terminate="yes" select="concat('Encountered different fixture inclusions using the same id ''', @id, '''')"/>
-                </xsl:if>
-            </xsl:for-each>
-            <xsl:copy-of select="current-group()[1]"/>
-        </xsl:for-each-group>
-        <xsl:for-each-group select="$profiles" group-by="@id">
-            <xsl:for-each select="subsequence(current-group(), 2)">
-                <xsl:if test="not(deep-equal(current-group()[1], .))">
-                    <xsl:message terminate="yes" select="concat('Encountered different profile declarations using the id ''', @id, '''')"/>
-                </xsl:if>
-            </xsl:for-each>
-            <xsl:copy-of select="current-group()[1]"/>
-        </xsl:for-each-group>
-        <xsl:for-each-group select="$variables" group-by="f:name/@value">
-            <xsl:for-each select="subsequence(current-group(), 2)">
-                <xsl:if test="not(deep-equal(current-group()[1], .))">
-                    <xsl:message terminate="yes" select="concat('Encountered different variables using the name ''', f:name/@value, '''')"/>
-                </xsl:if>
-            </xsl:for-each>
-            <xsl:copy-of select="current-group()[1]"/>
-        </xsl:for-each-group>
-        <xsl:for-each-group select="$rules" group-by="@id">
-            <xsl:for-each select="subsequence(current-group(), 2)">
-                <xsl:if test="not(deep-equal(current-group()[1], .))">
-                    <xsl:message terminate="yes" select="concat('Encountered different rules using the id ''', @id, '''')"/>
-                </xsl:if>
-            </xsl:for-each>
-            <xsl:copy-of select="current-group()[1]"/>
-        </xsl:for-each-group>
-        <xsl:apply-templates select="f:ruleset | f:setup | f:test | f:teardown" mode="#current"/>
+        
+        <xsl:copy>
+            <xsl:apply-templates select="f:id" mode="#current"/>
+            <xsl:if test="f:meta/f:profile/@value">
+                <xsl:message>Overriding meta.profile to Aegis TestScript profile</xsl:message>
+            </xsl:if>
+            <meta>
+                <xsl:apply-templates select="f:meta/f:versionId | f:meta/f:lastUpdated" mode="#current"/>
+                <profile value="http://touchstone.aegis.net/touchstone/fhir/testing/StructureDefinition/testscript"/>
+                <xsl:apply-templates select="f:meta/f:security | f:meta/f:tag" mode="#current"/>
+            </meta>
+            <!-- Apply all templates that can exist between f:meta and f:url -->
+            <xsl:apply-templates select="f:implicitRules | f:language | f:text | f:contained | f:extension | f:modifierExtension" mode="#current"/>
+            <xsl:if test="f:url/@value">
+                <xsl:message>Overriding url to conform to convention</xsl:message>
+            </xsl:if>
+            <url value="{$url}"/>
+            <!-- Always add version -->
+            <version value="{concat(f:version/@value, $versionAddition)}"/>
+            <xsl:apply-templates select="f:name | f:title" mode="#current"/>
+            <xsl:choose>
+                <xsl:when test="f:status">
+                    <xsl:apply-templates select="f:status"/>
+                </xsl:when>
+                <xsl:otherwise>
+                    <status value="active"/>
+                </xsl:otherwise>
+            </xsl:choose>
+            <xsl:if test="f:publisher/@value">
+                <xsl:message>Overriding publisher to 'Nictiz'</xsl:message>
+            </xsl:if>
+            <publisher value="Nictiz"/>
+            <xsl:if test="f:contact/@value">
+                <xsl:message>Overriding contact to 'Nictiz'</xsl:message>
+            </xsl:if>
+            <contact>
+                <name value="Nictiz"/>
+                <telecom>
+                    <system value="email"/>
+                    <value value="kwalificatie@nictiz.nl"/>
+                    <use value="work"/>
+                </telecom>
+            </contact>
+            <xsl:apply-templates select="f:description | f:useContext | f:jurisdiction | f:purpose | f:copyright" mode="#current"/>
+            <!-- Include origin and destination elements -->
+            <origin>
+                <index value="1"/>
+                <profile>
+                    <system value="http://hl7.org/fhir/testscript-profile-origin-types"/>
+                    <code value="FHIR-Client"/>
+                </profile>
+            </origin>
+            <destination>
+                <index value="1"/>
+                <profile>
+                    <system value="http://hl7.org/fhir/testscript-profile-destination-types"/>
+                    <code value="FHIR-Server"/>
+                </profile>
+            </destination>
+            <xsl:apply-templates select="f:metadata" mode="#current"/>
+            <xsl:for-each-group select="$fixtures" group-by="@id">
+                <xsl:for-each select="subsequence(current-group(), 2)">
+                    <xsl:if test="not(deep-equal(current-group()[1], .))">
+                        <xsl:message terminate="yes" select="concat('Encountered different fixture inclusions using the same id ''', @id, '''')"/>
+                    </xsl:if>
+                </xsl:for-each>
+                <xsl:copy-of select="current-group()[1]"/>
+            </xsl:for-each-group>
+            <xsl:for-each-group select="$profiles" group-by="@id">
+                <xsl:for-each select="subsequence(current-group(), 2)">
+                    <xsl:if test="not(deep-equal(current-group()[1], .))">
+                        <xsl:message terminate="yes" select="concat('Encountered different profile declarations using the id ''', @id, '''')"/>
+                    </xsl:if>
+                </xsl:for-each>
+                <xsl:copy-of select="current-group()[1]"/>
+            </xsl:for-each-group>
+            <xsl:for-each-group select="$variables" group-by="f:name/@value">
+                <xsl:for-each select="subsequence(current-group(), 2)">
+                    <xsl:if test="not(deep-equal(current-group()[1], .))">
+                        <xsl:message terminate="yes" select="concat('Encountered different variables using the name ''', f:name/@value, '''')"/>
+                    </xsl:if>
+                </xsl:for-each>
+                <xsl:copy-of select="current-group()[1]"/>
+            </xsl:for-each-group>
+            <xsl:for-each-group select="$rules" group-by="@id">
+                <xsl:for-each select="subsequence(current-group(), 2)">
+                    <xsl:if test="not(deep-equal(current-group()[1], .))">
+                        <xsl:message terminate="yes" select="concat('Encountered different rules using the id ''', @id, '''')"/>
+                    </xsl:if>
+                </xsl:for-each>
+                <xsl:copy-of select="current-group()[1]"/>
+            </xsl:for-each-group>
+            <xsl:apply-templates select="f:ruleset | f:setup | f:test | f:teardown" mode="#current"/>
+        </xsl:copy>
     </xsl:template>
     
     <!-- Silence fixture, profile, variable and rule elements, because they are already handled elsewhere -->
