@@ -13,6 +13,8 @@ See the GNU Lesser General Public License for more details.
 The full text of the license is available at http://www.gnu.org/copyleft/lesser.html
 -->
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:f="http://hl7.org/fhir" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:util="urn:hl7:utilities" version="2.0" exclude-result-prefixes="#all" xmlns:saxon="http://saxon.sf.net/">
+    
+    <!-- NarrativeGenerator from c46e3c597d90c532fbd4595784292253a5d8a925 (2021-04-29) last used -->
     <xsl:import href="../../HL7-mappings/ada_2_fhir/fhir/NarrativeGenerator.xsl"/>
     <xsl:param name="override" select="'true'"/>
     <xsl:param name="util:textlangDefault" select="'nl-nl'"/>
