@@ -13,12 +13,14 @@
                                  a derived build script, passed on the command line or the property files should be 
                                  explicitly loaded using ANT's -propertyfile flag.
     - output.dir          : The folder where the output should be placed. See below for an explanation on folder structures.
+    - output.dir.standard : The name of the output folder where the output should be placed.
     - commoncomonents.dir : The directory containing the common components.
     - lib.dir             : The directory where all build dependency's will be placed. It's a good idea to add this to
                             .gitignore.
 
     Additionally, the following optional parameters may be used:
-    - outputLevel: the verbosity level of the script output  
+    - outputLevel : The verbosity level of the script output  
+    - publication : 'true/false' - Should be 'true' when preparing for the monthly release. Add publication-specific steps to the build process.
 
     # Project dirs
     
@@ -68,6 +70,9 @@
         var verboseMode = project.getProperty( "outputLevel" )
         project.getBuildListeners().firstElement().setMessageOutputLevel(verboseMode);
     </script>
+    
+    <!-- When true, also outputs the LoadResources to a centralized location. Necessary for the production folders on TouchStone -->
+    <property name="publication" value="false" />
     
     <!-- IVY -->
     
@@ -136,10 +141,18 @@
                     <fail message="Please set 'output.dir' to the directory where the output should be placed."/>
                 </then>
             </if>
+            <if>
+                <not>
+                    <isset property="output.dir.standard"/>
+                </not>
+                <then>
+                    <fail message="Please set 'output.dir.standard' to the name of the directory where the output should be placed."/>
+                </then>
+            </if>
             <!-- In order to construct output.dir.abs, the directory needs to exist, so we create it here and
                  then set output.dir.abs -->
-            <mkdir dir="${output.dir}"/>
-            <property name="output.dir.abs" location="${output.dir}"/>
+            <mkdir dir="${output.dir}/${output.dir.standard}"/>
+            <property name="output.dir.abs" location="${output.dir}/${output.dir.standard}"/>
             
             <if>
                 <not>
@@ -333,14 +346,20 @@
     </macrodef>
     
     <macrodef name="generate-loadresources" description="Generate a LoadResources TestScript to load all fixtures to the WildFHIR server.">
+        <attribute name="loadresources.file" description="Absolute path of the LoadResources output file."/>
+        <attribute name="centralized" description="If the LoadScript is saved centralized or not. Used for deletion of empty LoadResource files"/>
+        
         <sequential>
-            <property name="loadresources.file" value="${output.dir.abs}/_LoadResources/load-resources-purgecreateupdate-xml.xml"/>
-            <dirname property="loadresources.file.dir" file="${loadresources.file}"/>
+            <local name="loadresources.file.dir"/>
+            <local name="reference.dir.loadresourcesrelative"/>
+            <local name="reference.dir.loadresourcesrelative.normalized"/>
+            
+            <dirname property="loadresources.file.dir" file="@{loadresources.file}"/>
             <property name="reference.dir.loadresourcesrelative" location="${output.dir.abs}/_reference" relative="true" basedir="${loadresources.file.dir}"/>
             <!-- Convert backslashes to forward slashes if needed -->
             <propertyregex property="reference.dir.loadresourcesrelative.normalized" input="${reference.dir.loadresourcesrelative}" regexp="[\\]" replace="/" global="true" defaultValue="${reference.dir.loadresourcesrelative}"/>
             
-            <saxon-transform style="${xslt.dir}/generateLoadResources.xsl" out="${loadresources.file}">
+            <saxon-transform style="${xslt.dir}/generateLoadResources.xsl" out="@{loadresources.file}">
                 <parameters>
                     <param name="referenceBase" expression="${reference.dir.loadresourcesrelative.normalized}"/>
                     <param name="referenceDir" expression="${input.dir.abs}/_reference/"/>
@@ -350,9 +369,21 @@
             
             <!-- Check if output is empty. If yes, delete -->
             <if>
-                <length file="${loadresources.file}" when="equal" length="0" />
+                <and>
+                    <length file="@{loadresources.file}" when="equal" length="0" />
+                    <equals arg1="@{centralized}" arg2="false"/>
+                </and>
                 <then>
                     <delete dir="${loadresources.file.dir}"/>
+                </then>
+            </if>
+            <if>
+                <and>
+                    <length file="@{loadresources.file}" when="equal" length="0" />
+                    <equals arg1="@{centralized}" arg2="true"/>
+                </and>
+                <then>
+                    <delete file="@{loadresources.file}"/>
                 </then>
             </if>
         </sequential>
@@ -461,7 +492,19 @@
                     <!-- Copy over all fixtures and rules -->
                     <echo message="Copying fixtures"/>
                     <copy-references references.file="${references.file}"/>
-                    <generate-loadresources/>
+                    <generate-loadresources loadresources.file="${output.dir.abs}/_LoadResources/load-resources-purgecreateupdate-xml.xml" centralized="false"/>
+                    
+                    <!-- Generate extra LoadResources script in central location -->
+                    <if>
+                        <equals arg1="${publication}" arg2="true"/>
+                        <then>
+                            <echo message="Generating centralized LoadResources"/>
+                            <mkdir dir="${output.dir}/_LoadResources"/>
+                            <property name="output.dir.loadresources.abs" location="${output.dir}/_LoadResources"/>
+                            
+                            <generate-loadresources loadresources.file="${output.dir.loadresources.abs}/${output.dir.standard}-load-resources-purgecreateupdate-xml.xml" centralized="true"/>
+                        </then>
+                    </if>
                 </sequential>
             </then>
             <else>
