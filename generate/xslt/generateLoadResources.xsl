@@ -87,9 +87,11 @@
                 <xsl:variable name="fixtureId">
                     <xsl:call-template name="generateFixtureId"/>
                 </xsl:variable>
+                <!-- TouchStone has an additional requirement that files cannot contain dots - we replace dots with hyphens here, because fixtures generated with HL7-mappings can contain dots in filenames. Ideally, we would generate LoadResources from the output folder, because the filenames are changed when copying from input to output, but this would require significant restructuring. Therefore, we also replace dots with hyphens here parallel to the copying task in ANT. -->
+                <xsl:variable name="fileName" select="replace(translate(document-uri(ancestor::node()),'.','-'),'-xml$','.xml')"/>
                 <fixture id="{$fixtureId}">
                     <resource>
-                        <reference value="{replace(document-uri(ancestor::node()), $referenceDirAsUrl, $referenceBaseSanitized)}"/>
+                        <reference value="{replace($fileName, $referenceDirAsUrl, $referenceBaseSanitized)}"/>
                     </resource>
                 </fixture>
             </xsl:for-each>
@@ -199,14 +201,16 @@
         <xsl:if test="not(matches(f:id/@value, '^[A-Za-z0-9\-\.]{1,64}$'))">
             <xsl:message terminate="yes" select="concat('Invalid FHIR id: ', f:id/@value)"/>
         </xsl:if>
-
-        <xsl:variable name="fixtureId" select="concat(local-name(), '-', f:id/@value)"/>
+        
+        <!-- Dots are allowed in Resource.id, but not in fixture.id, see https://bits.nictiz.nl/projects/KT/issues/KT-283. We therefore replace them with hyphens in two places below. -->
+        <xsl:variable name="resourceId" select="translate(f:id/@value, '.', '-')"/>
+        <xsl:variable name="fixtureId" select="concat(local-name(), '-', $resourceId)"/>
         <xsl:choose>
             <xsl:when test="matches($fixtureId, '^[A-Za-z0-9\-\.]{1,64}$')">
-                <xsl:value-of select="$fixtureId"/>
+                <xsl:value-of select="translate($fixtureId, '.', '-')"/>
             </xsl:when>
             <xsl:otherwise>
-                <xsl:value-of select="substring(concat(local-name(), '-', generate-id(.), '-', f:id/@value),1,64)"/>
+                <xsl:value-of select="substring(concat(local-name(), '-', generate-id(.), '-', $resourceId),1,64)"/>
             </xsl:otherwise>
         </xsl:choose>
     </xsl:template>

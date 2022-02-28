@@ -296,12 +296,29 @@
                             <fail message="Fixture '@{fixture}' is referenced but doesn't exist"/>
                         </then>
                     </if>
+                    <!-- Because TouchStone does not allow dots in filenames (see copy task below), we check if the fixtures references in references.file do not contain dots -->
+                    <if>
+                        <contains string="@{fixture}" substring="."/>
+                        <then>
+                            <fail message="Fixture '@{fixture}' is referenced in a TestScript but contains a dot in its filename. TouchStone does not allow this."/>
+                        </then>
+                    </if>
                 </sequential>
             </for>
             
             <!-- Copy over the _reference dir with fixtures and rules -->
             <copy todir="${output.dir.abs}/_reference">
                 <fileset dir="${reference.dir}"/>
+                <!-- TouchStone has an additional requirement that files cannot contain dots - we replace dots with hyphens here, because fixtures generated with HL7-mappings can contain dots in filenames -->
+                <chainedmapper>
+                    <filtermapper>
+                        <replacestring from="." to="-"/>
+                    </filtermapper>
+                    <!-- Correction for correcting '-[extension]' to '.[extension]'. Very hacky :( -->
+                    <filtermapper>
+                        <replaceregex pattern="-(xml|groovy)$$" replace=".\1"/>
+                    </filtermapper>
+                </chainedmapper>
             </copy>
             
             <!-- Copy all rules from the global scope if they don't exist in the local scope, or fail if they don't
