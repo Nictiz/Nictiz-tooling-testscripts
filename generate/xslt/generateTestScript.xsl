@@ -542,6 +542,23 @@
                     </extension>
                 </extension>
             </xsl:for-each>
+            <xsl:for-each select="./nts:output">
+                <extension url="output">
+                    <extension url="name">
+                        <valueString value="{./@name}"/>
+                    </extension>
+                    <xsl:if test="./@type">
+                        <extension url="type">
+                            <valueString value="{./@type}"/>
+                        </extension>
+                    </xsl:if>
+                    <xsl:if test="./@contentType">
+                        <extension url="contentType">
+                            <valueString value="{./@contentType}"/>
+                        </extension>
+                    </xsl:if>
+                </extension>
+            </xsl:for-each>
         </extension>
     </xsl:template>
     
