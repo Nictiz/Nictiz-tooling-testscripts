@@ -313,6 +313,32 @@ Because of the verbosity of the ANT build, the logging level is set to 1 (warnin
 
 ## Changelog
 
+### 2.0.0
+- The tooling now produces TestScript resources in FHIR R4 rather then STU3.
+
+
+### 1.10.0
+- An extra buildscript has been added (ant/build-multiple.xml) that allows you to build multiple projects, as long as they have a build.properties file that sets the parameters for building each project.
+- Make the building of additional targets work when there are subdirs (HIT-21)
+- For the centralizeLoadResources script, the subdirs parameters may now include spaces.
+
+### 1.9.0
+- FIX: still produce unix path if the input is already a unix path
+- Fix for broken reference checking.
+- FIX: Set priority on filtering templates to ensure that there are no multiple matches
+- Fixed a broken url to README
+- Fix the broken components.dir parameter
+
+### 1.8.0
+- Add the option to include or exclude elements in components when a parameter is set or omitted.
+
+### 1.7.0
+- Expansion of parameters in subsequent parameter calls (and make clear that parameters are globally available across the inclusion chain).
+- Use attributes on nts:include elements as an alternative to nts:with-parameter.
+
+### 1.6.0
+- Add tooling to copy all loadresources script to a central location. This makes it easier to manage the permissions of the loadresources script when deployed to Touchstone.
+
 ### 1.5.0
 - Remove the date from TestScripts (MM-1976)
 - Add the option to pass a version addition to the build script (MM-1976)
