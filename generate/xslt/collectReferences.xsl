@@ -15,12 +15,23 @@
          
     <xsl:param name="additionalFixtures" as="xs:string" select="''"/>
     <xsl:param name="additionalRules" as="xs:string" select="''"/>
-    <xsl:param name="includesDir" select="'../_reference'"/>
-
+    <xsl:param name="includesDir" select="'../_reference/'"/>
+    
+    <xsl:variable name="includesDirNormalized">
+        <xsl:choose>
+            <xsl:when test="ends-with($includesDir, '/')">
+                <xsl:value-of select="$includesDir"/>
+            </xsl:when>
+            <xsl:otherwise>
+                <xsl:value-of select="concat($includesDir, '/')"/>
+            </xsl:otherwise>
+        </xsl:choose>
+    </xsl:variable>
+    
     <xsl:template match="f:TestScript">
         <xsl:variable name="fixtures" as="xs:string*">
             <xsl:for-each select="//f:fixture">
-                <xsl:value-of select="substring-after(f:resource/f:reference/@value, concat($includesDir,'/'))"/>        
+                <xsl:value-of select="substring-after(f:resource/f:reference/@value, $includesDirNormalized)"/>        
             </xsl:for-each>
             <xsl:for-each select="tokenize($additionalFixtures, ';')">
                 <xsl:if test="string-length(.) &gt; 0">
@@ -38,7 +49,7 @@
         
         <xsl:variable name="rules" as="xs:string*">
             <xsl:for-each select="//f:rule[f:resource]">
-                <xsl:value-of select="substring-after(f:resource/f:reference/@value, $includesDir)"/>        
+                <xsl:value-of select="substring-after(f:resource/f:reference/@value, $includesDirNormalized)"/>        
             </xsl:for-each>
             <xsl:for-each select="tokenize($additionalRules, ';')">
                 <xsl:if test="string-length(.) &gt; 0">
