@@ -52,6 +52,7 @@
         <xsl:variable name="expanded">
             <xsl:apply-templates mode="expand" select=".">
                 <xsl:with-param name="scenario" select="$scenario" tunnel="yes"/>
+                <xsl:with-param name="expectedResponseFormat" select="$expectedResponseFormat" tunnel="yes"/>
                 <xsl:with-param name="basePath" select="$basePath" tunnel="yes"/>
             </xsl:apply-templates>
         </xsl:variable>
@@ -278,9 +279,38 @@
     
     <!-- Expand a nts:fixture element to a FHIR fixture element -->
     <xsl:template match="nts:fixture[@id and @href]" mode="expand">
+        <xsl:param name="scenario" tunnel="yes"/>
+        <xsl:param name="expectedResponseFormat" tunnel="yes"/>
+        <xsl:variable name="href" select="@href"/>
+        
+        <xsl:variable name="hrefFormatAdjusted">
+            <xsl:choose>
+                <xsl:when test="$scenario = 'server'">
+                    <xsl:choose>
+                        <xsl:when test="($expectedResponseFormat = 'xml' and ends-with($href, '.xml')) or ($expectedResponseFormat = 'json' and ends-with($href, '.json'))">
+                            <xsl:value-of select="$href"/>
+                        </xsl:when>
+                        <xsl:when test="$expectedResponseFormat = 'json' and ends-with($href, '.xml')">
+                            <xsl:value-of select="replace($href, '\.xml', '.json')"/>
+                        </xsl:when>
+                        <xsl:when test="$expectedResponseFormat = 'xml' and ends-with($href, '.json')">
+                            <xsl:value-of select="replace($href, '\.json', '.xml')"/>
+                        </xsl:when>
+                        <xsl:otherwise>
+                            <xsl:value-of select="concat($href, '.', $expectedResponseFormat)"/>
+                        </xsl:otherwise>
+                    </xsl:choose>
+                </xsl:when>
+                <xsl:otherwise>
+                    <xsl:value-of select="$href"/>
+                </xsl:otherwise>
+            </xsl:choose>
+            
+        </xsl:variable>
+        
         <fixture id="{@id}">
             <resource>
-                <reference value="{nts:constructFilePath($referenceBase, @href)}"/>
+                <reference value="{nts:constructFilePath($referenceBase, $hrefFormatAdjusted)}"/>
             </resource>
         </fixture>
     </xsl:template>
