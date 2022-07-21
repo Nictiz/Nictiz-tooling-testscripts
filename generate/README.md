@@ -315,6 +315,9 @@ Because of the verbosity of the ANT build, the logging level is set to 1 (warnin
 
 ## Changelog
 
+### 2.1.0
+- Allows the use of a `{$_FORMAT}` parameter to output the format (`xml` or `json`) in fixture referencing.
+
 ### 2.0.0
 - The tooling now produces TestScript resources in FHIR R4 rather then STU3.
 
