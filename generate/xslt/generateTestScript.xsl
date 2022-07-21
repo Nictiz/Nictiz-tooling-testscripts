@@ -549,7 +549,7 @@
     </xsl:template>
     
     <!-- Parameter names starting with '_' are excluded here for exclusive internal use. See an example within nts:fixture for '_FORMAT' -->
-    <xsl:variable name="parameterChars" select="'[a-zA-Z0-9-][A-Za-z_0-9-]'"/>
+    <xsl:variable name="parameterChars" select="'[a-zA-Z0-9-][A-Za-z_0-9-]*'"/>
     
     <xsl:template match="@*" mode="expand">
         <xsl:param name="inclusionParameters" as="element(nts:with-parameter)*" tunnel="yes"/>
@@ -557,7 +557,7 @@
         <xsl:variable name="componentName" select="tokenize(base-uri(), '/')[last()]"/>
         
         <xsl:variable name="value">
-            <xsl:variable name="regexString" select="concat('\{\$(',$parameterChars,'*)\}')"/>
+            <xsl:variable name="regexString" select="concat('\{\$(',$parameterChars,')\}')"/>
             <xsl:choose>
                 <xsl:when test="matches(., $regexString)">
                     <xsl:analyze-string select="." regex="{$regexString}">
