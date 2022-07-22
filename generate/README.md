@@ -210,6 +210,8 @@ There may be differences for xis and phr scenarios in how a TestScript is transf
 nts:scenario="server|client"
 ```
 
+When the scenario is set to 'server', the magic variable `{$_FORMAT}` becomes available to `nts:fixture` and to `.operation.contentType`, which will result in the string 'xml' when generating the xml instance and in 'json' when generating the json instance.
+
 ### Building different variants
 
 It is possible to build different variants or _targets_ from the same source files that include different elements (these have to be defined using the `targets.additional` parameter during building, see the section on build script parameters further down this document on guidance). The `nts:in-targets` attribute can be used on elements to specify the targets where the element should end up in. If this attribute is absent, the element will be included in all targets. Mulitple targets may be separated by a space. The special target '#default' can be used for the default build.
