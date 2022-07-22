@@ -327,21 +327,14 @@
         <xsl:param name="expectedResponseFormat" tunnel="yes"/>
         
         <xsl:variable name="href">
-            <xsl:analyze-string select="@href" regex="\{{\$_FORMAT\}}">
-                <xsl:matching-substring>
-                    <xsl:choose>
-                        <xsl:when test="$scenario = 'server'">
-                            <xsl:value-of select="$expectedResponseFormat"/>
-                        </xsl:when>
-                        <xsl:when test="$scenario = 'client'">
-                            <xsl:message terminate="yes" select="'The use of parameter ''{$_FORMAT}'' has no meaning when the nts:scenario is ''client'''"/>
-                        </xsl:when>
-                    </xsl:choose>
-                </xsl:matching-substring>
-                <xsl:non-matching-substring>
-                    <xsl:value-of select="."/>
-                </xsl:non-matching-substring>
-            </xsl:analyze-string>
+            <xsl:choose>
+                <xsl:when test="$scenario = 'client' and contains(@href, '{$_FORMAT}')">
+                    <xsl:message terminate="yes" select="'The use of parameter ''{$_FORMAT}'' has no meaning when the nts:scenario is ''client'''"/>
+                </xsl:when>
+                <xsl:otherwise>
+                    <xsl:value-of select="replace(@href, '\{\$_FORMAT\}', $expectedResponseFormat)"/>
+                </xsl:otherwise>
+            </xsl:choose>
         </xsl:variable>
         
         <fixture id="{@id}">
@@ -349,6 +342,23 @@
                 <reference value="{nts:constructFilePath($referenceBase, $href)}"/>
             </resource>
         </fixture>
+    </xsl:template>
+    
+    <!-- Handle the magic parameter $_FORMAT in contentType -->
+    <xsl:template match="f:contentType/@value" mode="expand">
+        <xsl:param name="scenario" tunnel="yes"/>
+        <xsl:param name="expectedResponseFormat" tunnel="yes"/>
+
+        <xsl:choose>
+            <xsl:when test="$scenario = 'client' and contains(., '{$_FORMAT}')">
+                <xsl:message terminate="yes" select="'The use of parameter ''{$_FORMAT}'' has no meaning when the nts:scenario is ''client'''"/>
+            </xsl:when>
+            <xsl:otherwise>
+                <xsl:attribute name="value">
+                    <xsl:value-of select="replace(., '\{\$_FORMAT\}', $expectedResponseFormat)"/>
+                </xsl:attribute>
+            </xsl:otherwise>
+        </xsl:choose>
     </xsl:template>
     
     <!-- Expand an nts:patientTokenFixture element to create a variable called 'patient-token-id'. How this is handled
