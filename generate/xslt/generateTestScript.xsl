@@ -338,6 +338,8 @@
         </xsl:variable>
         
         <fixture id="{@id}">
+            <autocreate value="false"/>
+            <autodelete value="false"/>
             <resource>
                 <reference value="{nts:constructFilePath($referenceBase, $href)}"/>
             </resource>
