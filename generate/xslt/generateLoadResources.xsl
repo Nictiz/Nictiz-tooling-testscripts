@@ -33,7 +33,7 @@
                     </xsl:when>
                 </xsl:choose>
             </xsl:variable>
-            <xsl:value-of select="if (ends-with($fileUrl, '/')) then $fileUrl else concat($fileUrl, '/')"/>
+            <xsl:value-of select="encode-for-uri(if (ends-with($fileUrl, '/')) then $fileUrl else concat($fileUrl, '/'))"/>
         </xsl:variable>
         
         <!-- Make sure the referenceBase ends with a slash. -->
