@@ -15,6 +15,7 @@
     <xsl:param name="debug" select="true()"/>
     
     <xsl:param name="fhirPackage" select="'nictiz.fhir.nl.r4.patientcorrections'"/>
+    <!--<xsl:param name="fhirPackage" select="'nictiz.fhir.nl.r4.medicationprocess9'"/>-->
     <xsl:param name="fhirPackageVersion" select="'1.0.0'"/>
     
     <xsl:template match="/">
@@ -32,16 +33,77 @@
             <fhirVersion value="4.0.1"/>
             <kind value="resource"/>
             <abstract value="false"/>
-            <type value="{$resourceType}"/>
-            <baseDefinition value="http://hl7.org/fhir/StructureDefinition/{$resourceType}"/>
+            <!-- We always create a Bundle profile. If the transformation is applied to a single resource, we assume searchset Bundle -->
+            <type value="Bundle"/>
+            <baseDefinition value="http://hl7.org/fhir/StructureDefinition/Bundle"/>
             <derivation value="constraint"/>
             <differential>
-                <!-- Currently works on a Bundle fixture and only processes the first entry. If there are multiple entries to be checked, can we combine them in 1 profile?
-                And: this should be made to function to create a profile on 1 separate resource, that is expected to be returned in a searchset Bundle -->
-                <xsl:apply-templates select="*/*">
-                    <xsl:with-param name="elementId" select="$resourceType"/>
-                    <xsl:with-param name="path" select="$resourceType"/>
-                </xsl:apply-templates>
+                <xsl:choose>
+                    <!-- Currently works on a Bundle fixture and only processes the first entry. If there are multiple entries to be checked, can we combine them in 1 profile? -->
+                    <xsl:when test="f:Bundle">
+                        <xsl:apply-templates select="*/*">
+                            <xsl:with-param name="elementId" select="$resourceType"/>
+                            <xsl:with-param name="path" select="$resourceType"/>
+                        </xsl:apply-templates>
+                    </xsl:when>
+                    <xsl:otherwise>
+                        <element id="Bundle.type">
+                            <path value="Bundle.type"/>
+                            <fixedCode value="searchset"/>
+                        </element>
+                        <xsl:variable name="elementId" select="concat('Bundle.entry:', lower-case($resourceType))"/>
+                        <xsl:variable name="path" select="'Bundle.entry'"/>
+                        <xsl:variable name="profile" select="f:*/f:meta/f:profile[1]/@value"/>
+                        <xsl:variable name="structureDefinition">
+                            <xsl:call-template name="getStructureDefinition">
+                                <xsl:with-param name="profile" select="$profile"/>
+                            </xsl:call-template>
+                        </xsl:variable>
+                        <element id="Bundle.entry">
+                            <path value="{$path}"/>
+                            <slicing>
+                                <discriminator>
+                                    <type value="profile"/>
+                                    <path value="resource"/>
+                                </discriminator>
+                                <rules value="open"/>
+                            </slicing>
+                        </element>
+                        <element id="{$elementId}">
+                            <path value="{$path}"/>
+                            <sliceName value="{lower-case($resourceType)}"/>
+                            <min value="1"/>
+                            <max value="1"/>
+                        </element>
+                        <element id="{$elementId}.resource">
+                            <path value="{$path}.resource"/>
+                            <min value="1"/>
+                            <type>
+                                <code value="Resource"/>
+                                <profile value="{$profile}"/>
+                            </type>
+                        </element>
+                        <xsl:if test="f:*/f:extension">
+                            <element id="{$elementId}.resource.extension">
+                                <path value="{$path}.resource.extension"/>
+                                <slicing>
+                                    <discriminator>
+                                        <type value="value"/>
+                                        <path value="url"/>
+                                    </discriminator>
+                                    <rules value="open"/>
+                                </slicing>
+                                <min value="{count(f:*/f:extension)}"/>
+                            </element>
+                        </xsl:if>
+                        <xsl:apply-templates select="f:*/f:*">
+                            <xsl:with-param name="elementId" select="concat($elementId, '.resource')"/>
+                            <xsl:with-param name="path" select="concat($path, '.resource')"/>
+                            <xsl:with-param name="type" select="$resourceType" tunnel="yes"/>
+                            <xsl:with-param name="structureDefinition" select="$structureDefinition" tunnel="yes"/>
+                        </xsl:apply-templates>
+                    </xsl:otherwise>
+                </xsl:choose>
             </differential>
         </StructureDefinition>
     </xsl:template>
@@ -124,10 +186,11 @@
     </xsl:template>
     
     <!-- Here we start the real work -->
-    <xsl:template match="f:Bundle/f:entry/f:resource/f:*//f:*">
+    <xsl:template match="f:*">
         <xsl:param name="elementId"/>
         <xsl:param name="path"/>
         <xsl:param name="type" tunnel="yes"/>
+        <xsl:param name="url"/>
         
         <xsl:variable name="pathNew" select="nf:constructIdOrPath(., $path)"/>
         
@@ -137,6 +200,7 @@
                 <xsl:with-param name="path" select="$pathNew"/>
                 <xsl:with-param name="parentPath" select="$path"/>
                 <xsl:with-param name="parentType" select="$type"/>
+                <xsl:with-param name="url" select="$url"/>
             </xsl:call-template>
         </xsl:variable>
         
@@ -165,6 +229,10 @@
                     <xsl:when test="f:coding">
                         <!-- Slice on coding, to allow other codings then the ones we 'prescribe' to be present
                         What happens when there is already slicing present? I guess we can check for that using structureDefinition ... See 'Reference' for a way to do that. -->
+                        <element id="{$elementIdNew}">
+                            <path value="{$pathNew}"/>
+                            <min value="1"/>
+                        </element>
                         <element id="{$elementIdNew}.coding">
                             <path value="{$pathNew}.coding"/>
                             <slicing>
@@ -322,10 +390,41 @@
                 </xsl:apply-templates>
             </xsl:when>
             
+            <!-- Resource.id seems to use a special elementType code. Putting in an extra ends-with a) just to be sure and b) because we really would do like a 'special' check on .id, not just some string check. At the moment this is already checked by a common assert however. -->
+            <xsl:when test="$elementType = 'http://hl7.org/fhirpath/System.String' and ends-with($pathNew, '.id')"/>
+            
+            <xsl:when test="$elementType = 'Extension'">
+                <xsl:variable name="url" select="@url"/>
+                <xsl:variable name="sliceName" select="$elementDefinition/f:element[f:type/f:profile/@value = $url]/f:sliceName/@value"/>
+                <xsl:variable name="elementIdFull" select="concat($elementIdNew, ':', $sliceName)"/>
+                <element id="{$elementIdFull}">
+                    <path value="{$pathNew}"/>
+                    <sliceName value="{$sliceName}"/>
+                    <min value="1"/>
+                    <max value="1"/>
+                </element>
+                <xsl:apply-templates select="f:*">
+                    <xsl:with-param name="elementId" select="$elementIdFull"/>
+                    <xsl:with-param name="path" select="$pathNew"/>
+                    <xsl:with-param name="type" select="$elementType" tunnel="yes"/>
+                    <xsl:with-param name="url" select="$url"/>
+                </xsl:apply-templates>
+            </xsl:when>
+            
             <xsl:otherwise>
+                <!--<debug>
+                    <xsl:copy-of select="."/>
+                </debug>-->
+                <!--<debug>
+                    <xsl:copy-of select="$elementDefinition"/>
+                </debug>-->
                 <xsl:message terminate="yes">Unknown elementType: <xsl:value-of select="$elementType"/></xsl:message>
             </xsl:otherwise>
         </xsl:choose>
+        
+        <!--<debug>
+            <xsl:copy-of select="$elementDefinition"/>
+        </debug>-->
     </xsl:template>
     
     <!-- Construct element id or path by combining the 'inherited' id/path and the local element. Main goal is to detect and process choice (polymorphic) elements.
@@ -541,38 +640,38 @@
         <xsl:param name="path" required="yes"/>
         <xsl:param name="parentPath"/>
         <xsl:param name="parentType"/>
+        <xsl:param name="url"/>
         
         <xsl:if test="$debug">
             <xsl:message select="concat('getElementDefinitions: path = ',$path, ' - parentPath = ', $parentPath, ' - parentType = ', $parentType)"/>
         </xsl:if>
         
         <xsl:choose>
-            <!-- First we just try to find if 'it' is there -->
-            <xsl:when test="$structureDefinition/f:StructureDefinition/f:snapshot/f:element/f:path/@value = $path">
+            <!-- If the element is in an extension, $url is present and we should it account (because 'Extension.value[x]' will probably give multiple matches -->
+            <xsl:when test="string-length($url) gt 0 and $structureDefinition/f:StructureDefinition/f:snapshot[f:element[@id = 'Extension.url']/f:fixedUri/@value = $url]/f:element[f:path/@value = replace($path, $parentPath, $parentType)]">
+                <xsl:if test="$debug">
+                    <xsl:message select="concat('Found extension path: ', replace($path, $parentPath, $parentType))"/>
+                </xsl:if>
+                <xsl:copy-of select="$structureDefinition/f:StructureDefinition/f:snapshot[f:element[@id = 'Extension.url']/f:fixedUri/@value = $url]/f:element[f:path/@value = replace($path, $parentPath, $parentType)]"/>
+            </xsl:when>
+            <!-- If it is not an extension, first we just try to find if 'it' is there -->
+            <xsl:when test="string-length($url) = 0 and $structureDefinition/f:StructureDefinition/f:snapshot/f:element/f:path/@value = $path">
                 <xsl:if test="$debug">
                     <xsl:message select="concat('Found path: ', $path)"/>
                 </xsl:if>
                 <xsl:copy-of select="$structureDefinition/f:StructureDefinition/f:snapshot/f:element[f:path/@value = $path]"/>
             </xsl:when>
             <!-- Then, we try to replace the path of the element's parent with the type of that parent and try again -->
-            <xsl:when test="$parentPath and $structureDefinition/f:StructureDefinition/f:snapshot/f:element/f:path/@value = replace($path, $parentPath, $parentType)">
+            <xsl:when test="string-length($url) = 0 and $parentPath and $structureDefinition/f:StructureDefinition/f:snapshot/f:element/f:path/@value = replace($path, $parentPath, $parentType)">
                 <xsl:if test="$debug">
                     <xsl:message select="concat('Found path: ', replace($path, $parentPath, $parentType))"/>
                 </xsl:if>
                 <xsl:copy-of select="$structureDefinition/f:StructureDefinition/f:snapshot/f:element[f:path/@value = replace($path, $parentPath, $parentType)]"/>
             </xsl:when>
-            <!-- If we cannot find an elementdefinition because it is some kind of unknown extension, we should handle that -->
-            <!--<xsl:when test="self::f:extension"></xsl:when>-->
             <xsl:otherwise>
                 <xsl:message terminate="yes">Could not find elementDefinition for <xsl:value-of select="$path"/></xsl:message>
             </xsl:otherwise>
         </xsl:choose>
-    </xsl:template>
-    
-    <xsl:template match="*">
-        <xsl:element name="TODO:{local-name()}">
-            <xsl:apply-templates/>
-        </xsl:element>
     </xsl:template>
     
 </xsl:stylesheet>

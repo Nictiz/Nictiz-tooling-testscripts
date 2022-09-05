@@ -1,18 +1,18 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <StructureDefinition xmlns="http://hl7.org/fhir">
-    <id value="dwv-Transaction-Scenario-1"/>
-    <url value="http://nictiz.nl/fhir/StructureDefinition/Test/dwv-Transaction-Scenario-1"/>
-    <name value="dwvTransactionScenario1"/>
-    <title value="dwv Transaction Scenario 1"/>
-    <status value="draft"/>
-    <experimental value="true"/>
-    <description value="Constrained profile for qualification purposes. Not suited for implementation."/>
-    <fhirVersion value="4.0.1"/>
-    <kind value="resource"/>
-    <abstract value="false"/>
-    <type value="Bundle"/>
-    <baseDefinition value="http://hl7.org/fhir/StructureDefinition/Bundle"/>
-    <derivation value="constraint"/>
+  <id value="dwv-Bundle-Scenario-1" />
+  <url value="http://nictiz.nl/fhir/StructureDefinition/dwv-Bundle-Scenario-1" />
+  <name value="DwvBundleScenario1" />
+  <title value="dwv Bundle Scenario 1" />
+  <status value="draft" />
+  <experimental value="true" />
+  <description value="Constrained profile for qualification purposes. Not suited for implementation." />
+  <fhirVersion value="4.0.1" />
+  <kind value="resource" />
+  <abstract value="false" />
+  <type value="Bundle" />
+  <baseDefinition value="http://hl7.org/fhir/StructureDefinition/Bundle" />
+  <derivation value="constraint" />
     <differential>
         <element id="Bundle.type">
             <path value="Bundle.type"/>
@@ -28,11 +28,21 @@
                 <rules value="open"/>
             </slicing>
         </element>
+        <element id="Bundle.entry.link">
+            <!-- Forge artifact? -->
+            <path value="Bundle.entry.link"/>
+            <contentReference value="http://hl7.org/fhir/StructureDefinition/Bundle#Bundle.link"/>
+        </element>
         <element id="Bundle.entry:communication">
             <path value="Bundle.entry"/>
             <sliceName value="communication"/>
             <min value="1"/>
             <max value="1"/>
+        </element>
+        <element id="Bundle.entry:communication.link">
+            <!-- Forge artifact? -->
+            <path value="Bundle.entry.link"/>
+            <contentReference value="http://hl7.org/fhir/StructureDefinition/Bundle#Bundle.link"/>
         </element>
         <element id="Bundle.entry:communication.resource">
             <path value="Bundle.entry.resource"/>
@@ -50,10 +60,11 @@
             <path value="Bundle.entry.resource.identifier.value"/>
             <min value="1"/>
         </element>
-        <element id="Bundle.entry:communication.resource.category">
+        <!-- Following element is missing from output. Forge leaves this out because min value is already set in base profile. But can it do harm? -->
+        <!--<element id="Bundle.entry:communication.resource.category">
             <path value="Bundle.entry.resource.category"/>
             <min value="1"/>
-        </element>
+        </element>-->
         <element id="Bundle.entry:communication.resource.category.coding">
             <path value="Bundle.entry.resource.category.coding"/>
             <slicing>
@@ -113,6 +124,11 @@
             <path value="Bundle.entry.resource.topic.text"/>
             <fixedString value="Telefoonnummer wijzigen"/>
         </element>
+        <element id="Bundle.entry:communication.resource.recipient">
+            <path value="Bundle.entry.resource.recipient"/>
+            <!-- Don't think we can explicitly say so. Is this forbidden? Then it should be enforced by constraints? -->
+            <max value="1"/>
+        </element>
         <element id="Bundle.entry:communication.resource.recipient:healthcareProvider">
             <path value="Bundle.entry.resource.recipient"/>
             <sliceName value="healthcareProvider"/>
@@ -129,6 +145,12 @@
         <element id="Bundle.entry:communication.resource.recipient:healthcareProvider.display">
             <path value="Bundle.entry.resource.recipient.display"/>
             <min value="1"/>
+        </element>
+        <element id="Bundle.entry:communication.resource.recipient:healthProfessional">
+            <path value="Bundle.entry.resource.recipient"/>
+            <sliceName value="healthProfessional"/>
+            <!-- Don't think we can explicitly say so. Is this forbidden? Then it should be enforced by constraints? -->
+            <max value="0"/>
         </element>
         <element id="Bundle.entry:communication.resource.sender">
             <path value="Bundle.entry.resource.sender"/>
@@ -152,8 +174,7 @@
         </element>
         <element id="Bundle.entry:communication.resource.payload.content[x]">
             <path value="Bundle.entry.resource.payload.content[x]"/>
-            <min value="1"/>
-            <fixedString value="Ik heb in mijn dossier gezien dat mijn telefoonnummer niet klopt. Dit wil ik graag gewijzigd hebben. Mijn telefoonnummer is 06-12345678."/>
+            <fixedString value="Ik heb in mijn dossier gezien dat mijn telefoonnummer niet klopt. Dit wil ik graag gewijzigd hebben. Ik zou graag teruggebeld willen worden."/>
         </element>
     </differential>
 </StructureDefinition>
