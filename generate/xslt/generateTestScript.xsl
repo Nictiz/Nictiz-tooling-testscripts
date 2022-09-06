@@ -52,6 +52,7 @@
         <xsl:variable name="expanded">
             <xsl:apply-templates mode="expand" select=".">
                 <xsl:with-param name="scenario" select="$scenario" tunnel="yes"/>
+                <xsl:with-param name="expectedResponseFormat" select="$expectedResponseFormat" tunnel="yes"/>
                 <xsl:with-param name="basePath" select="$basePath" tunnel="yes"/>
             </xsl:apply-templates>
         </xsl:variable>
@@ -153,14 +154,14 @@
             <origin>
                 <index value="1"/>
                 <profile>
-                    <system value="http://hl7.org/fhir/testscript-profile-origin-types"/>
+                    <system value="http://terminology.hl7.org/CodeSystem/testscript-profile-origin-types"/>
                     <code value="FHIR-Client"/>
                 </profile>
             </origin>
             <destination>
                 <index value="1"/>
                 <profile>
-                    <system value="http://hl7.org/fhir/testscript-profile-destination-types"/>
+                    <system value="http://terminology.hl7.org/CodeSystem/testscript-profile-destination-types"/>
                     <code value="FHIR-Server"/>
                 </profile>
             </destination>
@@ -322,13 +323,44 @@
     
     <!-- Expand a nts:fixture element to a FHIR fixture element -->
     <xsl:template match="nts:fixture[@id and @href]" mode="expand">
+        <xsl:param name="scenario" tunnel="yes"/>
+        <xsl:param name="expectedResponseFormat" tunnel="yes"/>
+        
+        <xsl:variable name="href">
+            <xsl:choose>
+                <xsl:when test="$scenario = 'client' and contains(@href, '{$_FORMAT}')">
+                    <xsl:message terminate="yes" select="'The use of parameter ''{$_FORMAT}'' has no meaning when the nts:scenario is ''client'''"/>
+                </xsl:when>
+                <xsl:otherwise>
+                    <xsl:value-of select="replace(@href, '\{\$_FORMAT\}', $expectedResponseFormat)"/>
+                </xsl:otherwise>
+            </xsl:choose>
+        </xsl:variable>
+        
         <fixture id="{@id}">
             <autocreate value="false"/>
             <autodelete value="false"/>
             <resource>
-                <reference value="{nts:constructFilePath($referenceBase, @href)}"/>
+                <reference value="{nts:constructFilePath($referenceBase, $href)}"/>
             </resource>
         </fixture>
+    </xsl:template>
+    
+    <!-- Handle the magic parameter $_FORMAT in contentType -->
+    <xsl:template match="f:contentType/@value" mode="expand">
+        <xsl:param name="scenario" tunnel="yes"/>
+        <xsl:param name="expectedResponseFormat" tunnel="yes"/>
+
+        <xsl:choose>
+            <xsl:when test="$scenario = 'client' and contains(., '{$_FORMAT}')">
+                <xsl:message terminate="yes" select="'The use of parameter ''{$_FORMAT}'' has no meaning when the nts:scenario is ''client'''"/>
+            </xsl:when>
+            <xsl:otherwise>
+                <xsl:attribute name="value">
+                    <xsl:value-of select="replace(., '\{\$_FORMAT\}', $expectedResponseFormat)"/>
+                </xsl:attribute>
+            </xsl:otherwise>
+        </xsl:choose>
     </xsl:template>
     
     <!-- Expand an nts:patientTokenFixture element to create a variable called 'patient-token-id'. How this is handled
@@ -528,7 +560,8 @@
         </xsl:if>
     </xsl:template>
     
-    <xsl:variable name="parameterChars" select="'[a-zA-Z_0-9-]'"/>
+    <!-- Parameter names starting with '_' are excluded here for exclusive internal use. See an example within nts:fixture for '_FORMAT' -->
+    <xsl:variable name="parameterChars" select="'[a-zA-Z0-9-][A-Za-z_0-9-]*'"/>
     
     <xsl:template match="@*" mode="expand">
         <xsl:param name="inclusionParameters" as="element(nts:with-parameter)*" tunnel="yes"/>
@@ -536,7 +569,7 @@
         <xsl:variable name="componentName" select="tokenize(base-uri(), '/')[last()]"/>
         
         <xsl:variable name="value">
-            <xsl:variable name="regexString" select="concat('\{\$(',$parameterChars,'*)\}')"/>
+            <xsl:variable name="regexString" select="concat('\{\$(',$parameterChars,')\}')"/>
             <xsl:choose>
                 <xsl:when test="matches(., $regexString)">
                     <xsl:analyze-string select="." regex="{$regexString}">

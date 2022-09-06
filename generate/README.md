@@ -143,6 +143,8 @@ Profiles may be declared using:
 
 #### Fixtures
 
+Within the `@href` attribute of `nts:fixture`, the parameter `{$_FORMAT}` can be used to automatically output the format(either `xml` or `json`) the fixture is expected to be in.
+
 A LoadResources script is generated for all fixtures in the "_reference"-folder. See the section on building on how to exclude files and/or folders from being added the LoadResources script. 
 
 #### Using rules
@@ -207,6 +209,8 @@ There may be differences for xis and phr scenarios in how a TestScript is transf
 ```xml
 nts:scenario="server|client"
 ```
+
+When the scenario is set to 'server', the magic variable `{$_FORMAT}` becomes available to `nts:fixture` and to `.operation.contentType`, which will result in the string 'xml' when generating the xml instance and in 'json' when generating the json instance.
 
 ### Building different variants
 
@@ -312,6 +316,38 @@ It can be found at `schematron/NictizTestScript.sch` relative to this README.
 Because of the verbosity of the ANT build, the logging level is set to 1 (warning) and Saxon is set to not try to recover. When more verbose output is wanted, the logging level can be changed by setting the `-DoutputLevel=` parameter on the ANT build.
 
 ## Changelog
+
+### 2.1.1
+- Changed some CodeSystem uris from STU3 to their R4 counterpart.
+
+### 2.1.0
+- Allows the use of a `{$_FORMAT}` parameter to output the format (`xml` or `json`) in fixture referencing.
+
+### 2.0.0
+- The tooling now produces TestScript resources in FHIR R4 rather then STU3.
+
+
+### 1.10.0
+- An extra buildscript has been added (ant/build-multiple.xml) that allows you to build multiple projects, as long as they have a build.properties file that sets the parameters for building each project.
+- Make the building of additional targets work when there are subdirs (HIT-21)
+- For the centralizeLoadResources script, the subdirs parameters may now include spaces.
+
+### 1.9.0
+- FIX: still produce unix path if the input is already a unix path
+- Fix for broken reference checking.
+- FIX: Set priority on filtering templates to ensure that there are no multiple matches
+- Fixed a broken url to README
+- Fix the broken components.dir parameter
+
+### 1.8.0
+- Add the option to include or exclude elements in components when a parameter is set or omitted.
+
+### 1.7.0
+- Expansion of parameters in subsequent parameter calls (and make clear that parameters are globally available across the inclusion chain).
+- Use attributes on nts:include elements as an alternative to nts:with-parameter.
+
+### 1.6.0
+- Add tooling to copy all loadresources script to a central location. This makes it easier to manage the permissions of the loadresources script when deployed to Touchstone.
 
 ### 1.5.0
 - Remove the date from TestScripts (MM-1976)
