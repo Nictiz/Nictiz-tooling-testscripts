@@ -295,7 +295,7 @@ The following optional parameters may be used:
   targets.additional=Cert-with-setup
   ```
   The TestScript resources can use the `nts:in-targets` to define which element should be included in a target (see above). Multiple extra targets may be separated using comma's.
-  Note: additional targets may only be defined on input folders, not on subfolders. If there are subfolders in the input folder, each variant of the input folder will contain the full set of subfolders (but with slightly different content, of course).  
+  Note: if there are subfolders in the folder on which an additional target is defined, each variant of the input folder will contain the full set of subfolders (but with slightly different content, of course).  
 - `version.addition`: a string that will be added verbatim to the value in the `TestScript.version` from the input file. If this element is absent, it will be populated with this value. 
 
 ### Building multiple projects
@@ -316,6 +316,10 @@ It can be found at `schematron/NictizTestScript.sch` relative to this README.
 Because of the verbosity of the ANT build, the logging level is set to 1 (warning) and Saxon is set to not try to recover. When more verbose output is wanted, the logging level can be changed by setting the `-DoutputLevel=` parameter on the ANT build.
 
 ## Changelog
+
+### 2.1.2
+- Fixed a bug where 'special characters' in a local path would lead to the LoadResources outputting this local path instead of a relative path.
+- Allow for additional targets being defined at a lower level than the input folder.
 
 ### 2.1.1
 - Changed some CodeSystem uris from STU3 to their R4 counterpart.
