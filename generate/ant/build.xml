@@ -467,7 +467,7 @@
                                                 <not>
                                                     <equals arg1="${nts.file.reldir.root}" arg2=""/>
                                                 </not>
-                                                <contains string="/@{target.dir}" substring="${nts.file.reldir.root}"/>
+                                                <contains string="/@{target.dir}" substring="${nts.file.reldir.root}-"/>
                                             </and>
                                             <then>
                                                 <sequential>
