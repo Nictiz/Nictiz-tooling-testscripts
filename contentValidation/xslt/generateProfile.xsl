@@ -14,8 +14,8 @@
     
     <xsl:param name="debug" select="true()"/>
     
-    <xsl:param name="fhirPackage" select="'nictiz.fhir.nl.r4.patientcorrections'"/>
-    <!--<xsl:param name="fhirPackage" select="'nictiz.fhir.nl.r4.medicationprocess9'"/>-->
+    <!--<xsl:param name="fhirPackage" select="'nictiz.fhir.nl.r4.patientcorrections'"/>-->
+    <xsl:param name="fhirPackage" select="'nictiz.fhir.nl.r4.medicationprocess9'"/>
     <xsl:param name="fhirPackageVersion" select="'1.0.0'"/>
     
     <xsl:template match="/">
@@ -313,8 +313,10 @@
                     <xsl:variable name="type" select="f:type/@value"/>
                     <xsl:text>http://nictiz.nl/fhir/StructureDefinition/nl-core-</xsl:text>
                     <xsl:choose>
-                        <xsl:when test="$type = 'Patient'">Patient</xsl:when>
+                        <xsl:when test="$type = 'Medication'">PharmaceuticalProduct</xsl:when>
                         <xsl:when test="$type = 'Organization'">HealthcareProvider-Organization</xsl:when>
+                        <xsl:when test="$type = 'Patient'">Patient</xsl:when>
+                        <xsl:when test="$type = 'PractitionerRole'">HealthProfessional</xsl:when>
                         <xsl:otherwise>
                             <xsl:message terminate="yes">Need a Reference targetProfile for <xsl:value-of select="$type"/></xsl:message>
                         </xsl:otherwise>
@@ -409,6 +411,28 @@
                     <xsl:with-param name="type" select="$elementType" tunnel="yes"/>
                     <xsl:with-param name="url" select="$url"/>
                 </xsl:apply-templates>
+            </xsl:when>
+            
+            <xsl:when test="$elementType = 'Period'">
+                <!-- Should just refer to dateTime? Guess so -->
+                <xsl:if test="f:start">
+                    <element id="{$elementIdNew}.start">
+                        <path value="{$pathNew}.start"/>
+                        <min value="1"/>
+                        <fixedDateTime value="{f:start/@value}"/>
+                    </element>
+                </xsl:if>
+                <xsl:if test="f:end">
+                    <element id="{$elementIdNew}.end">
+                        <path value="{$pathNew}.end"/>
+                        <min value="1"/>
+                        <fixedDateTime value="2022-09-10T23:59:59+02:00"/>
+                    </element>
+                </xsl:if>
+            </xsl:when>
+            
+            <xsl:when test="$elementType = 'Dosage'">
+                <!-- TODO - just a BackboneElement actually? -->
             </xsl:when>
             
             <xsl:otherwise>
@@ -606,8 +630,21 @@
     <xsl:template name="getElementType">
         <xsl:param name="elementDefinition" required="yes"/>
         
-        <!-- The type seems to be the same in all elementDefinitions present, so we pick the first one. Have yet to encounter situations where this isn't the case -->
-        <xsl:variable name="elementType" select="($elementDefinition/f:element)[1]/f:type/f:code/@value"/>
+        <!-- The type seems to be the same in all elementDefinitions present, so we pick the first one. Have yet to encounter situations where this isn't the case. If the element is a polymorphic element, there are multiple .type's, so we have to check which one is applicable -->
+        <xsl:variable name="elementType">
+            <xsl:choose>
+                <xsl:when test="count(($elementDefinition/f:element)[1]/f:type) = 1">
+                    <xsl:value-of select="($elementDefinition/f:element)[1]/f:type/f:code/@value"/>
+                </xsl:when>
+                <xsl:when test="nf:isChoiceElement(local-name()) and count(($elementDefinition/f:element)[1]/f:type) gt 1">
+                    <xsl:variable name="elementTypeByLocalName" select="substring-after(local-name(), substring-before(nf:createChoiceElement(local-name()), '[x]'))"/>
+                    <xsl:value-of select="($elementDefinition/f:element)[1]/f:type/f:code[@value = $elementTypeByLocalName]/@value"/>
+                </xsl:when>
+                <xsl:otherwise>
+                    <xsl:message terminate="yes">Unknown situation when determining elementType</xsl:message>
+                </xsl:otherwise>
+            </xsl:choose>
+        </xsl:variable>
 
         <xsl:if test="$debug">
             <xsl:message select="concat('elementType: ',$elementType)"/>
