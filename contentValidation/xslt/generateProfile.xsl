@@ -82,6 +82,7 @@
                                 <code value="Resource"/>
                                 <profile value="{$profile}"/>
                             </type>
+                            <!-- If we want to check DateTimes relative to each other, I guess it should be done here. However, other than within Periods, I doubt if it gives valuable feedback -->
                         </element>
                         <xsl:if test="f:*/f:extension">
                             <element id="{$elementId}.resource.extension">
@@ -175,7 +176,7 @@
             </type>
         </element>
         
-        <!-- Skit the resourcetype element, we do not have anything to do there when starting from a Bundle -->
+        <!-- Skip the resourcetype element, we do not have anything to do there when starting from a Bundle -->
         <xsl:apply-templates select="f:*/f:*">
             <xsl:with-param name="elementId" select="$elementIdNew"/>
             <xsl:with-param name="path" select="$pathNew"/>
@@ -220,8 +221,43 @@
         
         <!-- Determine which action to take based on elementType -->
         <xsl:choose>
-            <xsl:when test="$elementType = 'code'">
-                <!-- Just check for fixed value I guess. Not present in the example output, because the profile actually fixed the value. I guess duplicating this does not matter, but that should be checked. -->
+            <xsl:when test="$elementType = ('code','decimal', 'positiveInt', 'string', 'uri')">
+                <element id="{$elementIdNew}">
+                    <path value="{$pathNew}"/>
+                    <min value="1"/>
+                    <xsl:element name="fixed{concat(upper-case(substring($elementType,1,1)),
+                        substring($elementType, 2))}">
+                        <xsl:attribute name="value" select="@value"/>
+                    </xsl:element>
+                </element>
+            </xsl:when>
+            
+            <xsl:when test="$elementType = ('BackboneElement', 'Dosage', 'Quantity', 'Timing') or ($elementType = 'Element' and (ends-with($pathNew, 'timing.repeat') or ends-with($pathNew, '.doseAndRate')))">
+                <!-- 'Element' is the base of all elements, so not sure why .repeat has this type, therefore coupling it with a path check -->
+                <element id="{$elementIdNew}">
+                    <path value="{$pathNew}"/>
+                    <min value="1"/>
+                </element>
+                <!-- Go one step deeper -->
+                <xsl:apply-templates select="f:*">
+                    <xsl:with-param name="elementId" select="$elementIdNew"/>
+                    <xsl:with-param name="path" select="$pathNew"/>
+                    <xsl:with-param name="type" tunnel="yes">
+                        <xsl:choose>
+                            <!-- These are too generic to pass forward -->
+                            <xsl:when test="$elementType = ('BackboneElement','Element')">
+                                <xsl:value-of select="concat($type, '.', local-name())"/>
+                            </xsl:when>
+                            <xsl:when test="$elementType = 'Timing'">
+                                <!-- Looks like Timing as a whole is already defined within the SD of Dosage, so apparently no need to treat it as a separate datatype -->
+                                <xsl:value-of select="concat($type, '.', local-name())"/>
+                            </xsl:when>
+                            <xsl:otherwise>
+                                <xsl:value-of select="$elementType"/>
+                            </xsl:otherwise>
+                        </xsl:choose>
+                    </xsl:with-param>
+                </xsl:apply-templates>
             </xsl:when>
             
             <xsl:when test="$elementType = 'CodeableConcept'">
@@ -289,9 +325,15 @@
             
             <xsl:when test="$elementType = 'dateTime'">
                 <!-- Do some T-date magic here? Check for Time pattern with constraint/regex? How to handle time zones? -->
+                <!-- T-dates in profiles not possible. -->
+                <!-- Time pattern in regex: .toString().matches('T\\d{2}:\\d{2}:\\d{2}') -->
+                <!-- Can we check for exact times? Only if timezones match. But shouldn't we check for timezones as well? .toString().matches('T23:59:59\\+0[12]:00') -->
             </xsl:when>
-            
             <xsl:when test="$elementType = 'Identifier'">
+                <element id="{$elementIdNew}">
+                    <path value="{$pathNew}"/>
+                    <min value="1"/>
+                </element>
                 <element id="{$elementIdNew}.system">
                     <path value="{$pathNew}.system"/>
                     <min value="1"/>
@@ -302,11 +344,9 @@
                 </element>
                 <!-- We could also check the contents of .system and .value more, like we do with a common assert at the moment. -->
             </xsl:when>
-            
             <xsl:when test="$elementType = 'Meta'">
                 <!-- Check meta.profile? This is done by common assert at the moment. -->
             </xsl:when>
-            
             <xsl:when test="$elementType = 'Reference'">
                 <xsl:variable name="targetProfile">
                     <!-- How can we determine correct targetProfile? Some 'resolveReference' function that searches for the file and checks that for Meta.profile? Up to that point: try to get away by using .type -->
@@ -374,24 +414,6 @@
                 </element>
             </xsl:when>
             
-            <xsl:when test="$elementType = 'string'">
-                <element id="{$elementIdNew}">
-                    <path value="{$pathNew}"/>
-                    <min value="1"/>
-                    <fixedString value="{@value}"/>
-                </element>
-            </xsl:when>
-            
-            <xsl:when test="$elementType = 'BackboneElement'">
-                <!-- Go one step deeper -->
-                <xsl:apply-templates select="f:*">
-                    <xsl:with-param name="elementId" select="$elementIdNew"/>
-                    <xsl:with-param name="path" select="$pathNew"/>
-                    <!-- If we have to do this, is 'type' really the best variable name? -->
-                    <xsl:with-param name="type" select="concat($type, '.', local-name())" tunnel="yes"/>
-                </xsl:apply-templates>
-            </xsl:when>
-            
             <!-- Resource.id seems to use a special elementType code. Putting in an extra ends-with a) just to be sure and b) because we really would do like a 'special' check on .id, not just some string check. At the moment this is already checked by a common assert however. -->
             <xsl:when test="$elementType = 'http://hl7.org/fhirpath/System.String' and ends-with($pathNew, '.id')"/>
             
@@ -414,25 +436,37 @@
             </xsl:when>
             
             <xsl:when test="$elementType = 'Period'">
+                <element id="{$elementIdNew}">
+                    <path value="{$pathNew}"/>
+                    <min value="1"/>
+                    <constraint>
+                        <key value="ma1"/>
+                        <severity value="error"/>
+                        <human value="Period.start and Period.end must have a difference of 9 days, 23:59:59"/>
+                        <expression value="start + 9 days + 23 hours + 59 minutes + 59 seconds = end"/>
+                    </constraint>
+                    <constraint>
+                        <key value="ma2"/>
+                        <severity value="error"/>
+                        <human value="Check if T-date works"/>
+                        <expression value="start = @${{DATE, T, D, -4}}T00:00:00+02:00"/>
+                    </constraint>
+                </element>
                 <!-- Should just refer to dateTime? Guess so -->
-                <xsl:if test="f:start">
+                <!--<xsl:if test="f:start">
                     <element id="{$elementIdNew}.start">
                         <path value="{$pathNew}.start"/>
                         <min value="1"/>
                         <fixedDateTime value="{f:start/@value}"/>
                     </element>
-                </xsl:if>
-                <xsl:if test="f:end">
+                </xsl:if>-->
+                <!--<xsl:if test="f:end">
                     <element id="{$elementIdNew}.end">
                         <path value="{$pathNew}.end"/>
                         <min value="1"/>
                         <fixedDateTime value="2022-09-10T23:59:59+02:00"/>
                     </element>
-                </xsl:if>
-            </xsl:when>
-            
-            <xsl:when test="$elementType = 'Dosage'">
-                <!-- TODO - just a BackboneElement actually? -->
+                </xsl:if>-->
             </xsl:when>
             
             <xsl:otherwise>
@@ -608,22 +642,30 @@
             <xsl:message>profile: <xsl:value-of select="$profile"/> - packageFileId: '<xsl:value-of select="$packageFileId"/>'</xsl:message>
         </xsl:if>
         
-        <xsl:choose>
-            <xsl:when test="string-length($packageFileId) gt 0">
-                <xsl:variable name="structureDefinition" select="document(concat('https://simplifier.net/ui/packagefile/downloadsnapshotas?packageFileId=',$packageFileId,'&amp;format=xml'))"/>
-                <xsl:copy-of select="$structureDefinition"/>
-                
-                <!-- Add StructureDefinitions of referenced datatype and extension profiles. For example: when no differential is present when dealing with a type profile, no SD-info is available in the snapshot (nl-core-patient, Patient.address for example). So we should add these to the set of SDs -->
-                <xsl:for-each select="distinct-values($structureDefinition//f:element/f:type/f:profile/@value)">
-                    <xsl:call-template name="getStructureDefinition">
-                        <xsl:with-param name="profile" select="."/>
-                    </xsl:call-template>
-                </xsl:for-each>
-            </xsl:when>
-            <xsl:otherwise>
-                <xsl:message terminate="yes">Unable to download snapshot for profile '<xsl:value-of select="$profile"/>'</xsl:message>
-            </xsl:otherwise>
-        </xsl:choose>
+        <xsl:variable name="rawStructureDefinitions">
+            <xsl:choose>
+                <xsl:when test="string-length($packageFileId) gt 0">
+                    <xsl:variable name="structureDefinition" select="document(concat('https://simplifier.net/ui/packagefile/downloadsnapshotas?packageFileId=',$packageFileId,'&amp;format=xml'))"/>
+                    <!-- We add packageFileId to deduplicate -->
+                    <StructureDefinition packageFileId="{$packageFileId}">
+                        <xsl:copy-of select="$structureDefinition/f:StructureDefinition/*"/>
+                    </StructureDefinition>
+                    
+                    <!-- Add StructureDefinitions of referenced datatype and extension profiles. For example: when no differential is present when dealing with a type profile, no SD-info is available in the snapshot (nl-core-patient, Patient.address for example). So we should add these to the set of SDs -->
+                    <xsl:for-each select="distinct-values($structureDefinition//f:element/f:type/f:profile/@value)">
+                        <xsl:call-template name="getStructureDefinition">
+                            <xsl:with-param name="profile" select="."/>
+                        </xsl:call-template>
+                    </xsl:for-each>
+                </xsl:when>
+                <xsl:otherwise>
+                    <xsl:message terminate="yes">Unable to download snapshot for profile '<xsl:value-of select="$profile"/>'</xsl:message>
+                </xsl:otherwise>
+            </xsl:choose>
+        </xsl:variable>
+        
+        <!-- Filtering unique SDs by packageFileId. Perhaps this can be done more efficiently _before_ calling Simplifier? -->
+        <xsl:copy-of select="$rawStructureDefinitions/f:StructureDefinition[not(@packageFileId = preceding-sibling::f:StructureDefinition/@packageFileId)]"/>
     </xsl:template>
     
     <!-- For a given element.path, get it's element type. -->
@@ -679,17 +721,22 @@
         <xsl:param name="parentType"/>
         <xsl:param name="url"/>
         
+        <!-- Because replace() is regex, we need to escape dots and polymorphic brackets -->
+        <xsl:param name="parentPathRegex" as="xs:string?">
+            <xsl:value-of select="replace(replace(replace($parentPath, '\.', '\\.'), '\[', '\\['), '\]', '\\]')"/>
+        </xsl:param>
+        
         <xsl:if test="$debug">
-            <xsl:message select="concat('getElementDefinitions: path = ',$path, ' - parentPath = ', $parentPath, ' - parentType = ', $parentType)"/>
+            <xsl:message select="concat('getElementDefinitions: path = ',$path, ' - parentPath = ', $parentPath, ' - parentType = ', $parentType, ' - replaced = ',replace($path, $parentPath, $parentType))"/>
         </xsl:if>
         
         <xsl:choose>
             <!-- If the element is in an extension, $url is present and we should it account (because 'Extension.value[x]' will probably give multiple matches -->
-            <xsl:when test="string-length($url) gt 0 and $structureDefinition/f:StructureDefinition/f:snapshot[f:element[@id = 'Extension.url']/f:fixedUri/@value = $url]/f:element[f:path/@value = replace($path, $parentPath, $parentType)]">
+            <xsl:when test="string-length($url) gt 0 and $structureDefinition/f:StructureDefinition/f:snapshot[f:element[@id = 'Extension.url']/f:fixedUri/@value = $url]/f:element[f:path/@value = replace($path, $parentPathRegex, $parentType)]">
                 <xsl:if test="$debug">
-                    <xsl:message select="concat('Found extension path: ', replace($path, $parentPath, $parentType))"/>
+                    <xsl:message select="concat('Found extension path: ', replace($path, $parentPathRegex, $parentType))"/>
                 </xsl:if>
-                <xsl:copy-of select="$structureDefinition/f:StructureDefinition/f:snapshot[f:element[@id = 'Extension.url']/f:fixedUri/@value = $url]/f:element[f:path/@value = replace($path, $parentPath, $parentType)]"/>
+                <xsl:copy-of select="$structureDefinition/f:StructureDefinition/f:snapshot[f:element[@id = 'Extension.url']/f:fixedUri/@value = $url]/f:element[f:path/@value = replace($path, $parentPathRegex, $parentType)]"/>
             </xsl:when>
             <!-- If it is not an extension, first we just try to find if 'it' is there -->
             <xsl:when test="string-length($url) = 0 and $structureDefinition/f:StructureDefinition/f:snapshot/f:element/f:path/@value = $path">
@@ -699,14 +746,14 @@
                 <xsl:copy-of select="$structureDefinition/f:StructureDefinition/f:snapshot/f:element[f:path/@value = $path]"/>
             </xsl:when>
             <!-- Then, we try to replace the path of the element's parent with the type of that parent and try again -->
-            <xsl:when test="string-length($url) = 0 and $parentPath and $structureDefinition/f:StructureDefinition/f:snapshot/f:element/f:path/@value = replace($path, $parentPath, $parentType)">
+            <xsl:when test="string-length($url) = 0 and $parentPath and $structureDefinition/f:StructureDefinition/f:snapshot/f:element/f:path/@value = replace($path, $parentPathRegex, $parentType)">
                 <xsl:if test="$debug">
-                    <xsl:message select="concat('Found path: ', replace($path, $parentPath, $parentType))"/>
+                    <xsl:message select="concat('Found path: ', replace($path, $parentPathRegex, $parentType))"/>
                 </xsl:if>
-                <xsl:copy-of select="$structureDefinition/f:StructureDefinition/f:snapshot/f:element[f:path/@value = replace($path, $parentPath, $parentType)]"/>
+                <xsl:copy-of select="$structureDefinition/f:StructureDefinition/f:snapshot/f:element[f:path/@value = replace($path, $parentPathRegex, $parentType)]"/>
             </xsl:when>
             <xsl:otherwise>
-                <xsl:message terminate="yes">Could not find elementDefinition for <xsl:value-of select="$path"/></xsl:message>
+                <xsl:message terminate="yes">Could not find elementDefinition for <xsl:value-of select="$path"/> <xsl:value-of select="$url"/></xsl:message>
             </xsl:otherwise>
         </xsl:choose>
     </xsl:template>
