@@ -212,6 +212,16 @@ nts:scenario="server|client"
 
 When the scenario is set to 'server', the magic variable `{$_FORMAT}` becomes available to `nts:fixture` and to `.operation.contentType`, which will result in the string 'xml' when generating the xml instance and in 'json' when generating the json instance.
 
+### Number of origins and destinations
+
+The tooling will by default add one `origin` and one `destination`, both with `index` set to 1. If more than one origin or destination is needed, the number can be set using the `nts:numOrigins` and `nts:numDestination` attributes on the `TestScript` root, like:
+
+```xml
+<TestScript xmlns="..." xmlns:nts="..." nts:numOrigins="2" nts:numDestinations="3" />
+```
+
+The `origin`s and `destination`s will be sequentially numbered, starting at 1.
+
 ### Building different variants
 
 It is possible to build different variants or _targets_ from the same source files that include different elements (these have to be defined using the `targets.additional` parameter during building, see the section on build script parameters further down this document on guidance). The `nts:in-targets` attribute can be used on elements to specify the targets where the element should end up in. If this attribute is absent, the element will be included in all targets. Mulitple targets may be separated by a space. The special target '#default' can be used for the default build.
@@ -317,7 +327,8 @@ Because of the verbosity of the ANT build, the logging level is set to 1 (warnin
 
 ## Changelog
 
-### 2.1.2
+### 2.2.0
+- Add the option to generate multuple origins and targets.
 - Fixed a bug where 'special characters' in a local path would lead to the LoadResources outputting this local path instead of a relative path.
 - Allow for additional targets being defined at a lower level than the input folder.
 
@@ -329,7 +340,6 @@ Because of the verbosity of the ANT build, the logging level is set to 1 (warnin
 
 ### 2.0.0
 - The tooling now produces TestScript resources in FHIR R4 rather then STU3.
-
 
 ### 1.10.0
 - An extra buildscript has been added (ant/build-multiple.xml) that allows you to build multiple projects, as long as they have a build.properties file that sets the parameters for building each project.
