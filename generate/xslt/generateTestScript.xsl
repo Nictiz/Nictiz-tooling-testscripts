@@ -86,7 +86,7 @@
                 <xsl:value-of select="$expectedResponseFormat"/>
             </xsl:if>
         </xsl:variable>
-        
+                
         <xsl:copy>
             <xsl:apply-templates select="f:id" mode="#current"/>
             <xsl:if test="f:meta/f:profile/@value">
@@ -150,21 +150,11 @@
                 </telecom>
             </contact>
             <xsl:apply-templates select="f:description | f:useContext | f:jurisdiction | f:purpose | f:copyright" mode="#current"/>
+
             <!-- Include origin and destination elements -->
-            <origin>
-                <index value="1"/>
-                <profile>
-                    <system value="http://terminology.hl7.org/CodeSystem/testscript-profile-origin-types"/>
-                    <code value="FHIR-Client"/>
-                </profile>
-            </origin>
-            <destination>
-                <index value="1"/>
-                <profile>
-                    <system value="http://terminology.hl7.org/CodeSystem/testscript-profile-destination-types"/>
-                    <code value="FHIR-Server"/>
-                </profile>
-            </destination>
+            <xsl:copy-of select="nts:addOrigins(1, if (./@nts:numOrigins) then ./@nts:numOrigins else 1)"/>
+            <xsl:copy-of select="nts:addDestinations(1, if (./@nts:numDestinations) then ./@nts:numDestinations else 1)"/>
+
             <xsl:apply-templates select="f:metadata" mode="#current"/>
             <xsl:for-each-group select="$fixtures" group-by="@id">
                 <xsl:for-each select="subsequence(current-group(), 2)">
@@ -699,4 +689,40 @@
         <xsl:value-of select="string-join(($base, $filename), $separator)"/>
     </xsl:function>
 
+    <!-- Recursive function to add curr to max origin elements -->
+    <xsl:function name="nts:addOrigins">
+        <xsl:param name="curr" as="xs:integer"/>
+        <xsl:param name="max"  as="xs:integer"/>
+        
+        <origin>
+            <index value="{$curr}"/>
+            <profile>
+                <system value="http://terminology.hl7.org/CodeSystem/testscript-profile-origin-types"/>
+                <code value="FHIR-Client"/>
+            </profile>
+        </origin>
+        
+        <xsl:if test="$curr &lt; $max">
+            <xsl:copy-of select="nts:addOrigins($curr + 1, $max)"/>
+        </xsl:if>
+    </xsl:function>
+
+    <!-- Recursive function to add curr to max destination elements -->
+    <xsl:function name="nts:addDestinations">
+        <xsl:param name="curr" as="xs:integer"/>
+        <xsl:param name="max"  as="xs:integer"/>
+        
+        <destination>
+            <index value="{$curr}"/>
+            <profile>
+                <system value="http://terminology.hl7.org/CodeSystem/testscript-profile-destination-types"/>
+                <code value="FHIR-Server"/>
+            </profile>
+        </destination>
+        
+        <xsl:if test="$curr &lt; $max">
+            <xsl:copy-of select="nts:addDestinations($curr + 1, $max)"/>
+        </xsl:if>
+    </xsl:function>
+    
 </xsl:stylesheet>
