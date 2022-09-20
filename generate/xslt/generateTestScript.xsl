@@ -81,6 +81,10 @@
         <xsl:variable name="url">
             <xsl:text>http://nictiz.nl/fhir/TestScript/</xsl:text>
             <xsl:value-of select="f:id/@value"/>
+            <xsl:if test="not($target = '#default')">
+                <xsl:text>-</xsl:text>
+                <xsl:value-of select="$target"/>
+            </xsl:if>
             <xsl:if test="$scenario='server'">
                 <xsl:text>-</xsl:text>
                 <xsl:value-of select="$expectedResponseFormat"/>
@@ -224,12 +228,16 @@
     <xsl:template match="nts:*" mode="filter"/>
     <xsl:template match="@nts:*" mode="filter"/>
     
-    <!-- Add the format for requests to the TestScript id, if specified -->
+    <!-- Add the target and/or the format for requests to the TestScript id, if specified -->
     <xsl:template match="f:TestScript/f:id/@value" mode="filter">
         <xsl:param name="scenario" tunnel="yes"/>
         <xsl:param name="expectedResponseFormat" tunnel="yes"/>
         <xsl:attribute name="value">
             <xsl:value-of select="."/>
+            <xsl:if test="not($target = '#default')">
+                <xsl:text>-</xsl:text>
+                <xsl:value-of select="$target"/>
+            </xsl:if>
             <xsl:if test="$scenario='server' and not(ancestor::f:TestScript/f:test/f:action/f:operation/f:accept) and not(contains(lower-case(.),$expectedResponseFormat))">
                 <xsl:text>-</xsl:text>
                 <xsl:value-of select="lower-case($expectedResponseFormat)"/>
@@ -237,12 +245,16 @@
         </xsl:attribute>
     </xsl:template>
     
-    <!--Add the format for requests to the TestScript name, if specified -->
+    <!--Add the target and/or the format for requests to the TestScript name, if specified -->
     <xsl:template match="f:TestScript/f:name/@value" mode="filter">
         <xsl:param name="scenario" tunnel="yes"/>
         <xsl:param name="expectedResponseFormat" tunnel="yes"/>
         <xsl:attribute name="value">
             <xsl:value-of select="."/>
+            <xsl:if test="not($target = '#default')">
+                <xsl:text> - target </xsl:text>
+                <xsl:value-of select="$target"/>
+            </xsl:if>
             <xsl:if test="$scenario='server' and not(ancestor::f:TestScript/f:test/f:action/f:operation/f:accept) and not(contains(lower-case(.),$expectedResponseFormat))">
                 <xsl:text> - </xsl:text>
                 <xsl:value-of select="upper-case($expectedResponseFormat)"/>
