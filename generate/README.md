@@ -331,6 +331,7 @@ Because of the verbosity of the ANT build, the logging level is set to 1 (warnin
 - Add the option to generate multuple origins and targets.
 - Fixed a bug where 'special characters' in a local path would lead to the LoadResources outputting this local path instead of a relative path.
 - Allow for additional targets being defined at a lower level than the input folder.
+- Fixed a bug where defining additional target led to multiple TestScripts having the same  `.id` and `.url`.
 
 ### 2.1.1
 - Changed some CodeSystem uris from STU3 to their R4 counterpart.
