@@ -232,7 +232,7 @@
     <xsl:template match="f:TestScript/f:id/@value" mode="filter">
         <xsl:param name="scenario" tunnel="yes"/>
         <xsl:param name="expectedResponseFormat" tunnel="yes"/>
-        <xsl:attribute name="value">
+        <xsl:variable name="joinedString">
             <xsl:value-of select="."/>
             <xsl:if test="not($target = '#default')">
                 <xsl:text>-</xsl:text>
@@ -242,6 +242,17 @@
                 <xsl:text>-</xsl:text>
                 <xsl:value-of select="lower-case($expectedResponseFormat)"/>
             </xsl:if>
+        </xsl:variable>
+        
+        <xsl:attribute name="value">
+            <xsl:choose>
+                <xsl:when test="string-length($joinedString) gt 64">
+                    <xsl:value-of select="substring($joinedString, 1, 64)"/>
+                </xsl:when>
+                <xsl:otherwise>
+                    <xsl:value-of select="$joinedString"/>
+                </xsl:otherwise>
+            </xsl:choose>
         </xsl:attribute>
     </xsl:template>
     
