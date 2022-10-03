@@ -89,9 +89,11 @@
     
     <!-- Rewrite fullUrl or add it if it is not there-->
     <xsl:template match="f:Bundle/f:entry" mode="rewrite">
-        <xsl:apply-templates select="f:link" mode="#current"/>
-        <fullUrl value="{concat('urn:uuid:', uuid:get-uuid(.))}"/>
-        <xsl:apply-templates select="f:*[not(self::f:link) and not(self::f:fullUrl)]" mode="#current"/>
+        <xsl:copy>
+            <xsl:apply-templates select="f:link" mode="#current"/>
+            <fullUrl value="{concat('urn:uuid:', uuid:get-uuid(.))}"/>
+            <xsl:apply-templates select="f:*[not(self::f:link) and not(self::f:fullUrl)]" mode="#current"/>
+        </xsl:copy>
     </xsl:template>
     
     <!-- Remove id as it throws warnings in the validator -->
