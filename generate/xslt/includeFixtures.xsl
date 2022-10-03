@@ -56,18 +56,25 @@
             </xsl:choose>
         </xsl:variable>
         
-        <xsl:variable name="resolvedFixture">
-            <xsl:apply-templates select="*" mode="resolve"/>
-        </xsl:variable>
-        
         <xsl:choose>
-            <xsl:when test="$bundleType = ('batch', 'transaction')">
-                <xsl:apply-templates select="$resolvedFixture" mode="rewrite">
-                    <xsl:with-param name="bundleType"></xsl:with-param>
-                </xsl:apply-templates>
+            <xsl:when test=".//nts:includeFixture">
+                <xsl:variable name="resolvedFixture">
+                    <xsl:apply-templates select="*" mode="resolve"/>
+                </xsl:variable>
+                
+                <xsl:choose>
+                    <xsl:when test="$bundleType = ('batch', 'transaction')">
+                        <xsl:apply-templates select="$resolvedFixture" mode="rewrite">
+                            <xsl:with-param name="bundleType"></xsl:with-param>
+                        </xsl:apply-templates>
+                    </xsl:when>
+                    <xsl:otherwise>
+                        <xsl:copy-of select="$resolvedFixture"/>
+                    </xsl:otherwise>
+                </xsl:choose>
             </xsl:when>
             <xsl:otherwise>
-                <xsl:copy-of select="$resolvedFixture"/>
+                <xsl:copy-of select="*"/>
             </xsl:otherwise>
         </xsl:choose>
         
