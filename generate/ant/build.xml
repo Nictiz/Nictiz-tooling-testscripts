@@ -276,7 +276,7 @@
         </sequential>
     </macrodef>
     
-    <macrodef name="copy-references" description="Copy all the referenced files to the build folder. A check will be done if all referenced files are available.">
+    <macrodef name="process-references" description="Resolve all includes in referenced files and copy them to the build folder. A check will be done if all referenced files are available.">
         <attribute name="references.file" description="A property file with the fixtures and rules. See the documentation on collect-references for more info."/>
         
         <sequential>
@@ -296,13 +296,15 @@
                             <fail message="Fixture '@{fixture}' is referenced but doesn't exist"/>
                         </then>
                     </if>
+                    
+                    <!-- Resolve all includes in referenced fixtures and (if applicable) rewrite .id, .fullUrl and References -->
+                    <saxon-transform style="${xslt.dir}/includeFixtures.xsl" in="${input.dir.abs}/_reference/@{fixture}" out="${output.dir.abs}/_reference/@{fixture}">
+                        <parameters>
+                            <param name="referenceDir" expression="${input.dir.abs}/_reference/"/>
+                        </parameters>
+                    </saxon-transform>
                 </sequential>
             </for>
-            
-            <!-- Copy over the _reference dir with fixtures and rules -->
-            <copy todir="${output.dir.abs}/_reference">
-                <fileset dir="${reference.dir}"/>
-            </copy>
             
             <!-- Copy all rules from the global scope if they don't exist in the local scope, or fail if they don't
                  exist there as well. -->
@@ -384,7 +386,7 @@
             </resourcecount>
         </condition>
         
-        <!-- Fail if no input files are found - otherwise the build just fails at copy-references without any warning -->
+        <!-- Fail if no input files are found - otherwise the build just fails at process-references without any warning -->
         <if>
             <equals arg1="${nts.files.available}" arg2="true"/>
             <then>
@@ -494,7 +496,7 @@
                     
                     <!-- Copy over all fixtures and rules -->
                     <echo message="Copying fixtures and rules"/>
-                    <copy-references references.file="${references.file}"/>
+                    <process-references references.file="${references.file}"/>
                     <generate-loadresources/>
                 </sequential>
             </then>
