@@ -285,6 +285,11 @@
             <local name="rules"/>
             <property file="@{references.file}"/>
             
+            <!-- Copy over the _reference dir with fixtures and rules -->
+            <copy todir="${output.dir.abs}/_reference">
+                <fileset dir="${reference.dir}"/>
+            </copy>
+            
             <!-- Check if all declared fixtures exist -->
             <for param="fixture" list="${fixtures}" delimiter=";">
                 <sequential>
@@ -297,7 +302,7 @@
                         </then>
                     </if>
                     
-                    <!-- Resolve all includes in referenced fixtures and (if applicable) rewrite .id, .fullUrl and References -->
+                    <!-- Resolve all includes in referenced fixtures and (if applicable) rewrite .id, .fullUrl and References. This overwrites the fixture copied earlier -->
                     <saxon-transform style="${xslt.dir}/includeFixtures.xsl" in="${input.dir.abs}/_reference/@{fixture}" out="${output.dir.abs}/_reference/@{fixture}">
                         <parameters>
                             <param name="referenceDir" expression="${input.dir.abs}/_reference/"/>
