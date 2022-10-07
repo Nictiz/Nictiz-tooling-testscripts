@@ -301,9 +301,25 @@
                             <fail message="Fixture '@{fixture}' is referenced but doesn't exist"/>
                         </then>
                     </if>
-                    
-                    <!-- Resolve all includes in referenced fixtures and (if applicable) rewrite .id, .fullUrl and References. This overwrites the fixture copied earlier -->
-                    <saxon-transform style="${xslt.dir}/includeFixtures.xsl" in="${input.dir.abs}/_reference/@{fixture}" out="${output.dir.abs}/_reference/@{fixture}">
+                </sequential>
+            </for>
+            
+            <!-- Copy over the _reference dir with fixtures and rules -->
+            <copy todir="${output.dir.abs}/_reference">
+                <fileset dir="${reference.dir}"/>
+            </copy>
+            
+            <!-- Resolve all includes in _all_ (not only references) fixtures and (if applicable) rewrite .id, .fullUrl and References. This overwrites the fixture copied earlier -->
+            <for param="fixture">
+                <path>
+                    <fileset dir="${reference.dir}"/>
+                </path>
+                <sequential>
+                    <local name="fixture.path.normalized"/>
+                    <local name="fixture.path.relative"/>
+                    <propertyregex property="fixture.path.normalized" input="@{fixture}" regexp="[\\]" replace="/" global="true" defaultValue="@{fixture}"/>
+                    <propertyregex property="fixture.path.relative" input="${fixture.path.normalized}" regexp="\/_reference\/(.*)" select="\1" global="true"/>
+                    <saxon-transform style="${xslt.dir}/includeFixtures.xsl" in="@{fixture}" out="${output.dir.abs}/_reference/${fixture.path.relative}">
                         <parameters>
                             <param name="referenceDir" expression="${input.dir.abs}/_reference/"/>
                         </parameters>
