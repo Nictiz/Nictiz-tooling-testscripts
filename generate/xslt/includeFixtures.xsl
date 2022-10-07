@@ -81,10 +81,15 @@
     </xsl:template>
     
     <xsl:template match="nts:includeFixture" mode="resolve">
-        <xsl:variable name="document" as="node()*">
-            <xsl:copy-of select="document(concat($referenceDirAsUrl,@href), .)"/>
-        </xsl:variable>
-        <xsl:apply-templates select="$document" mode="#current"/>
+        <xsl:variable name="docUri" select="concat($referenceDirAsUrl,@href)"/>
+        <xsl:choose>
+            <xsl:when test="doc-available($docUri)">
+                <xsl:apply-templates select="doc($docUri)" mode="#current"/>
+            </xsl:when>
+            <xsl:otherwise>
+                <xsl:message>includeFixture "<xsl:value-of select="$docUri"/>" not valid or unavailable</xsl:message>
+            </xsl:otherwise>
+        </xsl:choose>
     </xsl:template>
     
     <!-- Rewrite fullUrl or add it if it is not there-->
