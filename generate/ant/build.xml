@@ -285,11 +285,6 @@
             <local name="rules"/>
             <property file="@{references.file}"/>
             
-            <!-- Copy over the _reference dir with fixtures and rules -->
-            <copy todir="${output.dir.abs}/_reference">
-                <fileset dir="${reference.dir}"/>
-            </copy>
-            
             <!-- Check if all declared fixtures exist -->
             <for param="fixture" list="${fixtures}" delimiter=";">
                 <sequential>
