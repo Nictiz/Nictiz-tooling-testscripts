@@ -304,7 +304,7 @@
                 <fileset dir="${reference.dir}"/>
             </copy>
             
-            <!-- Resolve all includes in _all_ (not only references) fixtures and (if applicable) rewrite .id, .fullUrl and References. This overwrites the fixture copied earlier -->
+            <!-- Resolve all includes in _all_ (not only referenced) fixtures and (if applicable) rewrite .id, .fullUrl and References. This overwrites the fixture copied earlier -->
             <for param="fixture">
                 <path>
                     <fileset dir="${reference.dir}"/>
@@ -511,7 +511,7 @@
                     </for>
                     
                     <!-- Copy over all fixtures and rules -->
-                    <echo message="Copying fixtures and rules"/>
+                    <echo message="Processing fixtures and rules"/>
                     <process-references references.file="${references.file}"/>
                     <generate-loadresources/>
                 </sequential>
