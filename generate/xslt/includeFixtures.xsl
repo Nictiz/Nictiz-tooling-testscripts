@@ -7,7 +7,7 @@
     xmlns:uuid="http://www.uuid.org"
     exclude-result-prefixes="#all">
     
-    <xsl:import href="https://github.com/Nictiz/HL7-mappings/raw/master/util/uuid.xsl"/>
+    <xsl:import href="https://github.com/Nictiz/HL7-mappings/raw/faf8e311d8870144ff151cd94cf19b96859913c7/util/uuid.xsl"/>
     
     <xsl:output method="xml" indent="yes"/>
     <xsl:strip-space elements="*"/>
@@ -15,7 +15,7 @@
     <!-- Checks fixtures for the nts:includeFixture element to include fixtures in other fixtures. If this element is applied in batch or transaction Bundles, Resource.id is removed and (after all fixtures are included) fullUrl and references are rewritten -->
     
     <!-- The absolute path to the folder of fixtures -->
-    <xsl:param name="referenceDir" select="'file:/C:\Users\144189-ADM\Documents\Git\Nictiz-testscripts\src\SelfMeasurements-2-0\Test\_reference'"/>
+    <xsl:param name="referenceDir"/>
     
     <!-- Convert the reference to a file:// URL and make sure it ends with a slash. -->
     <xsl:variable name="referenceDirAsUrl">
@@ -65,7 +65,7 @@
                 <xsl:choose>
                     <xsl:when test="$bundleType = ('batch', 'transaction')">
                         <xsl:apply-templates select="$resolvedFixture" mode="rewrite">
-                            <xsl:with-param name="bundleType"></xsl:with-param>
+                            <xsl:with-param name="bundleType" tunnel="yes"/>
                         </xsl:apply-templates>
                     </xsl:when>
                     <xsl:otherwise>
@@ -106,11 +106,12 @@
     
     <!-- Rewrite references -->
     <xsl:template match="f:Bundle/f:entry/f:resource/f:*//f:reference/@value" mode="rewrite">
+        <xsl:param name="bundleType" tunnel="yes"/>
         <xsl:variable name="referencedId" select="substring-after(., '/')"/>
         <xsl:choose>
             <!-- if literal reference that matches a resource in the Bundle -->
             <xsl:when test="ancestor::f:Bundle/f:entry/f:resource/f:*/f:id/@value = $referencedId">
-                <xsl:if test="ancestor::f:Bundle/f:type/@value = 'batch'">
+                <xsl:if test="$bundleType = 'batch'">
                     <xsl:message>Warning: rewriting internal reference in batch Bundle. Strictly this is illegal, but is a known issue in MedMij STU3 SelfMeasurements implementation</xsl:message>
                 </xsl:if>
                 <xsl:attribute name="value" select="concat('urn:uuid:', uuid:get-uuid(ancestor::f:Bundle/f:entry[f:resource/f:*/f:id/@value = $referencedId][1]))"/>
