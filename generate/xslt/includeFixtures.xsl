@@ -74,7 +74,7 @@
                 </xsl:choose>
             </xsl:when>
             <xsl:otherwise>
-                <xsl:copy-of select="*"/>
+                <xsl:apply-templates select="*" mode="copy"/>
             </xsl:otherwise>
         </xsl:choose>
         
