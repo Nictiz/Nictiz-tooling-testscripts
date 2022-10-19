@@ -276,7 +276,7 @@
         </sequential>
     </macrodef>
     
-    <macrodef name="process-references" description="Resolve all includes in referenced files and copy them to the build folder. A check will be done if all referenced files are available.">
+    <macrodef name="process-references" description="Process the fixtures and rules in the _references folder and copy the result to the destination folder. Processing means that the nts:includeFixture tag will be resolved to the referenced file, that a check is done for the existence of fixtures and rules which are referenced from the TestScript, and that rules from the global scope will be included in the output.">
         <attribute name="references.file" description="A property file with the fixtures and rules. See the documentation on collect-references for more info."/>
         
         <sequential>
