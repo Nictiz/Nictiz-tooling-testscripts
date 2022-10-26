@@ -306,26 +306,36 @@
                 <fileset dir="${reference.dir}"/>
             </copy>
             
-            <!-- Resolve all includes in _all_ (not only referenced) fixtures and (if applicable) rewrite .id, .fullUrl and References. This overwrites the fixture copied earlier -->
-            <for param="fixture">
-                <path>
-                    <fileset dir="${reference.dir}">
-                        <!-- Known issue: .json fixtures are now ignored. Not a problem if they are automatically generated _after_ this, but should be taken care of! -->
-                        <include name="**/*.xml"/>
-                    </fileset>
-                </path>
-                <sequential>
-                    <local name="fixture.path.normalized"/>
-                    <local name="fixture.path.relative"/>
-                    <propertyregex property="fixture.path.normalized" input="@{fixture}" regexp="[\\]" replace="/" global="true" defaultValue="@{fixture}"/>
-                    <propertyregex property="fixture.path.relative" input="${fixture.path.normalized}" regexp="\/${reference.dir.name}\/(.*)" select="\1" global="true"/>
+            <if>
+                <not>
+                    <!-- Set this property with random value to skip includeFixtures, for example when fixtures are generated themselves -->
+                    <isset property="includefixtures.skip"/>
+                </not>
+                <then>
+                    <sequential>
+                        <!-- Resolve all includes in _all_ (not only referenced) fixtures and (if applicable) rewrite .id, .fullUrl and References. This overwrites the fixture copied earlier -->
+                        <for param="fixture">
+                            <path>
+                                <fileset dir="${reference.dir}">
+                                    <!-- Known issue: .json fixtures are now ignored. Not a problem if they are automatically generated _after_ this, but should be taken care of! -->
+                                    <include name="**/*.xml"/>
+                                </fileset>
+                            </path>
+                            <sequential>
+                                <local name="fixture.path.normalized"/>
+                                <local name="fixture.path.relative"/>
+                                <propertyregex property="fixture.path.normalized" input="@{fixture}" regexp="[\\]" replace="/" global="true" defaultValue="@{fixture}"/>
+                                <propertyregex property="fixture.path.relative" input="${fixture.path.normalized}" regexp="\/${reference.dir.name}\/(.*)" select="\1" global="true"/>
                                 <saxon-transform style="${xslt.dir}/includeFixtures.xsl" in="@{fixture}" out="${output.dir.abs}/${reference.dir.name}/${fixture.path.relative}">
-                        <parameters>
-                            <param name="referenceDir" expression="${input.dir.abs}/${reference.dir.name}/"/>
-                        </parameters>
-                    </saxon-transform>
-                </sequential>
-            </for>
+                                    <parameters>
+                                        <param name="referenceDir" expression="${input.dir.abs}/${reference.dir.name}/"/>
+                                    </parameters>
+                                </saxon-transform>
+                            </sequential>
+                        </for>
+                    </sequential>
+                </then>
+            </if>
             
             <!-- Copy all rules from the global scope if they don't exist in the local scope, or fail if they don't
                  exist there as well. -->
