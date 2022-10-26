@@ -46,6 +46,7 @@
     <property name="components.dir"           location="${input.dir}/_components"/>
     <property name="components.dir.abs"       location="${components.dir}"/>
     <property name="commoncomponents.dir.abs" location="${commoncomponents.dir}"/>
+    <property name="reference.dir.name"       value="_reference"/>
     
     <!-- Try to read all project property's defined in build.properties -->
     <property file="${input.dir.abs}/build.properties"/>
@@ -64,6 +65,7 @@
     <property name="version.addition" value=""/>
     
     <property name="targets.additional" value=""/> <!-- By default, we don't build additional targets -->
+    <property name="targets" value="#default,${targets.additional}"/>
         
     <!-- Set the verbosity level of the output. A higher value means more verbose output -->
     <property name="outputLevel" value="1" />
@@ -270,7 +272,7 @@
                 <parameters>
                     <param name="additionalFixtures" expression="${fixtures}" if="fixtures"/>
                     <param name="additionalRules" expression="${rules}" if="rules"/>
-                    <param name="includesDir" expression="../_reference/"/>
+                    <param name="includesDir" expression="../${reference.dir.name}/"/>
                 </parameters>
             </saxon-transform>
         </sequential>
@@ -290,7 +292,7 @@
                 <sequential>
                     <if>
                         <not>
-                            <available file="${input.dir.abs}/_reference/@{fixture}"/>
+                            <available file="${input.dir.abs}/${reference.dir.name}/@{fixture}"/>
                         </not>
                         <then>
                             <fail message="Fixture '@{fixture}' is referenced but doesn't exist"/>
@@ -300,23 +302,26 @@
             </for>
             
             <!-- Copy over the _reference dir with fixtures and rules -->
-            <copy todir="${output.dir.abs}/_reference">
+            <copy todir="${output.dir.abs}/${reference.dir.name}">
                 <fileset dir="${reference.dir}"/>
             </copy>
             
             <!-- Resolve all includes in _all_ (not only referenced) fixtures and (if applicable) rewrite .id, .fullUrl and References. This overwrites the fixture copied earlier -->
             <for param="fixture">
                 <path>
-                    <fileset dir="${reference.dir}"/>
+                    <fileset dir="${reference.dir}">
+                        <!-- Known issue: .json fixtures are now ignored. Not a problem if they are automatically generated _after_ this, but should be taken care of! -->
+                        <include name="**/*.xml"/>
+                    </fileset>
                 </path>
                 <sequential>
                     <local name="fixture.path.normalized"/>
                     <local name="fixture.path.relative"/>
                     <propertyregex property="fixture.path.normalized" input="@{fixture}" regexp="[\\]" replace="/" global="true" defaultValue="@{fixture}"/>
-                    <propertyregex property="fixture.path.relative" input="${fixture.path.normalized}" regexp="\/_reference\/(.*)" select="\1" global="true"/>
-                    <saxon-transform style="${xslt.dir}/includeFixtures.xsl" in="@{fixture}" out="${output.dir.abs}/_reference/${fixture.path.relative}">
+                    <propertyregex property="fixture.path.relative" input="${fixture.path.normalized}" regexp="\/${reference.dir.name}\/(.*)" select="\1" global="true"/>
+                                <saxon-transform style="${xslt.dir}/includeFixtures.xsl" in="@{fixture}" out="${output.dir.abs}/${reference.dir.name}/${fixture.path.relative}">
                         <parameters>
-                            <param name="referenceDir" expression="${input.dir.abs}/_reference/"/>
+                            <param name="referenceDir" expression="${input.dir.abs}/${reference.dir.name}/"/>
                         </parameters>
                     </saxon-transform>
                 </sequential>
@@ -334,7 +339,7 @@
                             <if>
                                 <available file="${commoncomponents.dir.abs}/_reference/@{rule}"/>
                                 <then>
-                                    <copy file="${commoncomponents.dir.abs}/_reference/@{rule}" tofile="${output.dir.abs}/_reference/@{rule}"/>
+                                    <copy file="${commoncomponents.dir.abs}/_reference/@{rule}" tofile="${output.dir.abs}/${reference.dir.name}/@{rule}"/>
                                 </then>
                                 <else>
                                     <fail message="Rule '@{rule}' is referenced but doesn't exist in the local or global scope"/>
@@ -351,14 +356,14 @@
         <sequential>
             <property name="loadresources.file" value="${output.dir.abs}/_LoadResources/load-resources-purgecreateupdate-xml.xml"/>
             <dirname property="loadresources.file.dir" file="${loadresources.file}"/>
-            <property name="reference.dir.loadresourcesrelative" location="${output.dir.abs}/_reference" relative="true" basedir="${loadresources.file.dir}"/>
+            <property name="reference.dir.loadresourcesrelative" location="${output.dir.abs}/${reference.dir.name}" relative="true" basedir="${loadresources.file.dir}"/>
             <!-- Convert backslashes to forward slashes if needed -->
             <propertyregex property="reference.dir.loadresourcesrelative.normalized" input="${reference.dir.loadresourcesrelative}" regexp="[\\]" replace="/" global="true" defaultValue="${reference.dir.loadresourcesrelative}"/>
             
             <saxon-transform style="${xslt.dir}/generateLoadResources.xsl" out="${loadresources.file}">
                 <parameters>
                     <param name="referenceBase" expression="${reference.dir.loadresourcesrelative.normalized}"/>
-                    <param name="referenceDir" expression="${input.dir.abs}/_reference/"/>
+                    <param name="referenceDir" expression="${input.dir.abs}/${reference.dir.name}/"/>
                     <param name="loadResourcesExclude" expression="${loadresources.exclude}"/>
                 </parameters>
             </saxon-transform>
@@ -381,7 +386,7 @@
     </target>
     
     <target name="build" depends="load, check-input, cleanBuildDir">
-        <property name="reference.dir" location="${input.dir.abs}/_reference"/>
+        <property name="reference.dir" location="${input.dir.abs}/${reference.dir.name}"/>
         
         <!-- Set default loadresources.exclude to nothing -->
         <property name="loadresources.exclude" value=""/>
@@ -411,7 +416,7 @@
                     
                     <!-- Iteratate over all targets that are defined as build parameter (targets.additional) plus the 
                          default target ('#default') -->
-                    <for list="#default,${targets.additional}" delimiter="," param="target.dir">
+                    <for list="${targets}" delimiter="," param="target.dir">
                         <sequential>
                             <if>
                                 <equals arg1="@{target.dir}" arg2="#default"/>
