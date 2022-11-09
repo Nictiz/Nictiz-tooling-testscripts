@@ -247,7 +247,7 @@
         <xsl:attribute name="value">
             <xsl:choose>
                 <xsl:when test="string-length($joinedString) gt 64">
-                    <xsl:value-of select="substring($joinedString, 1, 64)"/>
+                    <xsl:value-of select="substring($joinedString, string-length($joinedString) - 63)"/>
                 </xsl:when>
                 <xsl:otherwise>
                     <xsl:value-of select="$joinedString"/>
