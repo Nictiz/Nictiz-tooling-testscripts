@@ -157,6 +157,8 @@
                             <!-- Load Patient resources first to make sure WildFHIR indexes data in the right order to use patient.identifier searches. -->
                             <xsl:sort data-type="number" order="ascending" select="(number(local-name() = 'Patient') * 1) + (number(not(local-name() = 'Patient')) * 2)"/>
                             <xsl:sort select="lower-case(concat(local-name(), '-', f:id/@value))"/>
+                            <xsl:variable name="resourceType" select="local-name(.)"/>
+                            <xsl:variable name="resourceId" select="f:id/@value"/>
                             <xsl:variable name="fixtureId">
                                 <xsl:call-template name="generateFixtureId"/>
                             </xsl:variable>
@@ -166,17 +168,23 @@
                                         <system value="http://terminology.hl7.org/CodeSystem/testscript-operation-codes"/>
                                         <code value="updateCreate"/>
                                     </type>
-                                    <resource value="{local-name(.)}"/>
+                                    <resource value="{$resourceType}"/>
                                     <accept value="xml"/>
                                     <contentType value="xml"/>
                                     <encodeRequestUrl value="true"/>
                                     <params value="/${{{$fixtureId}-id}}"/>
                                     <requestHeader>
                                         <field value="Authorization"/>
-                                        <!-- This Bearer token is a dedicated token for LoadResources purposes -->
-                                        <!--<value value="Bearer e317fc02-e8ff-40fe-9b22-f3c43fbf5613"/>-->
-                                        <!-- Use first patient token until dedicated Bearer token is active -->
-                                        <value value="{$tokens[1]/f:id/@value}"/>
+                                        <!-- KT-330: In MedMij R4, it is required to use the correct patient token for updateCreate of Patients, but it doesn't hurt for STU3 -->
+                                        <xsl:choose>
+                                            <xsl:when test="$tokens[contains(base-uri(), $resourceId)]">
+                                                <value value="{$tokens[contains(base-uri(), $resourceId)][1]/f:id/@value}"/>
+                                            </xsl:when>
+                                            <xsl:otherwise>
+                                                <!-- Use first patient token, or should we check fixture .subject to determine correct token? -->
+                                                <value value="{$tokens[1]/f:id/@value}"/>
+                                            </xsl:otherwise>
+                                        </xsl:choose>
                                     </requestHeader>
                                     <sourceId value="{$fixtureId}"/>
                                 </operation>
