@@ -147,6 +147,31 @@ Within the `@href` attribute of `nts:fixture`, the parameter `{$_FORMAT}` can be
 
 A LoadResources script is generated for all fixtures in the "_reference"-folder. See the section on building on how to exclude files and/or folders from being added the LoadResources script. 
 
+#### Including fixtures in other fixtures
+
+With a fixture, the inclusion of another fixtures is declared using:
+
+```xml
+<nts:includeFixture href="..."/>
+```
+
+`href` is considered to be relative to a predefined fixtures folder.
+
+This feature can, for example, be used to include resources that are defined and maintained independently in Bundle-fixtures:
+```xml
+<entry>
+    <fullUrl value="urn:uuid:4637e949-e4f9-43ad-bbb4-d28a120f101d"/>
+    <resource>
+        <nts:includeFixture href="resources-send-receive/selfmeasurements-send-respiration-1.xml"/>
+    </resource>
+    <request>
+        <method value="POST"/>
+        <url value="Observation"/>
+    </request>
+</entry>
+```
+In this use case, references in the included fixtures are checked and rewritten where necessary.
+
 #### Using rules
 
 Once a rule is declared, it may be used in an `<assert>` using the same tag with only the `id` attribute set. Optional parameters to the rule are passed as attributes or using the `<nts:with-param>` tag, similar to how it is done with `<nts:include/>`: 
@@ -281,8 +306,8 @@ For the project build file, a particular folder structure is expected:
 - Project1/          : A project dir
   - build.properties : A file where parameters to the build script may be set (see below).
   - InputFolder1/    : One or more dirs containg NTS files. WARNING: all folder names starting with an underscore are ignored, while all other folders are included!
-  - \_components/    : The components specific for that project - may be overridden using the components.dir parameter
-  - \_reference/     : The fixtures and rules for that project. This folder is copied verbatim to the output folder. 
+  - /_components/    : The components specific for that project - may be overridden using the components.dir parameter
+  - /_reference/     : The fixtures and rules for that project. This folder is copied verbatim to the output folder. 
 ```
 
 ### Build script parameters
@@ -296,6 +321,7 @@ The following build script parameters are required:
 The following optional parameters may be used:
 - `outputLevel=<number>`: Increase or decrease verbosity of the build script (default = 1).
 - `components.dir=/path/to/project/components`: An alternative location for project specific NTS components. Should be an absolute or relative path, compared to `build.xml`.
+- `reference.subdir`: The _name_ (not the path!) of the folder containing fixtures. Defaults to '_reference'. Could be used when an additional target uses a different reference folder.
 - `loadresources.exclude`: a relative path to a folder containing the fixtures to be excluded or to specific filenames. Multiple entries can be comma separated. `*` is accepted as a wildcard.
   ```
   loadresources.exclude = _reference/resources/resources-specific
@@ -306,6 +332,7 @@ The following optional parameters may be used:
   ```
   The TestScript resources can use the `nts:in-targets` to define which element should be included in a target (see above). Multiple extra targets may be separated using comma's.
   Note: if there are subfolders in the folder on which an additional target is defined, each variant of the input folder will contain the full set of subfolders (but with slightly different content, of course).  
+- `targets`: This parameter contains the default target '#default', to which the targets defined in `targets.additional` are added. Used when building the default target is unwanted.
 - `version.addition`: a string that will be added verbatim to the value in the `TestScript.version` from the input file. If this element is absent, it will be populated with this value. 
 
 ### Building multiple projects
@@ -326,6 +353,12 @@ It can be found at `schematron/NictizTestScript.sch` relative to this README.
 Because of the verbosity of the ANT build, the logging level is set to 1 (warning) and Saxon is set to not try to recover. When more verbose output is wanted, the logging level can be changed by setting the `-DoutputLevel=` parameter on the ANT build.
 
 ## Changelog
+
+### 2.3.0
+- Add the option to include fixtures in other fixtures, which are resolved during build. When used in batch/transation Bundles, references are checked and edited where neccessary.
+- (Further) parametrize targets and reference directory to be able to overrule these properies in specific builds.
+- KT-330: In LoadResources generation, the Bearer token relevant to the updateCreate of a Patient is added (instead of a static token).
+- When too long, `TestScript.id` is restricted to the last 64 characters instead of the first to better warrant uniqueness.
 
 ### 2.2.0
 - Add the option to generate multuple origins and targets.
