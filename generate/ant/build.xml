@@ -8,15 +8,21 @@
     # Parameters
     
     To run it, the following parameters are expected:
-    - input.dir          : The folder where the input files reside. See below for an explanation on folder structures.
-                           NOTE: This parameter MUST be set before build.properties is read, so it should be set it in
-                                 a derived build script, passed on the command line or the property files should be 
-                                 explicitly loaded using ANT's -propertyfile flag.
-    - output.dir          : The folder where the output should be placed. See below for an explanation on folder structures.
-    - commoncomonents.dir : The directory containing the common components.
-    - lib.dir             : The directory where all build dependency's will be placed. It's a good idea to add this to
-                            .gitignore.
-    - [components.dir]    : Optional - the directory containing the project components, relative to input.dir. Defaults to '_components'.
+    - input.dir               : The folder where the input files reside. See below for an explanation on folder structures.
+                                NOTE: This parameter MUST be set before build.properties is read, so it should be set it in
+                                      a derived build script, passed on the command line or the property files should be 
+                                      explicitly loaded using ANT's -propertyfile flag.
+    - output.dir              : The folder where the output should be placed. See below for an explanation on folder structures.
+    - commoncomonents.dir     : The directory containing the common components.
+    - lib.dir                 : The directory where all build dependency's will be placed. It's a good idea to add this to
+                                .gitignore.
+    - [components.dir]        : Optional - the directory containing the project components, relative to input.dir. Defaults to '_components'.
+    - [loadresources.exclude] : Optional - A relative path to a folder containing the fixtures or to specific filenames to be excluded from 
+                                the LoadResources script. Multiple entries can be comma separated. `*` is accepted as a wildcard.
+    - [processfixtures.skip]  : Optional - If 'true' (or any other non-empty value) processing fixtures is skipped.
+    - [reference.subdir]      : Optional - The _name_ (not the path!) of the folder containing fixtures. Defaults to '_reference'.
+    - [targets]               : Optional - All targets to be built, including the 'default'-target. Defaults to '#default,[targets.additional]'. 
+    - [targets.additional]    : Optional - The additional targets to be built.
 
     Additionally, the following optional parameters may be used:
     - outputLevel: the verbosity level of the script output  
@@ -46,7 +52,7 @@
     <property name="components.dir"           location="${input.dir}/_components"/>
     <property name="components.dir.abs"       location="${components.dir}"/>
     <property name="commoncomponents.dir.abs" location="${commoncomponents.dir}"/>
-    <property name="reference.subdir"       value="_reference"/>
+    <property name="reference.subdir"         value="_reference"/>
     
     <!-- Try to read all project property's defined in build.properties -->
     <property file="${input.dir.abs}/build.properties"/>
