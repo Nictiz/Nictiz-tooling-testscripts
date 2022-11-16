@@ -9,7 +9,7 @@
     
     <xsl:import href="https://github.com/Nictiz/HL7-mappings/raw/faf8e311d8870144ff151cd94cf19b96859913c7/util/uuid.xsl"/>
     
-    <xsl:output method="xml" indent="yes"/>
+    <xsl:output method="xml" indent="yes" omit-xml-declaration="yes"/>
     <xsl:strip-space elements="*"/>
     
     <!-- Checks fixtures for the nts:includeFixture element to include fixtures in other fixtures. If this element is applied in batch or transaction Bundles, Resource.id is removed and (after all fixtures are included) fullUrl and references are rewritten -->
