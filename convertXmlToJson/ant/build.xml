@@ -1,4 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- Common ANT build script for Nictiz NTS projects.
+    
+    # Use of this build script
+    
+    The normal use of this build script is to import it from another ANT build script.
+    
+    # Parameters
+    
+    To run it, the following parameters are expected:
+    - convert.to.json.file : The path to a file, which contains a comma separated list of XML fixtures to convert. If
+      this parameter is empty, the file doesn't exist or is empty, this is taken as a signal that no conversion needs
+      to be done.
+    - fhir.version: The FHIR version the fixtures are in, either "STU3" or "R4".
+    
+-->
 <project xmlns:ivy="antlib:org.apache.ivy.ant" basedir=".." name="convertToJson" default="build">
     <!-- Set testscripttools.dir if it is not supplied by the including build file. -->
     <dirname property="testscripttools.dir" file="${ant.file.convertToJson}/.."/>
