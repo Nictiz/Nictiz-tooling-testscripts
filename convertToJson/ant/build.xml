@@ -38,28 +38,52 @@
         <property name="ivy.loaded" value="true" />
     </target>
     
-    <target name="retrieve" depends="check-ivy, install-ivy">
+    <target name="retrieve" depends="check-if-conversion-is-needed, check-ivy, install-ivy" if="should-convert">
         <ivy:settings file="${testscripttools.dir}/ant/ivysettings.xml"/>
-        <!-- <ivy:retrieve pattern="${dependency.dir}/[type]/[artifact]-[revision].[ext]"/> -->
         <ivy:retrieve/>
         <ivy:artifactproperty name="[module].[artifact]" value="${dependency.dir}/[type]/[artifact]-[revision].[ext]" />
         <ivy:artifactproperty name="[artifact].[type]" value="${dependency.dir}/[type]/[artifact]-[revision].[ext]" />
     </target>
     
-    <target name="convert">
-        <java sourcefile="${testscripttools.dir}/java/ConvertToJson.java" fork="true" outputProperty="result">
-            <classpath>
-                <pathelement path="${classpath}"/>
-                <fileset dir="lib">
-                    <include name="**/*.jar"/>
-                </fileset>
-            </classpath>
-            <arg value="STU3"/>
-            <arg file="${convert.to.json.file}"/>
-        </java>
+    <target name="check-convert-file">
+        <condition property="exists.convert.to.json.file">
+            <and>
+                <available file="${convert.to.json.file}"/>
+                <length file="${convert.to.json.file}" when="greater" length="0"/>
+            </and>
+        </condition>        
     </target>
-
-    <target name="build" depends="retrieve, convert">
-        <echo message="${result}"/>
+    
+    <target name="check-valid-fhir-version" depends="check-convert-file" if="exists.convert.to.json.file">
+        <sequential>
+            <condition property="isvalid.fhir.version">
+                <or>
+                    <equals arg1="${fhir.version}" arg2="STU3"/>
+                    <equals arg1="${fhir.version}" arg2="R4"/>
+                </or>
+            </condition>
+            <fail unless="isvalid.fhir.version" message="There are fixtures to convert from XML to JSON, but in order to do so, the fhir.version property must be set to either 'STU3' or 'R4'."/>
+        </sequential>
+    </target>
+    
+    <target name="check-if-conversion-is-needed" depends="check-convert-file, check-valid-fhir-version" if="exists.convert.to.json.file">
+        <property name="should.convert" value="true"/>
+    </target>
+    
+    <target name="build" depends="retrieve, check-if-conversion-is-needed" if="should.convert">
+        <sequential>
+            <echo message="Converting XML fixtures to JSON"/>
+            <java sourcefile="${testscripttools.dir}/java/ConvertToJson.java" fork="true" outputProperty="result">
+                <classpath>
+                    <pathelement path="${classpath}"/>
+                    <fileset dir="lib">
+                        <include name="**/*.jar"/>
+                    </fileset>
+                </classpath>
+                <arg value="${fhir.version}"/>
+                <arg file="${convert.to.json.file}"/>
+            </java>
+            <echo message="${result}"/>
+        </sequential>
     </target>
 </project>

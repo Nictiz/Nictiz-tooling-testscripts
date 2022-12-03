@@ -143,11 +143,11 @@ Profiles may be declared using:
 
 #### Fixtures
 
-Within the `@href` attribute of `nts:fixture`, the parameter `{$_FORMAT}` can be used to automatically output the format(either `xml` or `json`) the fixture is expected to be in.
+Within the `@href` attribute of `nts:fixture`, the parameter `{$_FORMAT}` can be used to automatically output the format (either `xml` or `json`) the fixture is expected to be in. See the section below on automatically converting XML fixtures to JSON.
 
 A LoadResources script is generated for all fixtures in the "_reference"-folder. See the section on building on how to exclude files and/or folders from being added the LoadResources script. 
 
-#### Including fixtures in other fixtures
+##### Including fixtures in other fixtures
 
 With a fixture, the inclusion of another fixtures is declared using:
 
