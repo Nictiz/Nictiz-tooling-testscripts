@@ -8,15 +8,15 @@
     # Parameters
     
     To run it, the following parameters are expected:
-    - input.dir          : The folder where the input files reside. See below for an explanation on folder structures.
-                           NOTE: This parameter MUST be set before build.properties is read, so it should be set it in
-                                 a derived build script, passed on the command line or the property files should be 
-                                 explicitly loaded using ANT's -propertyfile flag.
-    - output.dir          : The folder where the output should be placed. See below for an explanation on folder structures.
-    - commoncomonents.dir : The directory containing the common components.
-    - lib.dir             : The directory where all build dependency's will be placed. It's a good idea to add this to
-                            .gitignore.
-    - [components.dir]    : Optional - the directory containing the project components, relative to input.dir. Defaults to '_components'.
+    - input.dir               : The folder where the input files reside. See below for an explanation on folder structures.
+                                NOTE: This parameter MUST be set before build.properties is read, so it should be set it in
+                                      a derived build script, passed on the command line or the property files should be 
+                                      explicitly loaded using ANT's -propertyfile flag.
+    - output.dir              : The folder where the output should be placed. See below for an explanation on folder structures.
+    - commoncomonents.dir     : The directory containing the common components.
+    - lib.dir                 : The directory where all build dependency's will be placed. It's a good idea to add this to
+                                .gitignore.
+    - [components.dir]        : Optional - the directory containing the project components, relative to input.dir. Defaults to '_components'.
     - [loadresources.exclude] : Optional - A relative path to a folder containing the fixtures or to specific filenames to be excluded from 
                                 the LoadResources script. Multiple entries can be comma separated. `*` is accepted as a wildcard.
     - [processfixtures.skip]  : Optional - If 'true' (or any other non-empty value) processing fixtures is skipped.
@@ -72,7 +72,7 @@
     
     <property name="targets.additional" value=""/> <!-- By default, we don't build additional targets -->
     <property name="targets" value="#default,${targets.additional}"/>
-        
+    
     <!-- Set the verbosity level of the output. A higher value means more verbose output -->
     <property name="outputLevel" value="1" />
     <script language="javascript"> <!-- Gives a script warning. It is advised to switch to Groovy, haven't figured that one out. -->
@@ -293,15 +293,29 @@
             <local name="rules"/>
             <property file="@{references.file}"/>
             
-            <!-- Check if all declared fixtures exist -->
+            <!-- Check if all declared fixtures exist or, when it is a JSON fixture, an XML equivalent exists. -->
             <for param="fixture" list="${fixtures}" delimiter=";">
                 <sequential>
+                    <local name="fixture.asxml"/>
+                    <propertyregex property="fixture.asxml" input="@{fixture}" regexp="\.json" replace=".xml" defaultValue="@{fixture}"/>
                     <if>
                         <not>
                             <available file="${input.dir.abs}/${reference.subdir}/@{fixture}"/>
                         </not>
                         <then>
-                            <fail message="Fixture '@{fixture}' is referenced but doesn't exist"/>
+                            <if>
+                                <and>
+                                    <available file="${input.dir.abs}/${reference.subdir}/${fixture.asxml}"/>
+                                    <isset property="convert.to.json.file"/>
+                                </and>
+                                <then>
+                                    <echo message="@{fixture} will be generated from its XML counterpart."/>
+                                    <echo message="${output.dir.abs}/${reference.subdir}/${fixture.asxml} " file="${convert.to.json.file}" append="true"/>
+                                </then>
+                                <else>
+                                    <fail message="Fixture '@{fixture}' is referenced but doesn't exist"/>
+                                </else>
+                            </if>
                         </then>
                     </if>
                 </sequential>
