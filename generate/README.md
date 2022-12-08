@@ -143,9 +143,11 @@ Profiles may be declared using:
 
 #### Fixtures
 
-Within the `@href` attribute of `nts:fixture`, the parameter `{$_FORMAT}` can be used to automatically output the format (either `xml` or `json`) the fixture is expected to be in. See the section below on automatically converting XML fixtures to JSON.
+Within the `@href` attribute of `nts:fixture`, the parameter `{$_FORMAT}` can be used to automatically output the format (either `xml` or `json`) the fixture is expected to be in.
 
-A LoadResources script is generated for all fixtures in the "_reference"-folder. See the section on building on how to exclude files and/or folders from being added the LoadResources script. 
+During building, a check will be done on the existence of fixtures that are directly referenced from the TestScripts. It is possible to make an exception for the special situation where a fixture is declared in JSON format but only exists in XML format by setting the `convert.to.json.file` build parameter to the path of a readable file. All the XML version of JSON fixtures will be written to this file, so they can be converted later on. A separate script for this is available in the folder "convertXmlToJson".
+
+A LoadResources script is generated for all fixtures in the "_reference"-folder. See the section on building on how to exclude files and/or folders from being added the LoadResources script. Usually, fixtures that are only used for sending need to be excluded from the LoadResources script.
 
 ##### Including fixtures in other fixtures
 
@@ -333,7 +335,8 @@ The following optional parameters may be used:
   The TestScript resources can use the `nts:in-targets` to define which element should be included in a target (see above). Multiple extra targets may be separated using comma's.
   Note: if there are subfolders in the folder on which an additional target is defined, each variant of the input folder will contain the full set of subfolders (but with slightly different content, of course).  
 - `targets`: This parameter contains the default target '#default', to which the targets defined in `targets.additional` are added. Used when building the default target is unwanted.
-- `version.addition`: a string that will be added verbatim to the value in the `TestScript.version` from the input file. If this element is absent, it will be populated with this value. 
+- `version.addition`: a string that will be added verbatim to the value in the `TestScript.version` from the input file. If this element is absent, it will be populated with this value.
+- `convert.to.json.file`: the path of a writable file where all referenced JSON fixtures are collected that don't exists, but for which an XML counterpart exists. This file can be used for the 'convertXmlToJson' script in this repo). If this parameter is not set, this situation will be treated like any other missing fixture and the build will fail.
 
 ### Building multiple projects
 
