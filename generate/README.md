@@ -357,6 +357,9 @@ Because of the verbosity of the ANT build, the logging level is set to 1 (warnin
 
 ## Changelog
 
+### 2.4.0
+- Add an extra script to convert XML fixtures to JSON. This can be used separately or in conjunction with the NTS build script.
+
 ### 2.3.0
 - Add the option to include fixtures in other fixtures, which are resolved during build. When used in batch/transation Bundles, references are checked and edited where neccessary.
 - (Further) parametrize targets and reference directory to be able to overrule these properies in specific builds.
