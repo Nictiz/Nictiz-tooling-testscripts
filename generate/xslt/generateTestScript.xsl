@@ -1,7 +1,10 @@
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="2.0"
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3.0"
     xmlns="http://hl7.org/fhir"
     xmlns:f="http://hl7.org/fhir"
     xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:fn="http://www.w3.org/2005/xpath-functions"
+    xmlns:array="http://www.w3.org/2005/xpath-functions/array"
+    xmlns:map="http://www.w3.org/2005/xpath-functions/map"
     xmlns:nts="http://nictiz.nl/xsl/testscript"
     exclude-result-prefixes="#all">
     <xsl:output method="xml" indent="yes"/>
@@ -374,6 +377,18 @@
                 </xsl:attribute>
             </xsl:otherwise>
         </xsl:choose>
+    </xsl:template>
+    
+    <xsl:template match="nts:patientToken[@patientId]" mode="expand">
+        <xsl:variable name="resourceId" select="./@patientId"/>
+        <xsl:variable name="patientTokenMap" select="fn:json-doc('file:/C:/Users/Edelman/Nictiz-testscripts/Configuration/QualificationTokens.json')"/>
+        <xsl:variable name="patientTokenEntry" select="array:filter($patientTokenMap, function($x) {map:get($x, 'resourceId') = $resourceId})"/>
+        <xsl:variable name="patientToken" select="map:get($patientTokenEntry(1), 'accessToken')"/>
+
+        <variable>
+            <name value="patient-token-id"/>
+            <expression value="{$patientToken}"/>
+        </variable>
     </xsl:template>
     
     <!-- Expand an nts:patientTokenFixture element to create a variable called 'patient-token-id'. How this is handled
