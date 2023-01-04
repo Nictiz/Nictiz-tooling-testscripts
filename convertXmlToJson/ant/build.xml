@@ -54,6 +54,7 @@
     </target>
     
     <target name="retrieve" depends="check-if-conversion-is-needed, check-ivy, install-ivy" if="should.convert">
+        <ivy:cleancache/>
         <ivy:settings file="${testscripttools.dir}/ant/ivysettings.xml"/>
         <ivy:retrieve/>
         <ivy:artifactproperty name="[module].[artifact]" value="${dependency.dir}/[type]/[artifact]-[revision].[ext]" />
