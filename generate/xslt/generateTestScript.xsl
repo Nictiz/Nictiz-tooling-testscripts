@@ -1,4 +1,4 @@
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3.0"
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="2.0"
     xmlns="http://hl7.org/fhir"
     xmlns:f="http://hl7.org/fhir"
     xmlns:xs="http://www.w3.org/2001/XMLSchema"
@@ -32,6 +32,8 @@
     <!-- Optional string that will be appended verbatim to the verson string. If there is no version element in the
          input, it will be set to this parameter. -->
     <xsl:param name="versionAddition" select="''"/>
+    
+    <xsl:param name="tokensJsonFile" select="'file:/C:/Users/Edelman/Nictiz-testscripts/Configuration/QualificationTokens.json'"/>
     
     <!-- The main template, which will call the remaining templates. -->
     <xsl:template name="generate" match="f:TestScript">
@@ -380,15 +382,53 @@
     </xsl:template>
     
     <xsl:template match="nts:patientToken[@patientId]" mode="expand">
+        <xsl:param name="scenario" tunnel="yes"/>
         <xsl:variable name="resourceId" select="./@patientId"/>
-        <xsl:variable name="patientTokenMap" select="fn:json-doc('file:/C:/Users/Edelman/Nictiz-testscripts/Configuration/QualificationTokens.json')"/>
-        <xsl:variable name="patientTokenEntry" select="array:filter($patientTokenMap, function($x) {map:get($x, 'resourceId') = $resourceId})"/>
-        <xsl:variable name="patientToken" select="map:get($patientTokenEntry(1), 'accessToken')"/>
+        
+        <!-- Try to find the "accessToken" key associated with "resourceId": patientId in the tokens JSON file.
+             This is done in two steps: first the block with the relevant resourceId is identified, and then the
+             "accessToken" value is extracted.
+             Note: this could be done using the JSON parsing features of XSLT 3, but at the moment of writing this
+             use case is too narrow to warrant the bump to XSLT 3. So a 'dumb' regex based method is used. -->
+        <xsl:variable name="patientToken" as="xs:string*">
+            <xsl:variable name="patientTokenMap" select="unparsed-text($tokensJsonFile)"/>
+            <xsl:variable name="regex" select="concat('\{[^\}]*[''&quot;]resourceId[''&quot;]\s*:\s*[''&quot;]', $resourceId, '[''&quot;].*?\}')"/>
+            <xsl:analyze-string select="$patientTokenMap" regex="{$regex}" flags="s">
+                <xsl:matching-substring>
+                    <xsl:analyze-string select="regex-group(0)" regex='[&apos;&quot;]accessToken[&apos;&quot;]\s*:\s*[&apos;&quot;](.*?)[&apos;&quot;]'>
+                        <xsl:matching-substring>
+                            <xsl:value-of select="regex-group(1)"/>
+                        </xsl:matching-substring>
+                    </xsl:analyze-string>
+                </xsl:matching-substring>
+            </xsl:analyze-string>
+        </xsl:variable>
 
-        <variable>
-            <name value="patient-token-id"/>
-            <expression value="{$patientToken}"/>
-        </variable>
+        <xsl:choose>
+            <xsl:when test="count($patientToken) = 0">
+                <xsl:message terminate="yes" select="concat('Couldn''t find access token for Patient resource ', $resourceId, ' in ', $tokensJsonFile)"/>
+            </xsl:when>
+            <xsl:when test="count($patientToken) &gt; 1">
+                <xsl:message terminate="yes" select="concat('Multiple matches found for Patient resource ', $resourceId, ' in ', $tokensJsonFile)"/>
+            </xsl:when>
+            <xsl:otherwise>
+                <xsl:choose>
+                    <xsl:when test="$scenario='client'">
+                        <variable>
+                            <name value="patient-token-id"/>
+                            <expression value="'{$patientToken}"/>
+                        </variable>
+                    </xsl:when>
+                    <xsl:when test="$scenario='server'">
+                        <variable>
+                            <name value="patient-token-id"/>
+                            <defaultValue value="{$patientToken}"/>
+                            <description value="OAuth Token for current patient"/>
+                        </variable>
+                    </xsl:when>
+                </xsl:choose>
+            </xsl:otherwise>
+        </xsl:choose>
     </xsl:template>
     
     <!-- Expand an nts:patientTokenFixture element to create a variable called 'patient-token-id'. How this is handled
