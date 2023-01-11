@@ -33,7 +33,12 @@
          input, it will be set to this parameter. -->
     <xsl:param name="versionAddition" select="''"/>
     
-    <xsl:param name="tokensJsonFile" select="'file:/C:/Users/Edelman/Nictiz-testscripts/Configuration/QualificationTokens.json'"/>
+    <!-- Optional URL to a JSON file matching Patient resource id's to tokens used in authorization headers. This
+         parameter is needed if the nts:authToken/nts:authHeader features are used. In addition, the two concepts
+         are linked by placing them in the same group with the keys 'resourceId' and 'accessToken'. This is a
+         structure imposed by Touchstone for mocking token based authorization.
+    -->
+    <xsl:param name="tokensJsonFile"/>
     
     <!-- The main template, which will call the remaining templates. -->
     <xsl:template name="generate" match="f:TestScript">
@@ -812,6 +817,9 @@
     <xsl:function name="nts:resolveAuthTokens" as="element(nts:authToken)*">
         <xsl:param name="authTokenElements" as="element(nts:authToken)*"/>
         
+        <xsl:if test="count($authTokenElements) &gt; 0 and not($tokensJsonFile)">
+            <xsl:message terminate="yes">If you use the nts:authToken element, you need to pass in a file containing the tokens using the tokensJsonFile parameter.</xsl:message>
+        </xsl:if>
         <xsl:if test="count($authTokenElements[not(@id)]) &gt; 1">
             <xsl:message terminate="yes">When using multiple nts:authToken elements, at most one may have the default id. All other instances must be uniquely identified with an id.</xsl:message>
         </xsl:if>
