@@ -32,13 +32,10 @@
     <!-- Optional string that will be appended verbatim to the verson string. If there is no version element in the
          input, it will be set to this parameter. -->
     <xsl:param name="versionAddition" select="''"/>
-    
-    <!-- Optional URL to a JSON file matching Patient resource id's to tokens used in authorization headers. This
-         parameter is needed if the nts:authToken/nts:authHeader features are used. In addition, the two concepts
-         are linked by placing them in the same group with the keys 'resourceId' and 'accessToken'. This is a
-         structure imposed by Touchstone for mocking token based authorization.
-    -->
-    <xsl:param name="tokensJsonFile"/>
+
+    <!-- Include the machinery to resolve auth tokens from a JSON file. This adds the parameter tokensJSONFile, which
+         should hold an URL. -->
+    <xsl:include href="resolveAuthTokens.xsl"/>
     
     <!-- The main template, which will call the remaining templates. -->
     <xsl:template name="generate" match="f:TestScript">
@@ -60,7 +57,18 @@
 
         <!-- Extract the authorization tokens specified using the nts:authToken element(s). These tokens can then be used within 
              the nts:authHeader element, referenced by their id. -->
-        <xsl:variable name="authTokens" as="element(nts:authToken)*" select="nts:resolveAuthTokens(//nts:authToken[@patientResourceId])"/>
+        <xsl:if test="count(//nts:authToken[@patientResourceId]) &gt; 0 and not($tokensJsonFile)">
+            <xsl:message terminate="yes">If you use the nts:authToken element, you need to pass in a file containing the tokens using the tokensJsonFile parameter.</xsl:message>
+        </xsl:if>
+        <xsl:if test="count(//nts:authToken[not(@id)]) &gt; 1">
+            <xsl:message terminate="yes">When using multiple nts:authToken elements, at most one may have the default id. All other instances must be uniquely identified with an id.</xsl:message>
+        </xsl:if>
+        <xsl:variable name="authTokens">
+            <xsl:for-each select="//nts:authToken[@patientResourceId]">
+                <xsl:variable name="id" select="if (.[@id]) then ./@id else 'patient-token-id'"/>
+                <xsl:copy-of select="nts:resolveAuthToken(./@patientResourceId, $id)"/>
+            </xsl:for-each>
+        </xsl:variable>
         
         <!-- Expand all the Nictiz inclusion elements to their FHIR representation --> 
         <xsl:variable name="expanded">
@@ -401,7 +409,7 @@
         <xsl:if test="$scenario='server'">
             <variable>
                 <name value="{if (.[@id]) then ./@id else 'patient-token-id'}"/>
-                <defaultValue value="{$authTokens[@id = ./@id]/@value}"/>
+                <defaultValue value="{$authTokens[@id = ./@id]/@token}"/>
                 <description value="OAuth Token for current patient"/>
             </variable>
         </xsl:if>
@@ -434,7 +442,7 @@
             <xsl:when test="$scenario='client'">
                 <requestHeader>
                     <field value="Authorization"/>
-                    <value value="{$authTokens[@id = $id]/@value}"/>
+                    <value value="{$authTokens[@id = $id]/@token}"/>
                 </requestHeader>
             </xsl:when>
         </xsl:choose>
@@ -809,55 +817,6 @@
         <xsl:if test="$curr &lt; $max">
             <xsl:copy-of select="nts:addDestinations($curr + 1, $max)"/>
         </xsl:if>
-    </xsl:function>
-
-    <!-- Resolve the authorization tokens defined using the nts:authToken element(s). The result will be a flat list
-         of <nts:authToken> elements with an id and a value attribute, which can be referenced in the nts:authToken
-         expansion and the nts:authHeader element. -->
-    <xsl:function name="nts:resolveAuthTokens" as="element(nts:authToken)*">
-        <xsl:param name="authTokenElements" as="element(nts:authToken)*"/>
-        
-        <xsl:if test="count($authTokenElements) &gt; 0 and not($tokensJsonFile)">
-            <xsl:message terminate="yes">If you use the nts:authToken element, you need to pass in a file containing the tokens using the tokensJsonFile parameter.</xsl:message>
-        </xsl:if>
-        <xsl:if test="count($authTokenElements[not(@id)]) &gt; 1">
-            <xsl:message terminate="yes">When using multiple nts:authToken elements, at most one may have the default id. All other instances must be uniquely identified with an id.</xsl:message>
-        </xsl:if>
-        <xsl:for-each select="$authTokenElements[@patientResourceId]">
-            <xsl:variable name="id" select="if (.[@id]) then ./@id else 'patient-token-id'"/>
-            <xsl:variable name="patientResourceId" select="./@patientResourceId"/>
-
-            <!-- Try to find the "accessToken" key associated with "resourceId": patientId in the tokens JSON file.
-             This is done in two steps: first the block with the relevant resourceId is identified, and then the
-             "accessToken" value is extracted.
-             Note: this could be done using the JSON parsing features of XSLT 3, but at the moment of writing this
-             use case is too narrow to warrant the bump to XSLT 3. So a 'dumb' regex based method is used. -->
-            <xsl:variable name="patientToken" as="xs:string*">
-                <xsl:variable name="patientTokenMap" select="unparsed-text($tokensJsonFile)"/>
-                <xsl:variable name="regex" select="concat('\{[^\}]*[''&quot;]resourceId[''&quot;]\s*:\s*[''&quot;]', $patientResourceId, '[''&quot;].*?\}')"/>
-                <xsl:analyze-string select="$patientTokenMap" regex="{$regex}" flags="s">
-                    <xsl:matching-substring>
-                        <xsl:analyze-string select="regex-group(0)" regex='[&apos;&quot;]accessToken[&apos;&quot;]\s*:\s*[&apos;&quot;](.*?)[&apos;&quot;]'>
-                            <xsl:matching-substring>
-                                <xsl:value-of select="regex-group(1)"/>
-                            </xsl:matching-substring>
-                        </xsl:analyze-string>
-                    </xsl:matching-substring>
-                </xsl:analyze-string>
-            </xsl:variable>
-            
-            <xsl:choose>
-                <xsl:when test="count($patientToken) = 0">
-                    <xsl:message terminate="yes" select="concat('Couldn''t find access token for Patient resource ', $patientResourceId, ' in ', $tokensJsonFile)"/>
-                </xsl:when>
-                <xsl:when test="count($patientToken) &gt; 1">
-                    <xsl:message terminate="yes" select="concat('Multiple matches found for Patient resource ', $patientResourceId, ' in ', $tokensJsonFile)"/>
-                </xsl:when>
-                <xsl:otherwise>
-                    <nts:authToken id="{$id}" value="{$patientToken[1]}"/>
-                </xsl:otherwise>
-            </xsl:choose>
-        </xsl:for-each>
     </xsl:function>
     
 </xsl:stylesheet>

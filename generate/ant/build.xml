@@ -390,6 +390,7 @@
                     <param name="referenceBase" expression="${reference.dir.loadresourcesrelative.normalized}"/>
                     <param name="referenceDir" expression="${input.dir.abs}/${reference.subdir}/"/>
                     <param name="loadResourcesExclude" expression="${loadresources.exclude}"/>
+                    <param name="tokensJsonFile" expression="${tokens.json.url}"/>
                 </parameters>
             </saxon-transform>
             
