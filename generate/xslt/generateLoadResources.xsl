@@ -68,9 +68,6 @@
             </xsl:choose>
         </xsl:variable>
         
-        <!-- And collect all bearer fixtures as file URLs -->
-        <xsl:variable name="tokens" select="collection(iri-to-uri(concat(resolve-uri($referenceDirAsUrl), '?select=', '*token.xml;recurse=yes')))/f:*"/>
-        
         <xsl:choose>
             <xsl:when test="$fixtures">
                 <!-- Write out the TestScript resource -->
@@ -135,16 +132,16 @@
                             <xsl:value-of select="substring(./@value, 9)"/>
                         </xsl:for-each>
                     </xsl:variable>
-                    <!-- ... and find the matching tokens. -->
+                    <!-- ... and find the matching tokens, if they exists in the JSON file. -->
                     <xsl:variable name="tokens" as="element(nts:authToken)*">
                         <xsl:for-each select="distinct-values($patientReferences)">
-                            <xsl:copy-of select="nts:resolveAuthToken(., '')"/>
+                            <xsl:copy-of select="nts:resolveAuthToken(., '', false())"/>
                         </xsl:for-each>
                     </xsl:variable>
                     
                     <!-- Purge Patients in setup -->
                     <setup>
-                        <xsl:for-each select="$tokens">
+                        <xsl:for-each select="$tokens[@token]">
                             <action>
                                 <operation>
                                     <type>
@@ -202,12 +199,12 @@
                                         <field value="Authorization"/>
                                         <!-- KT-330: In MedMij R4, it is required to use the correct patient token for updateCreate of Patients, but it doesn't hurt for STU3 -->
                                         <xsl:choose>
-                                            <xsl:when test="$tokens[@resourceId = $resourceId]">
-                                                <value value="{$tokens[@resourceId = $resourceId]/@token}"/>
+                                            <xsl:when test="$tokens[@token and @resourceId = $resourceId]">
+                                                <value value="{$tokens[@token and @resourceId = $resourceId]/@token}"/>
                                             </xsl:when>
                                             <xsl:otherwise>
                                                 <!-- Use first patient token, or should we check fixture .subject to determine correct token? -->
-                                                <value value="{$tokens[1]/@token}"/>
+                                                <value value="{$tokens[@token][1]/@token}"/>
                                             </xsl:otherwise>
                                         </xsl:choose>
                                     </requestHeader>

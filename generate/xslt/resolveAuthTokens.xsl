@@ -16,14 +16,16 @@
          this operation unless/until it is actually needed. -->
     <xsl:variable name="patientTokenMap" select="unparsed-text($tokensJsonFile)"/>
     
-    <!-- Resolve the authorization token from the JSON file. If no token was found or multiple matching tokens exist,
-         an error is thrown.
+    <!-- Resolve the authorization token from the JSON file. If multiple matching tokens exist, an error is thrown.
          @param patientResourceId - the resource id of the Patient resource for which the token is resolved.
          @param id - an internal id to match the resolved token to a mnemonic for later use.
+         @param failOnMissing - a boolean to indicate that processing should be halted when the id cannot be resolved,
+                                or that the resulting attribute will be empty.
          @returns a list of nts:authToken XML elements with the parameters patientResourceId, token, and id. -->
     <xsl:function name="nts:resolveAuthToken" as="element(nts:authToken)?">
         <xsl:param name="patientResourceId" as="xs:string"/>
         <xsl:param name="id" as="xs:string"/>
+        <xsl:param name="failOnMissing" as="xs:boolean"/>
 
         <xsl:if test="not($tokensJsonFile)">
             <xsl:message terminate="yes">You're trying to resolve a token based on a Patient resource id, but didn't pass in a file containing the tokens using the tokensJsonFile parameter.</xsl:message>
@@ -48,7 +50,7 @@
         </xsl:variable>
 
         <xsl:choose>
-            <xsl:when test="count($patientToken) = 0">
+            <xsl:when test="count($patientToken) = 0 and $failOnMissing">
                 <xsl:message terminate="yes" select="concat('Couldn''t find access token for Patient resource ', $patientResourceId, ' in ', $tokensJsonFile)"/>
             </xsl:when>
             <xsl:when test="count($patientToken) &gt; 1">
