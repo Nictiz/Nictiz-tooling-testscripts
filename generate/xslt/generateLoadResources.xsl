@@ -138,7 +138,7 @@
                     <!-- ... and find the matching tokens. -->
                     <xsl:variable name="tokens" as="element(nts:authToken)*">
                         <xsl:for-each select="distinct-values($patientReferences)">
-                            <xsl:copy-of select="nts:resolveAuthToken('', .)"/>
+                            <xsl:copy-of select="nts:resolveAuthToken(., '')"/>
                         </xsl:for-each>
                     </xsl:variable>
                     

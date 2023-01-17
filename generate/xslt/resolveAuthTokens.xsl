@@ -10,7 +10,7 @@
          is a structure imposed by Touchstone for mocking token based authorization. -->
     
     <!-- The (file) URL to the JSON file matching Patient resource id's to tokens used in authorization headers. -->
-    <xsl:param name="tokensJsonFile"/>
+    <xsl:param name="tokensJsonFile" required="no"/>
 
     <!-- Load the JSON file as flat text in the patientTokenMap variable. It is assumed that the XSLT processor defers
          this operation unless/until it is actually needed. -->
@@ -24,6 +24,10 @@
     <xsl:function name="nts:resolveAuthToken" as="element(nts:authToken)?">
         <xsl:param name="patientResourceId" as="xs:string"/>
         <xsl:param name="id" as="xs:string"/>
+
+        <xsl:if test="not($tokensJsonFile)">
+            <xsl:message terminate="yes">You're trying to resolve a token based on a Patient resource id, but didn't pass in a file containing the tokens using the tokensJsonFile parameter.</xsl:message>
+        </xsl:if>
         
         <!-- Try to find the "accessToken" key associated with "resourceId": patientId in the tokens JSON file.
              This is done in two steps: first the block with the relevant resourceId is identified, and then the

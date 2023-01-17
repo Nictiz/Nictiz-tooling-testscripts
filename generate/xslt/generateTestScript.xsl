@@ -63,7 +63,7 @@
         <xsl:if test="count(//nts:authToken[not(@id)]) &gt; 1">
             <xsl:message terminate="yes">When using multiple nts:authToken elements, at most one may have the default id. All other instances must be uniquely identified with an id.</xsl:message>
         </xsl:if>
-        <xsl:variable name="authTokens">
+        <xsl:variable name="authTokens" as="element(nts:authToken)*">
             <xsl:for-each select="//nts:authToken[@patientResourceId]">
                 <xsl:variable name="id" select="if (.[@id]) then ./@id else 'patient-token-id'"/>
                 <xsl:copy-of select="nts:resolveAuthToken(./@patientResourceId, $id)"/>
@@ -427,7 +427,7 @@
                     <xsl:message terminate="yes">An nts:authHeader element with 'patient-token-id' (the default when no id is set) was used, but no matching nts:authToken was defined.</xsl:message>
                 </xsl:when>
                 <xsl:otherwise>
-                    <xsl:message terminate="yes" select="concat('An nts:authHeader element with id ''', $id, ''' was used, but no matching nts:authToken with the same id was defined.')"/>                    
+                    <xsl:message terminate="yes" select="concat('An nts:authHeader element with id ''', $id, ''' was used, but no matching nts:authToken with the same id was defined.')"/>
                 </xsl:otherwise>
             </xsl:choose>
         </xsl:if>
