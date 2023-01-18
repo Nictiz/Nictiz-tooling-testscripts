@@ -122,21 +122,34 @@
                         <defaultValue value="${{CURRENTDATE}}"/>
                         <description value="Date that data and queries are expected to be relative to."/>
                     </variable>
-
-                    <!-- Collect all Patient resources that exist or are referred from other resources ... -->
-                    <xsl:variable name="patientReferences" as="xs:string*">
-                        <xsl:for-each select="$fixtures[local-name() = 'Patient']">
-                            <xsl:value-of select="./f:id/@value"/>
-                        </xsl:for-each>
-                        <xsl:for-each select="$fixtures//f:reference[starts-with(@value, 'Patient/')]">
-                            <xsl:value-of select="substring(./@value, 9)"/>
-                        </xsl:for-each>
-                    </xsl:variable>
-                    <!-- ... and find the matching tokens, if they exists in the JSON file. -->
+                    
                     <xsl:variable name="tokens" as="element(nts:authToken)*">
-                        <xsl:for-each select="distinct-values($patientReferences)">
-                            <xsl:copy-of select="nts:resolveAuthToken(., '', false())"/>
-                        </xsl:for-each>
+                        <xsl:variable name="tokensCached" as="element(nts:authToken)*">
+                            <!-- Collect all Patient resources that exist or are referred from other resources -->
+                            <xsl:variable name="patientReferences" as="xs:string*">
+                                <xsl:for-each select="$fixtures[local-name() = 'Patient']">
+                                    <xsl:value-of select="./f:id/@value"/>
+                                </xsl:for-each>
+                                <xsl:for-each select="$fixtures//f:reference[starts-with(@value, 'Patient/')]">
+                                    <xsl:value-of select="substring(./@value, 9)"/>
+                                </xsl:for-each>
+                            </xsl:variable>
+                            <!-- ... and find the matching tokens, if they exists in the JSON file. -->
+                            <xsl:for-each select="distinct-values($patientReferences)">
+                                <xsl:copy-of select="nts:resolveAuthToken(., '', false())"/>
+                            </xsl:for-each>
+                            
+                            <!-- Add to this the tokens from token files (where the resource id's are extracted from
+                                 the file names. --> 
+                            <xsl:for-each select="collection(iri-to-uri(concat(resolve-uri($referenceDirAsUrl), '?select=', '*token.xml;recurse=yes')))">
+                                <nts:authToken patientResourceId="{tokenize(substring-before(base-uri(), '-token.xml'), '/')[last()]}" token="{.//f:id/@value}"/>
+                            </xsl:for-each>
+                        </xsl:variable>
+                        
+                        <!-- Make everything unique by token -->
+                        <xsl:for-each-group select="$tokensCached" group-by="./@token">
+                            <xsl:copy-of select="current-group()[1]"/>
+                        </xsl:for-each-group>
                     </xsl:variable>
                     
                     <!-- Purge Patients in setup -->
