@@ -204,30 +204,49 @@ It is also possible implicitly declare the rule when it is used by adding the `h
 </assert>  
 ```
 
-### Patient token and date T
+### Date T and authorization headers
 
-There are two special elements for use cases that are common across Nictiz test scripts.
+There are special elements for two use cases that are common across Nictiz test scripts.
 
-The first one for including the patient authorization token in the TestScript:
-
-```xml
-<nts:patientTokenFixture href="..">
-```
-
-The `href` attribute should point to the `Patient` instance containing the token, as is commonly done with the Nictiz test scripts, placed in the "_reference"-folder. The `nts:scenario` attribute on the TestScript root determines how this tag is expanded:
-
-* for "server", a variable will be created which the test script executor can set, defaulting to the value from the fixture.
-* for "client", the fixture will be included and a variable called "patient-token-id" will be created that reads the value from the fixture
-
-The token filename should end with `token.xml` and the token id should start with `Bearer`.
-
-The second element is to indicate that the "date T" variable should be defined for the testscript:
+The first one is to indicate that the "date T" variable should be defined for the TestScript:
 
 ```xml
 <nts:includeDateT value="yes|no">
 ```
 
 If this element is present, and `value` is absent or set to "yes", a variable for setting date T will be included in the TestScript.
+
+The second one deals with the authorization header for defining the patient context in the TestScript. The assumption here is that the (static) content of an `Authorization` header associated with a specific Patient resource `.id` is defined in a JSON file with the following syntax:
+```json
+{
+    "accessToken": "Bearer ...",
+    "resourceId": "[resource.id of Patient resource]",
+}
+```
+
+This file should be passed as the `tokens.json` parameter to the build script. The token can then be imported into a TestScript using:
+
+```xml
+<nts:authToken patientResourceId="[resource.id of Patient resource]"/>
+```
+
+and subsequently be used in `.operation`'s with:
+
+```xml
+<nts:authHeader>
+```
+
+The output of these tags depend on the `nts:scenario`. For client scripts, the access token will be hardcoded in the `.operation`'s. For server scripts, a TestScript variable will be defined that defaults to the access token, but which can be overruled by the tester. This variable will be used in the `Authorization` header.
+
+These tags support an optional `id` attribute to match the `<nts:authToken/>` tags to the `<nts:authHeader/>` tags. This is useful when multiple tokens need to be handled. This `id` is also the name of the TestScript variable that is being defined in server scripts. When `id` is absent, this will have the value `patient-token-id`.
+
+There is actually a second (outdated) mechanism to import authorization tokens:
+
+```xml
+<nts:patientTokenFixture href="..">
+```
+
+The `href` attribute should point to a `Patient` instance containing the content of the authorization header as its `.id`, placed in the "_reference"-folder and with a file name ending in `-token.xml`. There is no corresponding tag to use the imported header in `.operation`'s, but a TestScript variable called `patient-token-id` will be defined which can be used throughout the TestScript.
 
 ### Scenario: server (xis) or client (phr)
 
