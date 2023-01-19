@@ -212,12 +212,12 @@
                                         <field value="Authorization"/>
                                         <!-- KT-330: In MedMij R4, it is required to use the correct patient token for updateCreate of Patients, but it doesn't hurt for STU3 -->
                                         <xsl:choose>
-                                            <xsl:when test="$tokens[@token and @resourceId = $resourceId]">
-                                                <value value="{$tokens[@token and @resourceId = $resourceId]/@token}"/>
+                                            <xsl:when test="$tokens[@token != '' and @patientResourceId = $resourceId]">
+                                                <value value="{$tokens[@token != '' and @patientResourceId = $resourceId]/@token}"/>
                                             </xsl:when>
                                             <xsl:otherwise>
                                                 <!-- Use first patient token, or should we check fixture .subject to determine correct token? -->
-                                                <value value="{$tokens[@token][1]/@token}"/>
+                                                <value value="{$tokens[@token != ''][1]/@token}"/>
                                             </xsl:otherwise>
                                         </xsl:choose>
                                     </requestHeader>
