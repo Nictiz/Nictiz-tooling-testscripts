@@ -379,7 +379,7 @@ Because of the verbosity of the ANT build, the logging level is set to 1 (warnin
 ## Changelog
 
 ### 2.5.0
-- Add the tags `<nts:authToken/>` and `<nts:authHeader/>` to work with authorization tokens defined in a JSON file, as is expected for mock authentication on Touchstone. This supersedes the `<nts:patientTokenFixture/>` tag.
+- Add the tag `<nts:authToken/>` to work with authorization tokens defined in a JSON file, as is expected for mock authentication on Touchstone. This supersedes the `<nts:patientTokenFixture/>` tag.
 
 ### 2.4.1
 - Make the magic _FORMAT parameter available to nts:ifset
