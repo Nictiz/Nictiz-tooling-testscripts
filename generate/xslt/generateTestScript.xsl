@@ -70,12 +70,29 @@
             </xsl:for-each>
         </xsl:variable>
         
+        <!-- Seed the parameters used during expansion with the id's of nts:authToken declarations.
+             The value of these "magic" parameters depend on the scenario. For server scripts, this will be expanded
+             to a corresponding TestScript variable. For client scripts, this will contain the literal content of the
+             token. -->
+        <xsl:variable name="inclusionParameters" as="element(nts:with-parameter)*">
+            <xsl:for-each select="$authTokens">
+                <xsl:if test="$scenario = 'server'">
+                    <nts:with-parameter name="{./@id}" value="{concat('${', ./@id, '}')}"/>    
+                </xsl:if>
+                <xsl:if test="$scenario = 'client'">
+                    <nts:with-parameter name="{./@id}" value="{./@token}"/>
+                </xsl:if>
+            </xsl:for-each>
+        </xsl:variable>
+        
+        
         <!-- Expand all the Nictiz inclusion elements to their FHIR representation --> 
         <xsl:variable name="expanded">
             <xsl:apply-templates mode="expand" select=".">
                 <xsl:with-param name="scenario" select="$scenario" tunnel="yes"/>
                 <xsl:with-param name="expectedResponseFormat" select="$expectedResponseFormat" tunnel="yes"/>
                 <xsl:with-param name="basePath" select="$basePath" tunnel="yes"/>
+                <xsl:with-param name="inclusionParameters" select="$inclusionParameters" tunnel="yes"/>
                 <xsl:with-param name="authTokens" select="$authTokens" tunnel="yes"/>
             </xsl:apply-templates>
         </xsl:variable>
@@ -413,39 +430,6 @@
                 <description value="OAuth Token for current patient"/>
             </variable>
         </xsl:if>
-    </xsl:template>
-    
-    <!-- Expand the nts:authHeader element to a FHIR TestScript requestHeader element used for authorization. -->
-    <xsl:template match="nts:authHeader" mode="expand">
-        <xsl:param name="scenario" tunnel="yes"/>
-        <xsl:param name="authTokens" tunnel="yes"/>
-        
-        <xsl:variable name="id" select="if (.[@id]) then ./@id else 'patient-token-id'"/>
-        <xsl:if test="count($authTokens[@id = $id]) = 0">
-            <xsl:choose>
-                <xsl:when test="$id = 'patient-token-id'">
-                    <xsl:message terminate="yes">An nts:authHeader element with 'patient-token-id' (the default when no id is set) was used, but no matching nts:authToken was defined.</xsl:message>
-                </xsl:when>
-                <xsl:otherwise>
-                    <xsl:message terminate="yes" select="concat('An nts:authHeader element with id ''', $id, ''' was used, but no matching nts:authToken with the same id was defined.')"/>
-                </xsl:otherwise>
-            </xsl:choose>
-        </xsl:if>
-        
-        <xsl:choose>
-            <xsl:when test="$scenario='server'">
-                <requestHeader>
-                    <field value="Authorization"/>
-                    <value value="{concat('${', $id, '}')}"/>
-                </requestHeader>
-            </xsl:when>
-            <xsl:when test="$scenario='client'">
-                <requestHeader>
-                    <field value="Authorization"/>
-                    <value value="{$authTokens[@id = $id]/@token}"/>
-                </requestHeader>
-            </xsl:when>
-        </xsl:choose>
     </xsl:template>
     
     <!-- Expand an nts:patientTokenFixture element to create a variable called 'patient-token-id'. How this is handled
