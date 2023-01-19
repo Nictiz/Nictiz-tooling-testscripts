@@ -2,6 +2,9 @@
     xmlns="http://hl7.org/fhir"
     xmlns:f="http://hl7.org/fhir"
     xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:fn="http://www.w3.org/2005/xpath-functions"
+    xmlns:array="http://www.w3.org/2005/xpath-functions/array"
+    xmlns:map="http://www.w3.org/2005/xpath-functions/map"
     xmlns:nts="http://nictiz.nl/xsl/testscript"
     exclude-result-prefixes="#all">
     <xsl:output method="xml" indent="yes"/>
@@ -29,6 +32,10 @@
     <!-- Optional string that will be appended verbatim to the verson string. If there is no version element in the
          input, it will be set to this parameter. -->
     <xsl:param name="versionAddition" select="''"/>
+
+    <!-- Include the machinery to resolve auth tokens from a JSON file. This adds the parameter tokensJSONFile, which
+         should hold an URL. -->
+    <xsl:include href="resolveAuthTokens.xsl"/>
     
     <!-- The main template, which will call the remaining templates. -->
     <xsl:template name="generate" match="f:TestScript">
@@ -47,6 +54,37 @@
         <xsl:if test="$scenario = 'server' and not($expectedResponseFormat = ('xml', 'json'))">
             <xsl:message terminate="yes" select="concat('Invalid value ''', $expectedResponseFormat, ''' for parameter ''expectedResponseFormat''; should be either ''xml'' or ''json''')"></xsl:message>
         </xsl:if>
+
+        <!-- Extract the authorization tokens specified using the nts:authToken element(s). These tokens can then be used within 
+             the nts:authHeader element, referenced by their id. -->
+        <xsl:if test="count(//nts:authToken[@patientResourceId]) &gt; 0 and not($tokensJsonFile)">
+            <xsl:message terminate="yes">If you use the nts:authToken element, you need to pass in a file containing the tokens using the tokensJsonFile parameter.</xsl:message>
+        </xsl:if>
+        <xsl:if test="count(//nts:authToken[not(@id)]) &gt; 1">
+            <xsl:message terminate="yes">When using multiple nts:authToken elements, at most one may have the default id. All other instances must be uniquely identified with an id.</xsl:message>
+        </xsl:if>
+        <xsl:variable name="authTokens" as="element(nts:authToken)*">
+            <xsl:for-each select="//nts:authToken[@patientResourceId]">
+                <xsl:variable name="id" select="if (.[@id]) then ./@id else 'patient-token-id'"/>
+                <xsl:copy-of select="nts:resolveAuthToken(./@patientResourceId, $id, true())"/>
+            </xsl:for-each>
+        </xsl:variable>
+        
+        <!-- Seed the parameters used during expansion with the id's of nts:authToken declarations.
+             The value of these "magic" parameters depend on the scenario. For server scripts, this will be expanded
+             to a corresponding TestScript variable. For client scripts, this will contain the literal content of the
+             token. -->
+        <xsl:variable name="inclusionParameters" as="element(nts:with-parameter)*">
+            <xsl:for-each select="$authTokens">
+                <xsl:if test="$scenario = 'server'">
+                    <nts:with-parameter name="{./@id}" value="{concat('${', ./@id, '}')}"/>    
+                </xsl:if>
+                <xsl:if test="$scenario = 'client'">
+                    <nts:with-parameter name="{./@id}" value="{./@token}"/>
+                </xsl:if>
+            </xsl:for-each>
+        </xsl:variable>
+        
         
         <!-- Expand all the Nictiz inclusion elements to their FHIR representation --> 
         <xsl:variable name="expanded">
@@ -54,6 +92,8 @@
                 <xsl:with-param name="scenario" select="$scenario" tunnel="yes"/>
                 <xsl:with-param name="expectedResponseFormat" select="$expectedResponseFormat" tunnel="yes"/>
                 <xsl:with-param name="basePath" select="$basePath" tunnel="yes"/>
+                <xsl:with-param name="inclusionParameters" select="$inclusionParameters" tunnel="yes"/>
+                <xsl:with-param name="authTokens" select="$authTokens" tunnel="yes"/>
             </xsl:apply-templates>
         </xsl:variable>
     
@@ -376,6 +416,22 @@
         </xsl:choose>
     </xsl:template>
     
+    <!-- Expand an nts:authToken element. For server scripts, this will result in a variable with a default value which
+         the tester can override. For client scripts, this doesn't result in any output (but the element is used 
+         beforehand for finding the correct authorization token to use. -->
+    <xsl:template match="nts:authToken[@patientResourceId]" mode="expand">
+        <xsl:param name="scenario" tunnel="yes"/>
+        <xsl:param name="authTokens" tunnel="yes"/>
+        
+        <xsl:if test="$scenario='server'">
+            <variable>
+                <name value="{if (.[@id]) then ./@id else 'patient-token-id'}"/>
+                <defaultValue value="{$authTokens[@id = ./@id]/@token}"/>
+                <description value="OAuth Token for current patient"/>
+            </variable>
+        </xsl:if>
+    </xsl:template>
+    
     <!-- Expand an nts:patientTokenFixture element to create a variable called 'patient-token-id'. How this is handled
          is different for server and client scripts:
          - for a server script, it will be provided with a default value read from the fixture, which can be overridden
@@ -693,7 +749,6 @@
         </xsl:variable>
         <xsl:value-of select="$fullFilename"/>
     </xsl:function>
-    
     
     <!-- Construct a file path from the elements.
          param base is the folder where the file resides

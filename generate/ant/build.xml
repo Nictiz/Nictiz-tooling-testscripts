@@ -17,6 +17,7 @@
     - lib.dir                 : The directory where all build dependency's will be placed. It's a good idea to add this to
                                 .gitignore.
     - [components.dir]        : Optional - the directory containing the project components, relative to input.dir. Defaults to '_components'.
+    - [tokens.json]           : Optional - the relative path to a JSON file linking Patient resource id's to authorization tokens. This is a feature specifically for the mocked authorization mechanism on Touchstone.
     - [loadresources.exclude] : Optional - A relative path to a folder containing the fixtures or to specific filenames to be excluded from 
                                 the LoadResources script. Multiple entries can be comma separated. `*` is accepted as a wildcard.
     - [processfixtures.skip]  : Optional - If 'true' (or any other non-empty value) processing fixtures is skipped.
@@ -53,6 +54,12 @@
     <property name="components.dir.abs"       location="${components.dir}"/>
     <property name="commoncomponents.dir.abs" location="${commoncomponents.dir}"/>
     <property name="reference.subdir"         value="_reference"/>
+    
+    <!-- Construct a file URL to the tokens JSON file. -->
+    <pathconvert property="tokens.json.url" targetos="unix">
+        <path location="${tokens.json}"/>
+        <mapper type="regexp" from="(.*)" to="file:/\1"/>
+    </pathconvert>
     
     <!-- Try to read all project property's defined in build.properties -->
     <property file="${input.dir.abs}/build.properties"/>
@@ -236,6 +243,7 @@
                                     <param name="expectedResponseFormat" expression="@{expectedResponseFormat}"/>
                                     <param name="target" expression="@{target}"/>
                                     <param name="versionAddition" expression="${version.addition}"/>
+                                    <param name="tokensJsonFile" expression="${tokens.json.url}"/>
                                 </parameters>
                             </saxon-transform>
                             
@@ -253,6 +261,7 @@
                             <param name="projectComponentFolder" expression="${components.dir.abs}"/>
                             <param name="target" expression="@{target}"/>
                             <param name="versionAddition" expression="${version.addition}"/>
+                            <param name="tokensJsonFile" expression="${tokens.json.url}"/>
                         </parameters>
                     </saxon-transform>
                     <collect-references testscript.path="@{output.dir}/${nts.file.newname}" references.file="@{references.file}" reference.dir.rel="@{reference.dir.rel}"/>
@@ -395,6 +404,7 @@
                     <param name="referenceBase" expression="${reference.dir.loadresourcesrelative.normalized}"/>
                     <param name="referenceDir" expression="${input.dir.abs}/${reference.subdir}/"/>
                     <param name="loadResourcesExclude" expression="${loadresources.exclude}"/>
+                    <param name="tokensJsonFile" expression="${tokens.json.url}"/>
                 </parameters>
             </saxon-transform>
             

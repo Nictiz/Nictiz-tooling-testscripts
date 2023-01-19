@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xd="http://www.oxygenxml.com/ns/doc/xsl" xmlns:f="http://hl7.org/fhir" exclude-result-prefixes="#all" version="2.0">
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+    xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:xd="http://www.oxygenxml.com/ns/doc/xsl"
+    xmlns:f="http://hl7.org/fhir"
+    xmlns:nts="http://nictiz.nl/xsl/testscript"
+    exclude-result-prefixes="#all" version="2.0">
     <!-- Stylesheet to write out the special TestScript resource that is used to load all fixtures to the test 
          server (the load script) -->
     
@@ -13,6 +18,10 @@
     
     <!-- Comma-separated list of paths to exclude -->
     <xsl:param name="loadResourcesExclude"/>
+    
+    <!-- Include the machinery to resolve auth tokens from a JSON file. This adds the parameter tokensJSONFile, which
+         should hold an URL. -->
+    <xsl:include href="resolveAuthTokens.xsl"/>
     
     <xsl:template match="/">
         
@@ -58,9 +67,6 @@
                 </xsl:otherwise>
             </xsl:choose>
         </xsl:variable>
-        
-        <!-- And collect all bearer fixtures as file URLs -->
-        <xsl:variable name="tokens" select="collection(iri-to-uri(concat(resolve-uri($referenceDirAsUrl), '?select=', '*token.xml;recurse=yes')))/f:*"/>
         
         <xsl:choose>
             <xsl:when test="$fixtures">
@@ -117,9 +123,38 @@
                         <description value="Date that data and queries are expected to be relative to."/>
                     </variable>
                     
+                    <xsl:variable name="tokens" as="element(nts:authToken)*">
+                        <xsl:variable name="tokensCached" as="element(nts:authToken)*">
+                            <!-- Collect all Patient resources that exist or are referred from other resources -->
+                            <xsl:variable name="patientReferences" as="xs:string*">
+                                <xsl:for-each select="$fixtures[local-name() = 'Patient']">
+                                    <xsl:value-of select="./f:id/@value"/>
+                                </xsl:for-each>
+                                <xsl:for-each select="$fixtures//f:reference[starts-with(@value, 'Patient/')]">
+                                    <xsl:value-of select="substring(./@value, 9)"/>
+                                </xsl:for-each>
+                            </xsl:variable>
+                            <!-- ... and find the matching tokens, if they exists in the JSON file. -->
+                            <xsl:for-each select="distinct-values($patientReferences)">
+                                <xsl:copy-of select="nts:resolveAuthToken(., '', false())"/>
+                            </xsl:for-each>
+                            
+                            <!-- Add to this the tokens from token files (where the resource id's are extracted from
+                                 the file names. --> 
+                            <xsl:for-each select="collection(iri-to-uri(concat(resolve-uri($referenceDirAsUrl), '?select=', '*token.xml;recurse=yes')))">
+                                <nts:authToken patientResourceId="{tokenize(substring-before(base-uri(), '-token.xml'), '/')[last()]}" token="{.//f:id/@value}"/>
+                            </xsl:for-each>
+                        </xsl:variable>
+                        
+                        <!-- Make everything unique by token -->
+                        <xsl:for-each-group select="$tokensCached" group-by="./@token">
+                            <xsl:copy-of select="current-group()[1]"/>
+                        </xsl:for-each-group>
+                    </xsl:variable>
+                    
                     <!-- Purge Patients in setup -->
                     <setup>
-                        <xsl:for-each select="$tokens">
+                        <xsl:for-each select="$tokens[@token]">
                             <action>
                                 <operation>
                                     <type>
@@ -130,10 +165,10 @@
                                     <accept value="xml"/>
                                     <contentType value="xml"/>
                                     <encodeRequestUrl value="true"/>
-                                    <params value="{tokenize(substring-before(base-uri(), '-token.xml'), '/')[last()]}/$purge"/>
+                                    <params value="{./@patientResourceId}/$purge"/>
                                     <requestHeader>
                                         <field value="Authorization"/>
-                                        <value value="{f:id/@value}"/>
+                                        <value value="{./@token}"/>
                                     </requestHeader>
                                 </operation>
                             </action>
@@ -177,12 +212,12 @@
                                         <field value="Authorization"/>
                                         <!-- KT-330: In MedMij R4, it is required to use the correct patient token for updateCreate of Patients, but it doesn't hurt for STU3 -->
                                         <xsl:choose>
-                                            <xsl:when test="$tokens[contains(base-uri(), $resourceId)]">
-                                                <value value="{$tokens[contains(base-uri(), $resourceId)][1]/f:id/@value}"/>
+                                            <xsl:when test="$tokens[@token != '' and @patientResourceId = $resourceId]">
+                                                <value value="{$tokens[@token != '' and @patientResourceId = $resourceId]/@token}"/>
                                             </xsl:when>
                                             <xsl:otherwise>
                                                 <!-- Use first patient token, or should we check fixture .subject to determine correct token? -->
-                                                <value value="{$tokens[1]/f:id/@value}"/>
+                                                <value value="{$tokens[@token != ''][1]/@token}"/>
                                             </xsl:otherwise>
                                         </xsl:choose>
                                     </requestHeader>

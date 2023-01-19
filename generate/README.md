@@ -204,30 +204,51 @@ It is also possible implicitly declare the rule when it is used by adding the `h
 </assert>  
 ```
 
-### Patient token and date T
+### Date T and authorization headers
 
-There are two special elements for use cases that are common across Nictiz test scripts.
+There are special elements for two use cases that are common across Nictiz test scripts.
 
-The first one for including the patient authorization token in the TestScript:
-
-```xml
-<nts:patientTokenFixture href="..">
-```
-
-The `href` attribute should point to the `Patient` instance containing the token, as is commonly done with the Nictiz test scripts, placed in the "_reference"-folder. The `nts:scenario` attribute on the TestScript root determines how this tag is expanded:
-
-* for "server", a variable will be created which the test script executor can set, defaulting to the value from the fixture.
-* for "client", the fixture will be included and a variable called "patient-token-id" will be created that reads the value from the fixture
-
-The token filename should end with `token.xml` and the token id should start with `Bearer`.
-
-The second element is to indicate that the "date T" variable should be defined for the testscript:
+The first one is to indicate that the "date T" variable should be defined for the TestScript:
 
 ```xml
 <nts:includeDateT value="yes|no">
 ```
 
 If this element is present, and `value` is absent or set to "yes", a variable for setting date T will be included in the TestScript.
+
+The second one deals with the authorization header for defining the patient context in the TestScript. The assumption here is that the (static) content of an `Authorization` header associated with a specific Patient resource `.id` is defined in a JSON file with the following syntax:
+```json
+{
+    "accessToken": "Bearer ...",
+    "resourceId": "[resource.id of Patient resource]",
+}
+```
+
+This file should be passed as the `tokens.json` parameter to the build script. The token can then be imported into a TestScript using:
+
+```xml
+<nts:authToken patientResourceId="[resource.id of Patient resource]" {id="[patient-token-id]"}/>
+```
+
+This sets an NTS parameter with the specified `id`, which can then be used throughout the NTS file. `id` is usually omitted, in which case it defaults to "patient-token-id". 
+
+For example, if you included a token with id "patient-token-id", you can use it to define the Authorization header with: 
+```xml
+<requestHeader>
+  <field value="Authorization"/>
+  <value value="{$patient-token}"/>  
+</requestHeader>
+```
+
+The output depends on `nts:scenario`. For client scripts, the content of the access token will be hardcoded in the TestScript output. For server scripts, a TestScript variable will be defined that defaults to the access token, but which can be overruled by the tester. The NTS variable will be translated to this TestScript variable.
+
+There is actually a second (outdated) mechanism to import authorization tokens:
+
+```xml
+<nts:patientTokenFixture href="..">
+```
+
+The `href` attribute should point to a `Patient` instance containing the content of the authorization header as its `.id`, placed in the "_reference"-folder and with a file name ending in `-token.xml`. This will always result in definig the TestScript variable `patient-token-id`, for both client and server scripts.
 
 ### Scenario: server (xis) or client (phr)
 
@@ -356,6 +377,12 @@ It can be found at `schematron/NictizTestScript.sch` relative to this README.
 Because of the verbosity of the ANT build, the logging level is set to 1 (warning) and Saxon is set to not try to recover. When more verbose output is wanted, the logging level can be changed by setting the `-DoutputLevel=` parameter on the ANT build.
 
 ## Changelog
+
+### 2.5.0
+- Add the tag `<nts:authToken/>` to work with authorization tokens defined in a JSON file, as is expected for mock authentication on Touchstone. This supersedes the `<nts:patientTokenFixture/>` tag.
+
+### 2.4.1
+- Make the magic _FORMAT parameter available to nts:ifset
 
 ### 2.4.0
 - Add an extra script to convert XML fixtures to JSON. This can be used separately or in conjunction with the NTS build script.
