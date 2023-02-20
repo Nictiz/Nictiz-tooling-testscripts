@@ -148,7 +148,9 @@
                         
                         <!-- Make everything unique by token -->
                         <xsl:for-each-group select="$tokensCached" group-by="./@token">
-                            <xsl:copy-of select="current-group()[1]"/>
+                            <xsl:for-each-group select="current-group()" group-by="./@patientResourceId">
+                                <xsl:copy-of select="current-group()[1]"/>
+                            </xsl:for-each-group>
                         </xsl:for-each-group>
                     </xsl:variable>
                     
