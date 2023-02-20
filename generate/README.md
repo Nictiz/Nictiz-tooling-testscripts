@@ -378,6 +378,9 @@ Because of the verbosity of the ANT build, the logging level is set to 1 (warnin
 
 ## Changelog
 
+### 2.5.1
+- BUGFIX: Allow multiple Patient-resources to have the same token in the loadscript.
+
 ### 2.5.0
 - Add the tag `<nts:authToken/>` to work with authorization tokens defined in a JSON file, as is expected for mock authentication on Touchstone. This supersedes the `<nts:patientTokenFixture/>` tag.
 
