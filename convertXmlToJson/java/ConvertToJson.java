@@ -44,6 +44,7 @@ public class ConvertToJson {
         while (dtMaskMatcher.find()) {
             unmaskedJSON += maskedJSON.substring(pos, dtMaskMatcher.start()) + dtPlaceholders.get(placeholderNum);
             pos = dtMaskMatcher.end();
+            placeholderNum += 1;
         }
         unmaskedJSON += maskedJSON.substring(pos);
         return unmaskedJSON;
