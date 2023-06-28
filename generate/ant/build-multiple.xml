@@ -26,6 +26,8 @@
                     <property name="lib.dir" value="${lib.dir}"/>
                     <property name="commoncomponents.dir" value="${commoncomponents.dir}"/>
                     <property name="version.addition" value="${version.addition}"/>
+                    <property name="tokens.json" value="${tokens.json}"/>
+                    <property name="convert.to.json.file" value="${convert.to.json.file}"/>
                 </ant>
             </sequential>
         </for>

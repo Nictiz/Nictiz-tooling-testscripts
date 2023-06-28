@@ -143,9 +143,36 @@ Profiles may be declared using:
 
 #### Fixtures
 
-Within the `@href` attribute of `nts:fixture`, the parameter `{$_FORMAT}` can be used to automatically output the format(either `xml` or `json`) the fixture is expected to be in.
+Within the `@href` attribute of `nts:fixture`, the parameter `{$_FORMAT}` can be used to automatically output the format (either `xml` or `json`) the fixture is expected to be in.
 
-A LoadResources script is generated for all fixtures in the "_reference"-folder. See the section on building on how to exclude files and/or folders from being added the LoadResources script. 
+During building, a check will be done on the existence of fixtures that are directly referenced from the TestScripts. It is possible to make an exception for the special situation where a fixture is declared in JSON format but only exists in XML format by setting the `convert.to.json.file` build parameter to the path of a readable file. All the XML version of JSON fixtures will be written to this file, so they can be converted later on. A separate script for this is available in the folder "convertXmlToJson".
+
+A LoadResources script is generated for all fixtures in the "_reference"-folder. See the section on building on how to exclude files and/or folders from being added the LoadResources script. Usually, fixtures that are only used for sending need to be excluded from the LoadResources script.
+
+##### Including fixtures in other fixtures
+
+With a fixture, the inclusion of another fixtures is declared using:
+
+```xml
+<nts:includeFixture href="..."/>
+```
+
+`href` is considered to be relative to a predefined fixtures folder.
+
+This feature can, for example, be used to include resources that are defined and maintained independently in Bundle-fixtures:
+```xml
+<entry>
+    <fullUrl value="urn:uuid:4637e949-e4f9-43ad-bbb4-d28a120f101d"/>
+    <resource>
+        <nts:includeFixture href="resources-send-receive/selfmeasurements-send-respiration-1.xml"/>
+    </resource>
+    <request>
+        <method value="POST"/>
+        <url value="Observation"/>
+    </request>
+</entry>
+```
+In this use case, references in the included fixtures are checked and rewritten where necessary.
 
 #### Using rules
 
@@ -177,30 +204,51 @@ It is also possible implicitly declare the rule when it is used by adding the `h
 </assert>  
 ```
 
-### Patient token and date T
+### Date T and authorization headers
 
-There are two special elements for use cases that are common across Nictiz test scripts.
+There are special elements for two use cases that are common across Nictiz test scripts.
 
-The first one for including the patient authorization token in the TestScript:
-
-```xml
-<nts:patientTokenFixture href="..">
-```
-
-The `href` attribute should point to the `Patient` instance containing the token, as is commonly done with the Nictiz test scripts, placed in the "_reference"-folder. The `nts:scenario` attribute on the TestScript root determines how this tag is expanded:
-
-* for "server", a variable will be created which the test script executor can set, defaulting to the value from the fixture.
-* for "client", the fixture will be included and a variable called "patient-token-id" will be created that reads the value from the fixture
-
-The token filename should end with `token.xml` and the token id should start with `Bearer`.
-
-The second element is to indicate that the "date T" variable should be defined for the testscript:
+The first one is to indicate that the "date T" variable should be defined for the TestScript:
 
 ```xml
 <nts:includeDateT value="yes|no">
 ```
 
 If this element is present, and `value` is absent or set to "yes", a variable for setting date T will be included in the TestScript.
+
+The second one deals with the authorization header for defining the patient context in the TestScript. The assumption here is that the (static) content of an `Authorization` header associated with a specific Patient resource `.id` is defined in a JSON file with the following syntax:
+```json
+{
+    "accessToken": "Bearer ...",
+    "resourceId": "[resource.id of Patient resource]",
+}
+```
+
+This file should be passed as the `tokens.json` parameter to the build script. The token can then be imported into a TestScript using:
+
+```xml
+<nts:authToken patientResourceId="[resource.id of Patient resource]" {id="[patient-token-id]"}/>
+```
+
+This sets an NTS parameter with the specified `id`, which can then be used throughout the NTS file. `id` is usually omitted, in which case it defaults to "patient-token-id". 
+
+For example, if you included a token with id "patient-token-id", you can use it to define the Authorization header with: 
+```xml
+<requestHeader>
+  <field value="Authorization"/>
+  <value value="{$patient-token}"/>  
+</requestHeader>
+```
+
+The output depends on `nts:scenario`. For client scripts, the content of the access token will be hardcoded in the TestScript output. For server scripts, a TestScript variable will be defined that defaults to the access token, but which can be overruled by the tester. The NTS variable will be translated to this TestScript variable.
+
+There is actually a second (outdated) mechanism to import authorization tokens:
+
+```xml
+<nts:patientTokenFixture href="..">
+```
+
+The `href` attribute should point to a `Patient` instance containing the content of the authorization header as its `.id`, placed in the "_reference"-folder and with a file name ending in `-token.xml`. This will always result in definig the TestScript variable `patient-token-id`, for both client and server scripts.
 
 ### Scenario: server (xis) or client (phr)
 
@@ -211,6 +259,16 @@ nts:scenario="server|client"
 ```
 
 When the scenario is set to 'server', the magic variable `{$_FORMAT}` becomes available to `nts:fixture` and to `.operation.contentType`, which will result in the string 'xml' when generating the xml instance and in 'json' when generating the json instance.
+
+### Number of origins and destinations
+
+The tooling will by default add one `origin` and one `destination`, both with `index` set to 1. If more than one origin or destination is needed, the number can be set using the `nts:numOrigins` and `nts:numDestination` attributes on the `TestScript` root, like:
+
+```xml
+<TestScript xmlns="..." xmlns:nts="..." nts:numOrigins="2" nts:numDestinations="3" />
+```
+
+The `origin`s and `destination`s will be sequentially numbered, starting at 1.
 
 ### Building different variants
 
@@ -271,8 +329,8 @@ For the project build file, a particular folder structure is expected:
 - Project1/          : A project dir
   - build.properties : A file where parameters to the build script may be set (see below).
   - InputFolder1/    : One or more dirs containg NTS files. WARNING: all folder names starting with an underscore are ignored, while all other folders are included!
-  - \_components/    : The components specific for that project - may be overridden using the components.dir parameter
-  - \_reference/     : The fixtures and rules for that project. This folder is copied verbatim to the output folder. 
+  - /_components/    : The components specific for that project - may be overridden using the components.dir parameter
+  - /_reference/     : The fixtures and rules for that project. This folder is copied verbatim to the output folder. 
 ```
 
 ### Build script parameters
@@ -286,6 +344,7 @@ The following build script parameters are required:
 The following optional parameters may be used:
 - `outputLevel=<number>`: Increase or decrease verbosity of the build script (default = 1).
 - `components.dir=/path/to/project/components`: An alternative location for project specific NTS components. Should be an absolute or relative path, compared to `build.xml`.
+- `reference.subdir`: The _name_ (not the path!) of the folder containing fixtures. Defaults to '_reference'. Could be used when an additional target uses a different reference folder.
 - `loadresources.exclude`: a relative path to a folder containing the fixtures to be excluded or to specific filenames. Multiple entries can be comma separated. `*` is accepted as a wildcard.
   ```
   loadresources.exclude = _reference/resources/resources-specific
@@ -295,8 +354,10 @@ The following optional parameters may be used:
   targets.additional=Cert-with-setup
   ```
   The TestScript resources can use the `nts:in-targets` to define which element should be included in a target (see above). Multiple extra targets may be separated using comma's.
-  Note: additional targets may only be defined on input folders, not on subfolders. If there are subfolders in the input folder, each variant of the input folder will contain the full set of subfolders (but with slightly different content, of course).  
-- `version.addition`: a string that will be added verbatim to the value in the `TestScript.version` from the input file. If this element is absent, it will be populated with this value. 
+  Note: if there are subfolders in the folder on which an additional target is defined, each variant of the input folder will contain the full set of subfolders (but with slightly different content, of course).  
+- `targets`: This parameter contains the default target '#default', to which the targets defined in `targets.additional` are added. Used when building the default target is unwanted.
+- `version.addition`: a string that will be added verbatim to the value in the `TestScript.version` from the input file. If this element is absent, it will be populated with this value.
+- `convert.to.json.file`: the path of a writable file where all referenced JSON fixtures are collected that don't exists, but for which an XML counterpart exists. This file can be used for the 'convertXmlToJson' script in this repo). If this parameter is not set, this situation will be treated like any other missing fixture and the build will fail.
 
 ### Building multiple projects
 
@@ -316,6 +377,30 @@ It can be found at `schematron/NictizTestScript.sch` relative to this README.
 Because of the verbosity of the ANT build, the logging level is set to 1 (warning) and Saxon is set to not try to recover. When more verbose output is wanted, the logging level can be changed by setting the `-DoutputLevel=` parameter on the ANT build.
 
 ## Changelog
+
+### 2.5.0
+- Add the tag `<nts:authToken/>` to work with authorization tokens defined in a JSON file, as is expected for mock authentication on Touchstone. This supersedes the `<nts:patientTokenFixture/>` tag.
+
+### 2.4.1
+- Make the magic _FORMAT parameter available to nts:ifset
+
+### 2.4.0
+- Add an extra script to convert XML fixtures to JSON. This can be used separately or in conjunction with the NTS build script.
+
+### 2.3.0
+- Add the option to include fixtures in other fixtures, which are resolved during build. When used in batch/transation Bundles, references are checked and edited where neccessary.
+- (Further) parametrize targets and reference directory to be able to overrule these properies in specific builds.
+- KT-330: In LoadResources generation, the Bearer token relevant to the updateCreate of a Patient is added (instead of a static token).
+- When too long, `TestScript.id` is restricted to the last 64 characters instead of the first to better warrant uniqueness.
+
+### 2.2.0
+- Add the option to generate multuple origins and targets.
+- Fixed a bug where 'special characters' in a local path would lead to the LoadResources outputting this local path instead of a relative path.
+- Allow for additional targets being defined at a lower level than the input folder.
+- Fixed a bug where defining additional target led to multiple TestScripts having the same  `.id` and `.url`.
+
+### 2.1.1
+- Changed some CodeSystem uris from STU3 to their R4 counterpart.
 
 ### 2.1.0
 - Allows the use of a `{$_FORMAT}` parameter to output the format (`xml` or `json`) in fixture referencing.

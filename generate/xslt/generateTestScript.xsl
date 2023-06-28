@@ -2,6 +2,9 @@
     xmlns="http://hl7.org/fhir"
     xmlns:f="http://hl7.org/fhir"
     xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:fn="http://www.w3.org/2005/xpath-functions"
+    xmlns:array="http://www.w3.org/2005/xpath-functions/array"
+    xmlns:map="http://www.w3.org/2005/xpath-functions/map"
     xmlns:nts="http://nictiz.nl/xsl/testscript"
     exclude-result-prefixes="#all">
     <xsl:output method="xml" indent="yes"/>
@@ -29,6 +32,10 @@
     <!-- Optional string that will be appended verbatim to the verson string. If there is no version element in the
          input, it will be set to this parameter. -->
     <xsl:param name="versionAddition" select="''"/>
+
+    <!-- Include the machinery to resolve auth tokens from a JSON file. This adds the parameter tokensJSONFile, which
+         should hold an URL. -->
+    <xsl:include href="resolveAuthTokens.xsl"/>
     
     <!-- The main template, which will call the remaining templates. -->
     <xsl:template name="generate" match="f:TestScript">
@@ -47,6 +54,37 @@
         <xsl:if test="$scenario = 'server' and not($expectedResponseFormat = ('xml', 'json'))">
             <xsl:message terminate="yes" select="concat('Invalid value ''', $expectedResponseFormat, ''' for parameter ''expectedResponseFormat''; should be either ''xml'' or ''json''')"></xsl:message>
         </xsl:if>
+
+        <!-- Extract the authorization tokens specified using the nts:authToken element(s). These tokens can then be used within 
+             the nts:authHeader element, referenced by their id. -->
+        <xsl:if test="count(//nts:authToken[@patientResourceId]) &gt; 0 and not($tokensJsonFile)">
+            <xsl:message terminate="yes">If you use the nts:authToken element, you need to pass in a file containing the tokens using the tokensJsonFile parameter.</xsl:message>
+        </xsl:if>
+        <xsl:if test="count(//nts:authToken[not(@id)]) &gt; 1">
+            <xsl:message terminate="yes">When using multiple nts:authToken elements, at most one may have the default id. All other instances must be uniquely identified with an id.</xsl:message>
+        </xsl:if>
+        <xsl:variable name="authTokens" as="element(nts:authToken)*">
+            <xsl:for-each select="//nts:authToken[@patientResourceId]">
+                <xsl:variable name="id" select="if (.[@id]) then ./@id else 'patient-token-id'"/>
+                <xsl:copy-of select="nts:resolveAuthToken(./@patientResourceId, $id, true())"/>
+            </xsl:for-each>
+        </xsl:variable>
+        
+        <!-- Seed the parameters used during expansion with the id's of nts:authToken declarations.
+             The value of these "magic" parameters depend on the scenario. For server scripts, this will be expanded
+             to a corresponding TestScript variable. For client scripts, this will contain the literal content of the
+             token. -->
+        <xsl:variable name="inclusionParameters" as="element(nts:with-parameter)*">
+            <xsl:for-each select="$authTokens">
+                <xsl:if test="$scenario = 'server'">
+                    <nts:with-parameter name="{./@id}" value="{concat('${', ./@id, '}')}"/>    
+                </xsl:if>
+                <xsl:if test="$scenario = 'client'">
+                    <nts:with-parameter name="{./@id}" value="{./@token}"/>
+                </xsl:if>
+            </xsl:for-each>
+        </xsl:variable>
+        
         
         <!-- Expand all the Nictiz inclusion elements to their FHIR representation --> 
         <xsl:variable name="expanded">
@@ -54,6 +92,8 @@
                 <xsl:with-param name="scenario" select="$scenario" tunnel="yes"/>
                 <xsl:with-param name="expectedResponseFormat" select="$expectedResponseFormat" tunnel="yes"/>
                 <xsl:with-param name="basePath" select="$basePath" tunnel="yes"/>
+                <xsl:with-param name="inclusionParameters" select="$inclusionParameters" tunnel="yes"/>
+                <xsl:with-param name="authTokens" select="$authTokens" tunnel="yes"/>
             </xsl:apply-templates>
         </xsl:variable>
     
@@ -81,12 +121,16 @@
         <xsl:variable name="url">
             <xsl:text>http://nictiz.nl/fhir/TestScript/</xsl:text>
             <xsl:value-of select="f:id/@value"/>
+            <xsl:if test="not($target = '#default')">
+                <xsl:text>-</xsl:text>
+                <xsl:value-of select="$target"/>
+            </xsl:if>
             <xsl:if test="$scenario='server'">
                 <xsl:text>-</xsl:text>
                 <xsl:value-of select="$expectedResponseFormat"/>
             </xsl:if>
         </xsl:variable>
-        
+                
         <xsl:copy>
             <xsl:apply-templates select="f:id" mode="#current"/>
             <xsl:if test="f:meta/f:profile/@value">
@@ -150,21 +194,11 @@
                 </telecom>
             </contact>
             <xsl:apply-templates select="f:description | f:useContext | f:jurisdiction | f:purpose | f:copyright" mode="#current"/>
+
             <!-- Include origin and destination elements -->
-            <origin>
-                <index value="1"/>
-                <profile>
-                    <system value="http://hl7.org/fhir/testscript-profile-origin-types"/>
-                    <code value="FHIR-Client"/>
-                </profile>
-            </origin>
-            <destination>
-                <index value="1"/>
-                <profile>
-                    <system value="http://hl7.org/fhir/testscript-profile-destination-types"/>
-                    <code value="FHIR-Server"/>
-                </profile>
-            </destination>
+            <xsl:copy-of select="nts:addOrigins(1, if (./@nts:numOrigins) then ./@nts:numOrigins else 1)"/>
+            <xsl:copy-of select="nts:addDestinations(1, if (./@nts:numDestinations) then ./@nts:numDestinations else 1)"/>
+
             <xsl:apply-templates select="f:metadata" mode="#current"/>
             <xsl:for-each-group select="$fixtures" group-by="@id">
                 <xsl:for-each select="subsequence(current-group(), 2)">
@@ -234,25 +268,44 @@
     <xsl:template match="nts:*" mode="filter"/>
     <xsl:template match="@nts:*" mode="filter"/>
     
-    <!-- Add the format for requests to the TestScript id, if specified -->
+    <!-- Add the target and/or the format for requests to the TestScript id, if specified -->
     <xsl:template match="f:TestScript/f:id/@value" mode="filter">
         <xsl:param name="scenario" tunnel="yes"/>
         <xsl:param name="expectedResponseFormat" tunnel="yes"/>
-        <xsl:attribute name="value">
+        <xsl:variable name="joinedString">
             <xsl:value-of select="."/>
+            <xsl:if test="not($target = '#default')">
+                <xsl:text>-</xsl:text>
+                <xsl:value-of select="$target"/>
+            </xsl:if>
             <xsl:if test="$scenario='server' and not(ancestor::f:TestScript/f:test/f:action/f:operation/f:accept) and not(contains(lower-case(.),$expectedResponseFormat))">
                 <xsl:text>-</xsl:text>
                 <xsl:value-of select="lower-case($expectedResponseFormat)"/>
             </xsl:if>
+        </xsl:variable>
+        
+        <xsl:attribute name="value">
+            <xsl:choose>
+                <xsl:when test="string-length($joinedString) gt 64">
+                    <xsl:value-of select="substring($joinedString, string-length($joinedString) - 63)"/>
+                </xsl:when>
+                <xsl:otherwise>
+                    <xsl:value-of select="$joinedString"/>
+                </xsl:otherwise>
+            </xsl:choose>
         </xsl:attribute>
     </xsl:template>
     
-    <!--Add the format for requests to the TestScript name, if specified -->
+    <!--Add the target and/or the format for requests to the TestScript name, if specified -->
     <xsl:template match="f:TestScript/f:name/@value" mode="filter">
         <xsl:param name="scenario" tunnel="yes"/>
         <xsl:param name="expectedResponseFormat" tunnel="yes"/>
         <xsl:attribute name="value">
             <xsl:value-of select="."/>
+            <xsl:if test="not($target = '#default')">
+                <xsl:text> - target </xsl:text>
+                <xsl:value-of select="$target"/>
+            </xsl:if>
             <xsl:if test="$scenario='server' and not(ancestor::f:TestScript/f:test/f:action/f:operation/f:accept) and not(contains(lower-case(.),$expectedResponseFormat))">
                 <xsl:text> - </xsl:text>
                 <xsl:value-of select="upper-case($expectedResponseFormat)"/>
@@ -361,6 +414,22 @@
                 </xsl:attribute>
             </xsl:otherwise>
         </xsl:choose>
+    </xsl:template>
+    
+    <!-- Expand an nts:authToken element. For server scripts, this will result in a variable with a default value which
+         the tester can override. For client scripts, this doesn't result in any output (but the element is used 
+         beforehand for finding the correct authorization token to use. -->
+    <xsl:template match="nts:authToken[@patientResourceId]" mode="expand">
+        <xsl:param name="scenario" tunnel="yes"/>
+        <xsl:param name="authTokens" tunnel="yes"/>
+        
+        <xsl:if test="$scenario='server'">
+            <variable>
+                <name value="{if (.[@id]) then ./@id else 'patient-token-id'}"/>
+                <defaultValue value="{$authTokens[@id = ./@id]/@token}"/>
+                <description value="OAuth Token for current patient"/>
+            </variable>
+        </xsl:if>
     </xsl:template>
     
     <!-- Expand an nts:patientTokenFixture element to create a variable called 'patient-token-id'. How this is handled
@@ -596,8 +665,12 @@
     <!-- Include or exclude elements with the nts:ifset and nts:ifnotset attributes, based on whether the specified 
          parameter is passed in an nts:include. -->
     <xsl:template match="*[@nts:ifset]" mode="expand" priority="2">
+        <xsl:param name="scenario" tunnel="yes"/>
         <xsl:param name="inclusionParameters" tunnel="yes" as="element(nts:with-parameter)*"/>
         <xsl:if test="./@nts:ifset = $inclusionParameters/@name/string()">
+            <xsl:next-match/>
+        </xsl:if>
+        <xsl:if test="local-name(.) = ('contentType', 'fixture') and ./@nts:ifset = '_FORMAT' and $scenario = 'server'">
             <xsl:next-match/>
         </xsl:if>
     </xsl:template>
@@ -725,7 +798,6 @@
         <xsl:value-of select="$fullFilename"/>
     </xsl:function>
     
-    
     <!-- Construct a file path from the elements.
          param base is the folder where the file resides
          param filename is the name of the file in the folder including the extension
@@ -747,4 +819,40 @@
         <xsl:value-of select="string-join(($base, $filename), $separator)"/>
     </xsl:function>
 
+    <!-- Recursive function to add curr to max origin elements -->
+    <xsl:function name="nts:addOrigins">
+        <xsl:param name="curr" as="xs:integer"/>
+        <xsl:param name="max"  as="xs:integer"/>
+        
+        <origin>
+            <index value="{$curr}"/>
+            <profile>
+                <system value="http://terminology.hl7.org/CodeSystem/testscript-profile-origin-types"/>
+                <code value="FHIR-Client"/>
+            </profile>
+        </origin>
+        
+        <xsl:if test="$curr &lt; $max">
+            <xsl:copy-of select="nts:addOrigins($curr + 1, $max)"/>
+        </xsl:if>
+    </xsl:function>
+
+    <!-- Recursive function to add curr to max destination elements -->
+    <xsl:function name="nts:addDestinations">
+        <xsl:param name="curr" as="xs:integer"/>
+        <xsl:param name="max"  as="xs:integer"/>
+        
+        <destination>
+            <index value="{$curr}"/>
+            <profile>
+                <system value="http://terminology.hl7.org/CodeSystem/testscript-profile-destination-types"/>
+                <code value="FHIR-Server"/>
+            </profile>
+        </destination>
+        
+        <xsl:if test="$curr &lt; $max">
+            <xsl:copy-of select="nts:addDestinations($curr + 1, $max)"/>
+        </xsl:if>
+    </xsl:function>
+    
 </xsl:stylesheet>

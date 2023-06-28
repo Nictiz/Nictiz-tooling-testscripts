@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Common ANT build script for Nictiz NTS projects.
+    
+    # Use of this build script
+    
+    The normal use of this build script is to import it from another ANT build script.
+    
+    # Parameters
+    
+    To run it, the following parameters are expected:
+    - convert.to.json.file : The path to a file, which contains a comma separated list of XML fixtures to convert. If
+      this parameter is empty, the file doesn't exist or is empty, this is taken as a signal that no conversion needs
+      to be done.
+    - fhir.version: The FHIR version the fixtures are in, either "STU3" or "R4".
+    
+-->
+<project xmlns:ivy="antlib:org.apache.ivy.ant" basedir=".." name="convertToJson" default="build">
+    <!-- Set testscripttools.dir if it is not supplied by the including build file. -->
+    <dirname property="testscripttools.dir" file="${ant.file.convertToJson}/.."/>
+    
+    <property name="ivy.install.version" value="2.5.0-rc1" />
+    <property name="ivy.jar.file" value="${ant.library.dir}/ivy.jar" />
+    <property name="ivy.dep.file" value="${testscripttools.dir}/ant/ivy.xml" />
+    
+    <property name="lib.dir" value="${basedir}/lib"/>
+    <property name="java.dir" value="${testscripttools.dir}/java" />
+    <property name="dependency.dir" value="${lib.dir}/ant-dependencies"/>
+    <property name="ivy.local.jar.file" value="${dependency.dir}/ivy.jar" />
+    
+    <!-- IVY -->
+    
+    <target name="check-ivy">
+        <condition property="ivy.exists">
+            <or>
+                <available file="${ivy.jar.file}" type="file"/>
+                <available file="${ivy.local.jar.file}" type="file"/>
+            </or>
+        </condition>
+        <mkdir dir="${dependency.dir}"/>
+    </target>
+    
+    <target name="download-ivy" depends="check-ivy" unless="ivy.exists">
+        <echo message="Installing Ivy"/>
+        <get src="https://repo1.maven.org/maven2/org/apache/ivy/ivy/${ivy.install.version}/ivy-${ivy.install.version}.jar"
+            dest="${ivy.local.jar.file}" usetimestamp="true"/>
+    </target>
+    
+    <target name="install-ivy" depends="download-ivy" unless="ivy.exists, ivy.loaded">
+        <path id="ivy.lib.path">
+            <fileset dir="${dependency.dir}" includes="*.jar"/>
+        </path>
+        <taskdef resource="org/apache/ivy/ant/antlib.xml" uri="antlib:org.apache.ivy.ant" classpathref="ivy.lib.path"/>
+        <property name="ivy.loaded" value="true" />
+    </target>
+    
+    <target name="retrieve" depends="check-if-conversion-is-needed, check-ivy, install-ivy" if="should.convert">
+        <ivy:settings file="${testscripttools.dir}/ant/ivysettings.xml"/>
+        <ivy:retrieve/>
+        <ivy:artifactproperty name="[module].[artifact]" value="${dependency.dir}/[type]/[artifact]-[revision].[ext]" />
+        <ivy:artifactproperty name="[artifact].[type]" value="${dependency.dir}/[type]/[artifact]-[revision].[ext]" />
+    </target>
+    
+    <target name="check-convert-file">
+        <condition property="exists.convert.to.json.file">
+            <and>
+                <available file="${convert.to.json.file}"/>
+                <length file="${convert.to.json.file}" when="greater" length="0"/>
+            </and>
+        </condition>        
+    </target>
+    
+    <target name="check-valid-fhir-version" depends="check-convert-file" if="exists.convert.to.json.file">
+        <sequential>
+            <condition property="isvalid.fhir.version">
+                <or>
+                    <equals arg1="${fhir.version}" arg2="STU3"/>
+                    <equals arg1="${fhir.version}" arg2="R4"/>
+                </or>
+            </condition>
+            <fail unless="isvalid.fhir.version" message="There are fixtures to convert from XML to JSON, but in order to do so, the fhir.version property must be set to either 'STU3' or 'R4'."/>
+        </sequential>
+    </target>
+    
+    <target name="check-if-conversion-is-needed" depends="check-convert-file, check-valid-fhir-version" if="exists.convert.to.json.file">
+        <property name="should.convert" value="true"/>
+    </target>
+    
+    <target name="build" depends="retrieve, check-if-conversion-is-needed" if="should.convert">
+        <sequential>
+            <echo message="Converting XML fixtures to JSON"/>
+            <java sourcefile="${testscripttools.dir}/java/ConvertToJson.java" fork="true" outputProperty="result">
+                <classpath>
+                    <pathelement path="${classpath}"/>
+                    <fileset dir="lib">
+                        <include name="**/*.jar"/>
+                    </fileset>
+                </classpath>
+                <arg value="${fhir.version}"/>
+                <arg file="${convert.to.json.file}"/>
+            </java>
+            <echo message="${result}"/>
+        </sequential>
+    </target>
+</project>
