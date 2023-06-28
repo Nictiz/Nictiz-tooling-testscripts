@@ -204,6 +204,17 @@ It is also possible implicitly declare the rule when it is used by adding the `h
 </assert>  
 ```
 
+Lastly, it is possible to use [rule outputs](https://touchstone.aegis.net/touchstone/userguide/html/testscript-authoring/rule-authoring/rule-outputs.html). This is done using a nested `<nts:output name="...">` tag. Optionally, the `type` and `contentType` attributes may be used in this element (see the Touchstone documentation for more information). Conveniently, the magic parameter `$_FORMAT` also works in the `contentType` attribute.
+
+```xml
+<assert>
+  ..
+  <nts:rule id="..">
+    <nts:output name="outputName" type="document" contentType="$_FORMAT"/>
+  </nts:rule>
+</assert>
+```
+
 ### Date T and authorization headers
 
 There are special elements for two use cases that are common across Nictiz test scripts.
