@@ -389,6 +389,8 @@ Because of the verbosity of the ANT build, the logging level is set to 1 (warnin
 
 ## Changelog
 
+### 2.6.0
+- Add support for rule outputs using the `<nts:output>` tag within `<nts:rule>`. WARNING: the `<nts:param>` tag for rules is renamed to `<nts:parameter>` as well!
 ### 2.5.0
 - Add the tag `<nts:authToken/>` to work with authorization tokens defined in a JSON file, as is expected for mock authentication on Touchstone. This supersedes the `<nts:patientTokenFixture/>` tag.
 
