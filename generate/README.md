@@ -176,7 +176,7 @@ In this use case, references in the included fixtures are checked and rewritten 
 
 #### Using rules
 
-Once a rule is declared, it may be used in an `<assert>` using the same tag with only the `id` attribute set. Optional parameters to the rule are passed as attributes or using the `<nts:with-param>` tag, similar to how it is done with `<nts:include/>`: 
+Once a rule is declared, it may be used in an `<assert>` using the same tag with only the `id` attribute set. Optional parameters to the rule are passed as attributes or using the `<nts:with-parameter>` tag, similar to how it is done with `<nts:include/>`: 
 
 ```xml
 <nts:rule id=".."
@@ -188,8 +188,8 @@ is equivalent to:
 
 ```xml
 <nts:rule id="..">
-  <nts:with-param name="param1" value="value1"/>
-  <nts:with-param name="param2" value="value2"/>  
+  <nts:with-parameter name="param1" value="value1"/>
+  <nts:with-parameter name="param2" value="value2"/>  
 </nts:rule>
 ```
 

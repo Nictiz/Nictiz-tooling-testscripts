@@ -604,7 +604,7 @@
                         </extension>
                     </extension>
                 </xsl:for-each>
-                <xsl:apply-templates mode="expand" select="./nts:with-param"/>
+                <xsl:apply-templates mode="expand" select="./nts:with-parameter"/>
                 <xsl:apply-templates mode="expand" select="./nts:output"/>
             </extension>
         </xsl:variable>
@@ -615,9 +615,9 @@
     </xsl:template>
     
     <!-- 
-        Helper template to handle an nts:with-param element in nts:rule.
+        Helper template to handle an nts:with-parameter element in nts:rule.
     -->
-    <xsl:template match="nts:with-param[parent::nts:rule][@name and @value]" mode="expand">
+    <xsl:template match="nts:with-parameter[parent::nts:rule][@name and @value]" mode="expand">
         <extension url="param">
             <extension url="name">
                 <valueString value="{./@name}"/>
