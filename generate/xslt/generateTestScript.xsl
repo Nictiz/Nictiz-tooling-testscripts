@@ -587,35 +587,83 @@
         matches first by setting a high priority and subsequently calls the 'use' template,
     -->
     <xsl:template match="nts:rule[@id]" mode="expand">
-        <extension url="http://touchstone.aegis.net/touchstone/fhir/testing/StructureDefinition/testscript-assert-rule">
-            <extension url="ruleId">
-                <valueId value="{@id}"/>
+        <xsl:param name="inclusionParameters" tunnel="yes" as="element(nts:with-parameter)*"/>
+
+        <xsl:variable name="expandedRule">
+            <extension url="http://touchstone.aegis.net/touchstone/fhir/testing/StructureDefinition/testscript-assert-rule">
+                <extension url="ruleId">
+                    <valueId value="{@id}"/>
+                </extension>
+                <xsl:for-each select="./@*[not(local-name() = ('id', 'href'))]">
+                    <extension url="param">
+                        <extension url="name">
+                            <valueString value="{local-name()}"/>
+                        </extension>
+                        <extension url="value">
+                            <valueString value="{.}"/>
+                        </extension>
+                    </extension>
+                </xsl:for-each>
+                <xsl:apply-templates mode="expand" select="./nts:with-parameter"/>
+                <xsl:apply-templates mode="expand" select="./nts:output"/>
             </extension>
-            <xsl:for-each select="./@*[not(local-name() = ('id', 'href'))]">
-                <extension url="param">
-                    <extension url="name">
-                        <valueString value="{local-name()}"/>
-                    </extension>
-                    <extension url="value">
-                        <valueString value="{.}"/>
-                    </extension>
-                </extension>
-            </xsl:for-each>
-            <xsl:for-each select="./nts:with-param">
-                <extension url="param">
-                    <extension url="name">
-                        <valueString value="{@name}"/>
-                    </extension>
-                    <extension url="value">
-                        <valueString value="{@value}"/>
-                    </extension>
-                </extension>
-            </xsl:for-each>
-        </extension>
+        </xsl:variable>
+
+        <xsl:apply-templates select="$expandedRule/(element()|comment())" mode="expand">
+            <xsl:with-param name="inclusionParameters" select="$inclusionParameters" tunnel="yes"/>
+        </xsl:apply-templates>
     </xsl:template>
     
+    <!-- 
+        Helper template to handle an nts:with-parameter element in nts:rule.
+    -->
+    <xsl:template match="nts:with-parameter[parent::nts:rule][@name and @value]" mode="expand">
+        <extension url="param">
+            <extension url="name">
+                <valueString value="{./@name}"/>
+            </extension>
+            <extension url="value">
+                <valueString value="{./@value}"/>
+            </extension>
+        </extension>
+    </xsl:template>
+
+    <!-- 
+        Helper template to handle an nts:output element in nts:rule.
+    -->
+    <xsl:template match="nts:output[parent::nts:rule]" mode="expand">
+        <xsl:param name="scenario" tunnel="yes"/>
+        <xsl:param name="expectedResponseFormat" tunnel="yes"/>
+
+        <extension url="output">
+            <extension url="name">
+                <valueString value="{./@name}"/>
+            </extension>
+            <xsl:if test="./@type">
+                <extension url="type">
+                    <valueString value="{./@type}"/>
+                </extension>
+            </xsl:if>
+            <xsl:if test="./@contentType">
+                <xsl:variable name="contentType">
+                    <xsl:choose>
+                        <xsl:when test="$scenario = 'client' and contains(./@contentType, '{$_FORMAT}')">
+                            <xsl:message terminate="yes" select="'The use of parameter ''{$_FORMAT}'' has no meaning when the nts:scenario is ''client'''"/>
+                        </xsl:when>
+                        <xsl:otherwise>
+                            <xsl:value-of select="replace(./@contentType, '\{\$_FORMAT\}', $expectedResponseFormat)"/>
+                        </xsl:otherwise>
+                    </xsl:choose>
+                </xsl:variable>
+                <extension url="contentType">
+                    <valueString value="{$contentType}"/>
+                </extension>
+            </xsl:if>
+        </extension>
+    </xsl:template>
+
     <!-- Include or exclude elements with the nts:ifset and nts:ifnotset attributes, based on whether the specified 
-        parameter is passed in an nts:include. -->
+         parameter is passed in an nts:include. -->
     <xsl:template match="*[@nts:ifset]" mode="expand" priority="2">
         <xsl:param name="scenario" tunnel="yes"/>
         <xsl:param name="inclusionParameters" tunnel="yes" as="element(nts:with-parameter)*"/>

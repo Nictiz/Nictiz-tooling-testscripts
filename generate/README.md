@@ -176,7 +176,7 @@ In this use case, references in the included fixtures are checked and rewritten 
 
 #### Using rules
 
-Once a rule is declared, it may be used in an `<assert>` using the same tag with only the `id` attribute set. Optional parameters to the rule are passed as attributes or using the `<nts:with-param>` tag, similar to how it is done with `<nts:include/>`: 
+Once a rule is declared, it may be used in an `<assert>` using the same tag with only the `id` attribute set. Optional parameters to the rule are passed as attributes or using the `<nts:with-parameter>` tag, similar to how it is done with `<nts:include/>`: 
 
 ```xml
 <nts:rule id=".."
@@ -188,8 +188,8 @@ is equivalent to:
 
 ```xml
 <nts:rule id="..">
-  <nts:with-param name="param1" value="value1"/>
-  <nts:with-param name="param2" value="value2"/>  
+  <nts:with-parameter name="param1" value="value1"/>
+  <nts:with-parameter name="param2" value="value2"/>  
 </nts:rule>
 ```
 
@@ -202,6 +202,17 @@ It is also possible implicitly declare the rule when it is used by adding the `h
     param2="value2" />
   ..
 </assert>  
+```
+
+Lastly, it is possible to use [rule outputs](https://touchstone.aegis.net/touchstone/userguide/html/testscript-authoring/rule-authoring/rule-outputs.html). This is done using a nested `<nts:output name="...">` tag. Optionally, the `type` and `contentType` attributes may be used in this element (see the Touchstone documentation for more information). Conveniently, the magic parameter `$_FORMAT` also works in the `contentType` attribute.
+
+```xml
+<assert>
+  ..
+  <nts:rule id="..">
+    <nts:output name="outputName" type="document" contentType="$_FORMAT"/>
+  </nts:rule>
+</assert>
 ```
 
 ### Date T and authorization headers
@@ -377,6 +388,9 @@ It can be found at `schematron/NictizTestScript.sch` relative to this README.
 Because of the verbosity of the ANT build, the logging level is set to 1 (warning) and Saxon is set to not try to recover. When more verbose output is wanted, the logging level can be changed by setting the `-DoutputLevel=` parameter on the ANT build.
 
 ## Changelog
+
+### 2.6.0
+- Add support for rule outputs using the `<nts:output>` tag within `<nts:rule>`. WARNING: the `<nts:param>` tag for rules is renamed to `<nts:parameter>` as well!
 
 ### 2.5.1
 - BUGFIX: Allow multiple Patient-resources to have the same token in the loadscript.
