@@ -82,10 +82,10 @@
     
     <!-- Set the verbosity level of the output. A higher value means more verbose output -->
     <property name="outputLevel" value="1" />
-    <script language="javascript"> <!-- Gives a script warning. It is advised to switch to Groovy, haven't figured that one out. -->
+    <!--<script language="javascript"> <!-\- Gives a script warning. It is advised to switch to Groovy, haven't figured that one out. -\->
         var verboseMode = project.getProperty( "outputLevel" )
         project.getBuildListeners().firstElement().setMessageOutputLevel(verboseMode);
-    </script>
+    </script>-->
     
     <!-- IVY -->
     
@@ -192,13 +192,15 @@
         <element name="parameters" optional="yes" description="Optionally, a group of 'param' elements as understood by the XSLT task"/>
 
         <sequential>
-            <xslt force="true" style="@{style}" in="@{in}" out="@{out}">
-                <factory name="net.sf.saxon.TransformerFactoryImpl">
-                    <attribute name="http://saxon.sf.net/feature/recoveryPolicy" value="2"/>
-                </factory>
-                <classpath location="${Saxon-HE.jar}"/>
-                <parameters/>
-            </xslt>
+            <sequential>
+                <java classname="net.sf.saxon.Transform" classpath="${Saxon-HE.jar}">
+                    <classpath location="${Saxon-HE.jar}"/>
+                    <arg value="-s:@{in}" />
+                    <arg value="-xsl:@{style}" />
+                    <arg value="-o:@{out}" />
+                    <parameters />
+                </java>
+            </sequential>
         </sequential>
     </macrodef>
 
@@ -226,6 +228,8 @@
             <property name="reference.dir.relative" location="${reference.dir}" relative="true" basedir="${nts.file.dir}"/>
             <!-- Convert backslashes to forward slashes if needed -->
             <propertyregex property="reference.dir.relative.normalized" input="${reference.dir.relative}" regexp="[\\]" replace="/" global="true" defaultValue="${reference.dir.relative}"/>
+            <propertyregex property="commoncomponents.dir.abs.normalized" input="${commoncomponents.dir.abs}" regexp="[\\]" replace="/" global="true" defaultValue="${commoncomponents.dir.abs}"/>
+            <propertyregex property="components.dir.abs.normalized" input="${components.dir.abs}" regexp="[\\]" replace="/" global="true" defaultValue="${components.dir.abs}"/>
             
             <if>
                 <equals arg1="${TestScript(nts:scenario)}" arg2="server"/>
@@ -237,16 +241,15 @@
                             
                             <saxon-transform style="${xslt.dir}/generateTestScript.xsl" in="@{nts.file}" out="@{output.dir}/${nts.file.newname}">
                                 <parameters>
-                                    <param name="referenceBase" expression="${reference.dir.relative.normalized}"/>
-                                    <param name="commonComponentFolder" expression="${commoncomponents.dir.abs}"/>
-                                    <param name="projectComponentFolder" expression="${components.dir.abs}"/>
-                                    <param name="expectedResponseFormat" expression="@{expectedResponseFormat}"/>
-                                    <param name="target" expression="@{target}"/>
-                                    <param name="versionAddition" expression="${version.addition}"/>
-                                    <param name="tokensJsonFile" expression="${tokens.json.url}"/>
+                                    <arg value="referenceBase=${reference.dir.relative.normalized}"/>
+                                    <arg value="commonComponentFolder=${commoncomponents.dir.abs.normalized}"/>
+                                    <arg value="projectComponentFolder=${components.dir.abs.normalized}"/>
+                                    <arg value="expectedResponseFormat=@{expectedResponseFormat}"/>
+                                    <arg value="target=@{target}"/>
+                                    <arg value="versionAddition=${version.addition}"/>
+                                    <arg value="tokensJsonFile=${tokens.json.url}"/>
                                 </parameters>
                             </saxon-transform>
-                            
                             <collect-references testscript.path="@{output.dir}/${nts.file.newname}" references.file="@{references.file}" reference.dir.rel="@{reference.dir.rel}"/>
                         </sequential>
                     </for>
@@ -256,12 +259,12 @@
                     <property name="nts.file.newname" value="${nts.file.basename}.xml"/>
                     <saxon-transform style="${xslt.dir}/generateTestScript.xsl" in="@{nts.file}" out="@{output.dir}/${nts.file.newname}">
                         <parameters>
-                            <param name="referenceBase" expression="${reference.dir.relative.normalized}"/>
-                            <param name="commonComponentFolder" expression="${commoncomponents.dir.abs}"/>
-                            <param name="projectComponentFolder" expression="${components.dir.abs}"/>
-                            <param name="target" expression="@{target}"/>
-                            <param name="versionAddition" expression="${version.addition}"/>
-                            <param name="tokensJsonFile" expression="${tokens.json.url}"/>
+                            <arg value="referenceBase=${reference.dir.relative.normalized}"/>
+                            <arg value="commonComponentFolder=${commoncomponents.dir.abs.normalized}"/>
+                            <arg value="projectComponentFolder=${components.dir.abs.normalized}"/>
+                            <arg value="target=@{target}"/>
+                            <arg value="versionAddition=${version.addition}"/>
+                            <arg value="tokensJsonFile=${tokens.json.url}"/>
                         </parameters>
                     </saxon-transform>
                     <collect-references testscript.path="@{output.dir}/${nts.file.newname}" references.file="@{references.file}" reference.dir.rel="@{reference.dir.rel}"/>
@@ -281,15 +284,36 @@
             <local name="rules"/>
             <property file="@{references.file}"/>
             
+            <if>
+                <not>
+                    <isset property="fixtures"/>
+                </not>
+                <then>
+                    <property name="fixtures" value=""/>
+                </then>
+            </if>
+            <if>
+                <not>
+                    <isset property="rules"/>
+                </not>
+                <then>
+                    <property name="rules" value=""/>
+                </then>
+            </if>
+            
             <!-- Analyze the TestScript using an external stylesheet, feeding it the known fixtures and rules as 
                  parameters -->
             <saxon-transform style="${xslt.dir}/collectReferences.xsl" in="@{testscript.path}" out="@{references.file}">
                 <parameters>
-                    <param name="additionalFixtures" expression="${fixtures}" if="fixtures"/>
+                    <arg value="additionalFixtures=${fixtures}"/>
+                    <arg value="additionalRules=${rules}"/>
+                    <arg value="includesDir=../${reference.subdir}/"/>
+                    <!--<param name="additionalFixtures" expression="${fixtures}" if="fixtures"/>
                     <param name="additionalRules" expression="${rules}" if="rules"/>
-                    <param name="includesDir" expression="../${reference.subdir}/"/>
+                    <param name="includesDir" expression="../${reference.subdir}/"/>-->
                 </parameters>
             </saxon-transform>
+            
         </sequential>
     </macrodef>
     
@@ -357,7 +381,8 @@
                                 <propertyregex property="fixture.path.relative" input="${fixture.path.normalized}" regexp="\/${reference.subdir}\/(.*)" select="\1" global="true"/>
                                 <saxon-transform style="${xslt.dir}/processFixtures.xsl" in="@{fixture}" out="${output.dir.abs}/${reference.subdir}/${fixture.path.relative}">
                                     <parameters>
-                                        <param name="referenceDir" expression="${input.dir.abs}/${reference.subdir}/"/>
+                                        <arg value="referenceDir=${input.dir.abs}/${reference.subdir}/"/>
+                                        <!--<param name="referenceDir" expression="${input.dir.abs}/${reference.subdir}/"/>-->
                                     </parameters>
                                 </saxon-transform>
                             </sequential>
@@ -401,10 +426,14 @@
             
             <saxon-transform style="${xslt.dir}/generateLoadResources.xsl" out="${loadresources.file}">
                 <parameters>
-                    <param name="referenceBase" expression="${reference.dir.loadresourcesrelative.normalized}"/>
+                    <arg value="referenceBase=${reference.dir.loadresourcesrelative.normalized}"/>
+                    <arg value="referenceDir=${input.dir.abs}/${reference.subdir}/"/>
+                    <arg value="loadResourcesExclude=${loadresources.exclude}"/>
+                    <arg value="tokensJsonFile=${tokens.json.url}"/>
+                    <!--<param name="referenceBase" expression="${reference.dir.loadresourcesrelative.normalized}"/>
                     <param name="referenceDir" expression="${input.dir.abs}/${reference.subdir}/"/>
                     <param name="loadResourcesExclude" expression="${loadresources.exclude}"/>
-                    <param name="tokensJsonFile" expression="${tokens.json.url}"/>
+                    <param name="tokensJsonFile" expression="${tokens.json.url}"/>-->
                 </parameters>
             </saxon-transform>
             
