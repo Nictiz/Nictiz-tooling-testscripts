@@ -118,7 +118,10 @@
                     - target is #default OR
                     - if target contains reldir (for example, target is 'XIS-Server-Nictiz-intern' while reldir is 'XIS-Server')
                      Otherwise we do nothing, because targets only have to output files affected by it. -->
-                <xsl:if test="$target = '#default' or fn:contains(fn:concat('/',$target.dir), $nts.file.reldir)">
+                <xsl:variable name="targetLevel" select="fn:string-length($target.dir) - fn:string-length(fn:translate($target.dir, '/', '')) + 1"/>
+                <xsl:variable name="rootLevel" select="fn:string-length($nts.file.reldir.root) - fn:string-length(fn:translate($nts.file.reldir.root, '/', ''))"/>
+                
+                <xsl:if test="$target = '#default' or (fn:contains(fn:concat('/',$target.dir), $nts.file.reldir.root) and $targetLevel = $rootLevel)">
                     <xsl:choose>
                         <xsl:when test="$ntsScenario = 'server'">
                             <!-- XIS scripts are generated in both XML and JSON flavor -->
