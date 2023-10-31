@@ -80,12 +80,42 @@
     <property name="targets.additional" value=""/> <!-- By default, we don't build additional targets -->
     <property name="targets" value="#default,${targets.additional}"/>
     
-    <!-- Set the verbosity level of the output. A higher value means more verbose output -->
-    <property name="outputLevel" value="2" />
-    <script language="javascript"> <!-- Gives a script warning. It is advised to switch to Groovy, haven't figured that one out. -->
-        var verboseMode = project.getProperty( "outputLevel" )
-        project.getBuildListeners().firstElement().setMessageOutputLevel(verboseMode);
-    </script>
+    <!-- Set the verbosity level of the output.
+         0 = error
+         1 = warn
+         2 = info
+         3 = verbose
+         4 = debug -->
+    <property name="outputLevel" value="1" />
+    <!-- Can we do this smarter? Using ${groovy.jar} is not available until after Ivy has ran -->
+    <property name="groovy.jar.file" location="${dependency.dir}/jar/groovy-4.0.9.jar" />
+    <property name="groovy-ant.jar.file" location="${dependency.dir}/jar/groovy-ant-4.0.9.jar" />
+    
+    <!-- LOGGING -->
+    <target name="check-groovy">
+        <!-- We need Groovy, and we need Ivy to get that, but we also need this script to suppress Ivy output. 
+        So this part does not work the first time you run the script. After that, Groovy is available and the setting works, after outputting some Ant task names-->
+        <condition property="groovy.exists">
+            <and>
+                <available file="${groovy.jar.file}" type="file"/>
+                <available file="${groovy-ant.jar.file}" type="file"/>
+            </and>
+        </condition>
+    </target>
+    
+    <target name="set-logging" depends="check-groovy" if="groovy.exists">
+        <taskdef name="groovy" classname="org.codehaus.groovy.ant.Groovy">
+            <classpath>
+                <pathelement location="${groovy.jar.file}"/>
+                <pathelement location="${groovy-ant.jar.file}"/>
+            </classpath>
+        </taskdef>
+        <groovy>
+            <arg value="${outputLevel}"/>
+            int outputLevel = args[0] as int
+            project.getBuildListeners()[0].setMessageOutputLevel(outputLevel)
+        </groovy>
+    </target>
     
     <!-- IVY -->
     
@@ -128,6 +158,29 @@
             </classpath>
         </taskdef>
         <property name="ant.contrib.loaded" value="true" />
+        
+        <!-- If Groovy didn't exist before, it does now after Ivy, so now we can set the logging correctly even if it's the first time running -->
+        <if>
+            <not>
+                <isset property="groovy.exists"/>
+            </not>
+            <then>
+                <sequential>
+                    <!-- We can only set taskdef and groovy task after we are sure the jar exists, so unfortunately we have to repeat this. Cannot place it in a macrodef -->
+                    <taskdef name="groovy" classname="org.codehaus.groovy.ant.Groovy">
+                        <classpath>
+                            <pathelement location="${groovy.jar.file}"/>
+                            <pathelement location="${groovy-ant.jar.file}"/>
+                        </classpath>
+                    </taskdef>
+                    <groovy>
+                        <arg value="${outputLevel}"/>
+                        int outputLevel = args[0] as int
+                        project.getBuildListeners()[0].setMessageOutputLevel(outputLevel)
+                    </groovy>
+                </sequential>
+            </then>
+        </if>
     </target>
     
     <!-- BUILD XML -->
@@ -210,7 +263,7 @@
             <propertyregex property="components.dir.abs.normalized" input="${components.dir}" regexp="[\\]" replace="/" global="true" defaultValue="${components.dir}"/>
             <propertyregex property="commoncomponents.dir.abs.normalized" input="${commoncomponents.dir}" regexp="[\\]" replace="/" global="true" defaultValue="${commoncomponents.dir}"/>
             
-            <java classname="net.sf.saxon.Transform" classpath="${Saxon-HE.jar}">
+            <java classname="net.sf.saxon.Transform" classpath="${Saxon-HE.jar}" logError="true">
                 <classpath location="${Saxon-HE.jar}"/>
                 <arg value="-it:initialTemplate" />
                 <arg value="-xsl:${xslt.dir}/generateTestScript.xsl" />
@@ -231,7 +284,7 @@
         <attribute name="references.file" description="The file to store the list of references fixtures and rules to, formatted as an Ant property file with the property's 'fixtures' and 'rules', each containing a list of files separated by a semicolon. If there are already fixtures/rules listed in this file, the new ones are appended."/>
         
         <sequential>
-            <java classname="net.sf.saxon.Transform" classpath="${Saxon-HE.jar}">
+            <java classname="net.sf.saxon.Transform" classpath="${Saxon-HE.jar}" logError="true">
                 <classpath location="${Saxon-HE.jar}"/>
                 <arg value="-it:initialTemplate" />
                 <arg value="-xsl:${xslt.dir}/collectReferences.xsl" />
@@ -292,42 +345,14 @@
                 <then>
                     <sequential>
                         <!-- Resolve all includes in _all_ (not only referenced) fixtures and (if applicable) rewrite .id, .fullUrl and References. This overwrites the fixture copied earlier -->
-                        <java classname="net.sf.saxon.Transform" classpath="${Saxon-HE.jar}">
+                        <java classname="net.sf.saxon.Transform" classpath="${Saxon-HE.jar}" logError="true">
                             <classpath location="${Saxon-HE.jar}"/>
                             <arg value="-it:initialTemplate" />
                             <arg value="-xsl:${xslt.dir}/processFixtures.xsl" />
                             <arg value="inputDir=${input.dir.abs}"/>
                             <arg value="outputDir=${output.dir.abs}"/>
                             <arg value="referenceSubDir=${reference.subdir}"/>
-                            <!--<arg value="commonComponentFolder=${commoncomponents.dir.abs.normalized}"/>
-                            <arg value="projectComponentFolder=${components.dir.abs.normalized}"/>
-                            <arg value="target=@{target}"/>
-                            <arg value="versionAddition=${version.addition}"/>
-                            <arg value="tokensJsonFile=${tokens.json.url}"/>
-                            <arg value="referencesFile=@{references.file}"/> -->
                         </java>
-                        
-                        <!--<for param="fixture">
-                            <path>
-                                <fileset dir="${reference.dir}">
-                                    <!-\- Known issue: .json fixtures are now ignored. Not a problem if they are automatically generated _after_ this, but should be taken care of! -\->
-                                    <include name="**/*.xml"/>
-                                </fileset>
-                            </path>
-                            <sequential>
-                                <local name="fixture.path.normalized"/>
-                                <local name="fixture.path.relative"/>
-                                <propertyregex property="fixture.path.normalized" input="@{fixture}" regexp="[\\]" replace="/" global="true" defaultValue="@{fixture}"/>
-                                <propertyregex property="fixture.path.relative" input="${fixture.path.normalized}" regexp="\/${reference.subdir}\/(.*)" select="\1" global="true"/>
-                                <saxon-transform style="${xslt.dir}/processFixtures.xsl" in="@{fixture}" out="${output.dir.abs}/${reference.subdir}/${fixture.path.relative}">
-                                    <parameters>
-                                        <param name="referenceDir" expression="${input.dir.abs}/${reference.subdir}/"/>
-                                    </parameters>
-                                </saxon-transform>
-                                
-                                
-                            </sequential>
-                        </for>-->
                     </sequential>
                 </then>
             </if>
@@ -391,7 +416,7 @@
         </sequential>
     </target>
     
-    <target name="build" depends="load, check-input, cleanBuildDir">
+    <target name="build" depends="set-logging, load, check-input, cleanBuildDir">        
         <property name="reference.dir" location="${input.dir.abs}/${reference.subdir}"/>
         
         <!-- Set default loadresources.exclude to nothing -->
