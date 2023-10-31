@@ -260,8 +260,8 @@
         <attribute name="target.dir" default="#default" description="The name of the target to build; choose '#default' to build the default target."/>
         
         <sequential>
-            <propertyregex property="components.dir.abs.normalized" input="${components.dir}" regexp="[\\]" replace="/" global="true" defaultValue="${components.dir}"/>
-            <propertyregex property="commoncomponents.dir.abs.normalized" input="${commoncomponents.dir}" regexp="[\\]" replace="/" global="true" defaultValue="${commoncomponents.dir}"/>
+            <propertyregex property="components.dir.abs.normalized" input="${components.dir.abs}" regexp="[\\]" replace="/" global="true" defaultValue="${components.dir.abs}"/>
+            <propertyregex property="commoncomponents.dir.abs.normalized" input="${commoncomponents.dir.abs}" regexp="[\\]" replace="/" global="true" defaultValue="${commoncomponents.dir.abs}"/>
             
             <java classname="net.sf.saxon.Transform" classpath="${Saxon-HE.jar}" logError="true">
                 <classpath location="${Saxon-HE.jar}"/>
