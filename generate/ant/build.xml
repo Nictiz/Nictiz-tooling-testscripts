@@ -204,7 +204,7 @@
     
     <macrodef name="transform-NTS-folder" description="Custom task to perform the transformation of a folder with NTS files">
         <attribute name="references.file" description="The (temporary) text file to collect the list of fixtures to. See the collect-fixtures macrodef for more information."/>
-        <attribute name="target" default="#default" description="The name of the target to build; choose '#default' to build the default target."/>
+        <attribute name="target.dir" default="#default" description="The name of the target to build; choose '#default' to build the default target."/>
         
         <sequential>
             <propertyregex property="components.dir.abs.normalized" input="${components.dir}" regexp="[\\]" replace="/" global="true" defaultValue="${components.dir}"/>
@@ -219,7 +219,7 @@
                 <arg value="referenceDir=${reference.dir}"/>
                 <arg value="commonComponentFolder=${commoncomponents.dir.abs.normalized}"/>
                 <arg value="projectComponentFolder=${components.dir.abs.normalized}"/>
-                <arg value="target=@{target}"/>
+                <arg value="target.dir=@{target.dir}"/>
                 <arg value="versionAddition=${version.addition}"/>
                 <arg value="tokensJsonFile=${tokens.json.url}"/>
                 <arg value="referencesFile=@{references.file}"/> 
@@ -435,7 +435,7 @@
                             </if>
                             
                             <transform-NTS-folder
-                                target="@{target.dir}"
+                                target.dir="@{target.dir}"
                                 references.file="${references.file}"/>
                             <collect-references references.file="${references.file}"/>
                             

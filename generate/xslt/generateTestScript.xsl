@@ -25,7 +25,7 @@
     <!-- An NTS input file can nominate elements to only be included in specific named targets using the nts:only-in
          attribute. The "target" parameter determines which target to build. '#default' is considered to be the default
          target that always applies if nothing else is specified. -->
-    <xsl:param name="target" select="'#default'"/>
+    <xsl:param name="target.dir" select="'#default'"/>
 
     <!-- Optional string that will be appended verbatim to the verson string. If there is no version element in the
          input, it will be set to this parameter. -->
@@ -50,7 +50,25 @@
                 </xsl:variable>
                 <xsl:variable name="nts.file.reldir" select="fn:substring-after($nts.file.dir, translate($inputDir, '\', '/'))"/>
                 
-                <!-- ANT does something complex here that was implemented for MP9 - apply targets on subfolder or something. TO-DO -->
+                <!-- Now extract the 'root' dir of the relative path, where additional targets may be
+                defined, and any subpaths following it. The 'root' is the largest combination of dir and subdirs that are defined in target.additional -->
+                <xsl:variable name="nts.file.reldir.root">
+                    
+                    <xsl:for-each select="fn:tokenize($nts.file.reldir, '/')">
+                        <!-- Get relative path up to and including subdir.-->
+                        <xsl:variable name="root.candidate">
+                            <xsl:analyze-string select="$nts.file.reldir" regex="(/.*/{.})">
+                                <xsl:matching-substring>
+                                    <xsl:value-of select="fn:regex-group(1)"/>
+                                </xsl:matching-substring>
+                            </xsl:analyze-string>
+                        </xsl:variable>
+                        <xsl:if test="not(. = '') and fn:contains(fn:concat('/',$target.dir), $root.candidate)">
+                            <xsl:value-of select="concat('/',.)"/>
+                        </xsl:if>
+                    </xsl:for-each>
+                </xsl:variable>
+                <xsl:variable name="nts.file.reldir.leaf" select="fn:substring-after($nts.file.reldir, $nts.file.reldir.root)"/>
                 
                 <!-- Get the raw file name without suffix -->
                 <xsl:variable name="nts.file.basename" select="substring-before(tokenize(base-uri(), '/')[last()], '.xml')"/>
@@ -72,34 +90,66 @@
                 <xsl:variable name="ntsFile" select="/f:TestScript"/>
                 <xsl:variable name="ntsScenario" select="/f:TestScript/@nts:scenario"/>
                 
-                <xsl:choose>
-                    <xsl:when test="$ntsScenario = 'server'">
-                        <!-- XIS scripts are generated in both XML and JSON flavor -->
-                        <xsl:for-each select="('xml', 'json')">
-                            <xsl:variable name="testscript.path" select="concat('file:///', translate($outputDir, '\', '/'), $nts.file.reldir, '/', $nts.file.basename, '-', ., '.xml')"/>
+                <xsl:variable name="testscript.path">
+                    <xsl:value-of select="concat('file:///', translate($outputDir, '\', '/'))"/>
+                    <xsl:choose>
+                        <xsl:when test="not($target.dir = '#default')">
+                            <xsl:value-of select="fn:concat('/', $target.dir, $nts.file.reldir.leaf)"/>
+                        </xsl:when>
+                        <xsl:otherwise>
+                            <xsl:value-of select="$nts.file.reldir"/>
+                        </xsl:otherwise>
+                    </xsl:choose>
+                    <xsl:value-of select="'/'"/>
+                </xsl:variable>
+                
+                <xsl:variable name="target">
+                    <xsl:choose>
+                        <xsl:when test="$target.dir = '#default'">
+                            <xsl:value-of select="$target.dir"/>
+                        </xsl:when>
+                        <xsl:otherwise>
+                            <xsl:value-of select="fn:substring-after(fn:concat('/', $target.dir), fn:concat($nts.file.reldir.root, '-'))"/>
+                        </xsl:otherwise>
+                    </xsl:choose>
+                </xsl:variable>
+
+                <!-- Generate output if:
+                    - target is #default OR
+                    - if target contains reldir (for example, target is 'XIS-Server-Nictiz-intern' while reldir is 'XIS-Server')
+                     Otherwise we do nothing, because targets only have to output files affected by it. -->
+                <xsl:if test="$target = '#default' or fn:contains(fn:concat('/',$target.dir), $nts.file.reldir)">
+                    <xsl:choose>
+                        <xsl:when test="$ntsScenario = 'server'">
+                            <!-- XIS scripts are generated in both XML and JSON flavor -->
+                            <xsl:for-each select="('xml', 'json')">
+                                <xsl:variable name="testscript.filename" select="fn:concat($nts.file.basename, '-', ., '.xml')"/>
+                                <xsl:variable name="testScript">
+                                    <xsl:apply-templates select="$ntsFile">
+                                        <xsl:with-param name="target" select="$target" tunnel="yes"/>
+                                        <xsl:with-param name="referenceBase" select="$referenceBase" tunnel="yes"/>
+                                        <xsl:with-param name="expectedResponseFormat" select="." tunnel="yes"/>
+                                    </xsl:apply-templates>
+                                </xsl:variable>
+                                <xsl:result-document href="{concat($testscript.path, $testscript.filename)}">
+                                    <xsl:copy-of select="$testScript"/>
+                                </xsl:result-document>
+                            </xsl:for-each>
+                        </xsl:when>
+                        <xsl:otherwise>
+                            <xsl:variable name="testscript.filename" select="fn:concat($nts.file.basename, '.xml')"/>
                             <xsl:variable name="testScript">
                                 <xsl:apply-templates select="$ntsFile">
+                                    <xsl:with-param name="target" select="$target" tunnel="yes"/>
                                     <xsl:with-param name="referenceBase" select="$referenceBase" tunnel="yes"/>
-                                    <xsl:with-param name="expectedResponseFormat" select="." tunnel="yes"/>
                                 </xsl:apply-templates>
                             </xsl:variable>
-                            <xsl:result-document href="{$testscript.path}">
+                            <xsl:result-document href="{concat($testscript.path, $testscript.filename)}">
                                 <xsl:copy-of select="$testScript"/>
                             </xsl:result-document>
-                        </xsl:for-each>
-                    </xsl:when>
-                    <xsl:otherwise>
-                        <xsl:variable name="testscript.path" select="concat('file:///', translate($outputDir, '\', '/'), $nts.file.reldir, '/', $nts.file.basename, '.xml')"/>
-                        <xsl:variable name="testScript">
-                            <xsl:apply-templates select="$ntsFile">
-                                <xsl:with-param name="referenceBase" select="$referenceBase" tunnel="yes"/>
-                            </xsl:apply-templates>
-                        </xsl:variable>
-                        <xsl:result-document href="{concat('file:///', translate($outputDir, '\', '/'), $nts.file.reldir, '/', $nts.file.basename, '.xml')}">
-                            <xsl:copy-of select="$testScript"/>
-                        </xsl:result-document>
-                    </xsl:otherwise>
-                </xsl:choose>
+                        </xsl:otherwise>
+                    </xsl:choose>
+                </xsl:if>
             </xsl:if>
         </xsl:for-each>
     </xsl:template>
@@ -198,6 +248,7 @@
     
     <!-- Match the root to organize and/or edit all children -->
     <xsl:template match="f:TestScript" mode="filter">
+        <xsl:param name="target" tunnel="yes"/>
         <xsl:param name="scenario" tunnel="yes"/>
         <xsl:param name="expectedResponseFormat" tunnel="yes"/>
         <xsl:param name="fixtures" tunnel="yes"/>
@@ -357,6 +408,7 @@
     
     <!-- Add the target and/or the format for requests to the TestScript id, if specified -->
     <xsl:template match="f:TestScript/f:id/@value" mode="filter">
+        <xsl:param name="target" tunnel="yes"/>
         <xsl:param name="scenario" tunnel="yes"/>
         <xsl:param name="expectedResponseFormat" tunnel="yes"/>
         <xsl:variable name="joinedString">
@@ -385,6 +437,7 @@
     
     <!--Add the target and/or the format for requests to the TestScript name, if specified -->
     <xsl:template match="f:TestScript/f:name/@value" mode="filter">
+        <xsl:param name="target" tunnel="yes"/>
         <xsl:param name="scenario" tunnel="yes"/>
         <xsl:param name="expectedResponseFormat" tunnel="yes"/>
         <xsl:attribute name="value">
@@ -825,6 +878,7 @@
     <!-- Pre-filter in the expand mode to only include elements that are in the target designated using the 'target'
          stylesheet parameter -->
     <xsl:template match="(f:*|nts:*)" mode="expand" priority="3">
+        <xsl:param name="target" tunnel="yes"/>
         <xsl:if test=".[$target = tokenize(@nts:in-targets, ' ') or not(@nts:in-targets)]">
             <xsl:next-match/>
         </xsl:if>
