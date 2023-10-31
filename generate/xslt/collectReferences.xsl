@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="2.0"
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+    xmlns:fn="http://www.w3.org/2005/xpath-functions" version="2.0"
     xmlns:f="http://hl7.org/fhir"
     xmlns:xs="http://www.w3.org/2001/XMLSchema"
     exclude-result-prefixes="#all">
@@ -12,9 +13,9 @@
          The parameters "additionalFixtures" and "additionalRules" can be used to specify lists of additional fixtures
          and rules (in the same format), so that this stylesheet can be used iteratively.
          The parameter "includesDir" can be given as the part that should be removed from the fixture/rules path. -->
-         
-    <xsl:param name="additionalFixtures" as="xs:string" select="''"/>
-    <xsl:param name="additionalRules" as="xs:string" select="''"/>
+    
+    <xsl:param name="outputDir" required="yes"/>
+    <xsl:param name="referencesFile" required="yes"/>
     <xsl:param name="includesDir" select="'../_reference/'"/>
     
     <xsl:variable name="includesDirNormalized">
@@ -28,42 +29,36 @@
         </xsl:choose>
     </xsl:variable>
 
-    <xsl:template match="f:TestScript">
+    <xsl:template match="/" name="initialTemplate">
+        <xsl:param name="testScripts" select="collection(concat('file:///', $outputDir, '?select=*.xml;recurse=yes'))"/>
+        
+        <xsl:variable name="referencesFileText" select="unparsed-text(concat('file:///', fn:translate($referencesFile, '\', '/')))"/>
+        
         <xsl:variable name="fixtures" as="xs:string*">
-            <xsl:for-each select="//f:fixture">
+            <xsl:for-each select="$testScripts//f:fixture">
                 <xsl:value-of select="substring-after(f:resource/f:reference/@value, $includesDirNormalized)"/>        
             </xsl:for-each>
-            <xsl:for-each select="tokenize($additionalFixtures, ';')">
-                <xsl:if test="string-length(.) &gt; 0">
-                    <xsl:value-of select="."/>
-                </xsl:if>
-            </xsl:for-each>
         </xsl:variable>
 
-        <xsl:text>fixtures=</xsl:text>
-        <xsl:for-each select="distinct-values($fixtures)">
-            <xsl:value-of select="."/>
-            <xsl:text>;</xsl:text>
-        </xsl:for-each>
-        <xsl:text>&#xA;</xsl:text>
-        
         <xsl:variable name="rules" as="xs:string*">
-            <xsl:for-each select="//f:extension[@url = 'http://touchstone.aegis.net/touchstone/fhir/testing/StructureDefinition/testscript-rule']">
+            <xsl:for-each select="$testScripts//f:extension[@url = 'http://touchstone.aegis.net/touchstone/fhir/testing/StructureDefinition/testscript-rule']">
                 <xsl:value-of select="substring-after(f:extension[@url = 'path']/f:valueString/@value, $includesDirNormalized)"/>
-                
-            </xsl:for-each>
-            <xsl:for-each select="tokenize($additionalRules, ';')">
-                <xsl:if test="string-length(.) &gt; 0">
-                    <xsl:value-of select="."/>
-                </xsl:if>
             </xsl:for-each>
         </xsl:variable>
-
-        <xsl:text>rules=</xsl:text>
-        <xsl:for-each select="distinct-values($rules)">
-            <xsl:value-of select="."/>
-            <xsl:text>;</xsl:text>
-        </xsl:for-each>
+        
+        <xsl:result-document href="{concat('file:///', fn:translate($referencesFile, '\', '/'))}" method="text">
+            <xsl:text>fixtures=</xsl:text>
+            <xsl:for-each select="distinct-values($fixtures)">
+                <xsl:value-of select="."/>
+                <xsl:text>;</xsl:text>
+            </xsl:for-each>
+            <xsl:text>&#xA;</xsl:text>
+            <xsl:text>rules=</xsl:text>
+            <xsl:for-each select="distinct-values($rules)">
+                <xsl:value-of select="."/>
+                <xsl:text>;</xsl:text>
+            </xsl:for-each>
+        </xsl:result-document>
         
     </xsl:template>
 </xsl:stylesheet>

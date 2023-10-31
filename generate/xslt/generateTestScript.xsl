@@ -9,20 +9,18 @@
     exclude-result-prefixes="#all">
     <xsl:output method="xml" indent="yes"/>
     <xsl:strip-space elements="*"/>
+    
+    <xsl:param name="inputDir" required="yes"/>
+    <xsl:param name="outputDir" required="yes"/>
         
-    <!-- The path to the base folder of fixtures, relative to the output. Defaults to '../_reference'. -->
-    <xsl:param name="referenceBase" select="'../_reference/'"/>
+    <!-- The path to the base folder of fixtures. -->
+    <xsl:param name="referenceDir" required="yes"/>
     
     <!-- The folder where components for this project can be found, relative to this file. -->
     <xsl:param name="projectComponentFolder" select="'../_componenents/'"/>
     
     <!-- The folder where the common components for TestScript generation can be found. -->
     <xsl:param name="commonComponentFolder" select="'../../common-asserts/'"/>
-    
-    <!-- The format for responses (either 'xml' (default) or 'json') that this TestScript expects when it tests a 
-         server (i.e. it has no meaning when nts:scenario is set to 'client'). This value is added as 'Accept' header
-         on all requests and to the name and id of the TestScript. -->
-    <xsl:param name="expectedResponseFormat"/>
     
     <!-- An NTS input file can nominate elements to only be included in specific named targets using the nts:only-in
          attribute. The "target" parameter determines which target to build. '#default' is considered to be the default
@@ -37,8 +35,97 @@
          should hold an URL. -->
     <xsl:include href="resolveAuthTokens.xsl"/>
     
+    <xsl:template match="/" name="initialTemplate">
+        <xsl:for-each select="collection(concat('file:///', $inputDir, '?select=*.xml;recurse=yes'))">
+            <!-- Exclude everything in a folder that starts with '_'. Can we do this in the collection query above? -->
+            <xsl:if test="not(contains(base-uri(), '/_'))">
+                <!-- Mirror logic previously present in ANT -->
+                
+                <!-- Get the relative directory of the input file within the base directory -->
+                <xsl:variable name="nts.file.dir">
+                    <xsl:call-template name="substring-before-last">
+                        <xsl:with-param name="string1" select="base-uri()"/>
+                        <xsl:with-param name="string2" select="'/'"/>
+                    </xsl:call-template>
+                </xsl:variable>
+                <xsl:variable name="nts.file.reldir" select="fn:substring-after($nts.file.dir, translate($inputDir, '\', '/'))"/>
+                
+                <!-- ANT does something complex here that was implemented for MP9 - apply targets on subfolder or something. TO-DO -->
+                
+                <!-- Get the raw file name without suffix -->
+                <xsl:variable name="nts.file.basename" select="substring-before(tokenize(base-uri(), '/')[last()], '.xml')"/>
+                
+                <!-- Calculate the relative path to the reference dir from the NTS file -->
+                <xsl:variable name="referenceBase">
+                    <xsl:variable name="dirLevel" select="fn:string-length($nts.file.reldir) - fn:string-length(fn:translate($nts.file.reldir, '/', ''))" as="xs:integer"/>
+                    <xsl:for-each select="0 to $dirLevel">
+                        <xsl:if test=". gt 0">
+                            <xsl:value-of select="'..'"/>
+                            <xsl:if test="not(position() = last())">
+                                <xsl:text>/</xsl:text>
+                            </xsl:if>
+                        </xsl:if>
+                    </xsl:for-each>
+                    <xsl:value-of select="fn:substring-after(translate($referenceDir, '\', '/'), translate($inputDir, '\', '/'))"/>
+                </xsl:variable>
+                
+                <xsl:variable name="ntsFile" select="/f:TestScript"/>
+                <xsl:variable name="ntsScenario" select="/f:TestScript/@nts:scenario"/>
+                
+                <xsl:choose>
+                    <xsl:when test="$ntsScenario = 'server'">
+                        <!-- XIS scripts are generated in both XML and JSON flavor -->
+                        <xsl:for-each select="('xml', 'json')">
+                            <xsl:variable name="testscript.path" select="concat('file:///', translate($outputDir, '\', '/'), $nts.file.reldir, '/', $nts.file.basename, '-', ., '.xml')"/>
+                            <xsl:variable name="testScript">
+                                <xsl:apply-templates select="$ntsFile">
+                                    <xsl:with-param name="referenceBase" select="$referenceBase" tunnel="yes"/>
+                                    <xsl:with-param name="expectedResponseFormat" select="." tunnel="yes"/>
+                                </xsl:apply-templates>
+                            </xsl:variable>
+                            <xsl:result-document href="{$testscript.path}">
+                                <xsl:copy-of select="$testScript"/>
+                            </xsl:result-document>
+                        </xsl:for-each>
+                    </xsl:when>
+                    <xsl:otherwise>
+                        <xsl:variable name="testscript.path" select="concat('file:///', translate($outputDir, '\', '/'), $nts.file.reldir, '/', $nts.file.basename, '.xml')"/>
+                        <xsl:variable name="testScript">
+                            <xsl:apply-templates select="$ntsFile">
+                                <xsl:with-param name="referenceBase" select="$referenceBase" tunnel="yes"/>
+                            </xsl:apply-templates>
+                        </xsl:variable>
+                        <xsl:result-document href="{concat('file:///', translate($outputDir, '\', '/'), $nts.file.reldir, '/', $nts.file.basename, '.xml')}">
+                            <xsl:copy-of select="$testScript"/>
+                        </xsl:result-document>
+                    </xsl:otherwise>
+                </xsl:choose>
+            </xsl:if>
+        </xsl:for-each>
+    </xsl:template>
+    
+    <!--https://stackoverflow.com/questions/1119449/removing-the-last-characters-in-an-xslt-string/1119666#1119666-->
+    <xsl:template name="substring-before-last">
+        <xsl:param name="string1" select="''" />
+        <xsl:param name="string2" select="''" />
+        
+        <xsl:if test="$string1 != '' and $string2 != ''">
+            <xsl:variable name="head" select="substring-before($string1, $string2)" />
+            <xsl:variable name="tail" select="substring-after($string1, $string2)" />
+            <xsl:value-of select="$head" />
+            <xsl:if test="contains($tail, $string2)">
+                <xsl:value-of select="$string2" />
+                <xsl:call-template name="substring-before-last">
+                    <xsl:with-param name="string1" select="$tail" />
+                    <xsl:with-param name="string2" select="$string2" />
+                </xsl:call-template>
+            </xsl:if>
+        </xsl:if>
+    </xsl:template>
+    
     <!-- The main template, which will call the remaining templates. -->
     <xsl:template name="generate" match="f:TestScript">
+        <xsl:param name="expectedResponseFormat" tunnel="yes"/>
         <xsl:variable name="scenario" select="@nts:scenario"/>
         
         <!-- Capture the base path in a variable, because the relative path changes with nested includes, leading to Patient token errors -->
@@ -378,6 +465,7 @@
     <xsl:template match="nts:fixture[@id and @href]" mode="expand">
         <xsl:param name="scenario" tunnel="yes"/>
         <xsl:param name="expectedResponseFormat" tunnel="yes"/>
+        <xsl:param name="referenceBase" tunnel="yes"/>
         
         <xsl:variable name="href">
             <xsl:choose>
@@ -441,6 +529,8 @@
     <xsl:template match="nts:patientTokenFixture" mode="expand">
         <xsl:param name="scenario" tunnel="yes"/>
         <xsl:param name="basePath" tunnel="yes"/>
+        <xsl:param name="referenceBase" tunnel="yes"/>
+        
         <xsl:variable name="href" as="xs:string">
             <xsl:apply-templates select="@href" mode="expand"/>
         </xsl:variable>
@@ -569,6 +659,7 @@
         filter step.
     -->
     <xsl:template match="nts:rule[@id and @href]" mode="expand" priority="2">
+        <xsl:param name="referenceBase" tunnel="yes"/>
         <!-- https://touchstone.aegis.net/touchstone/userguide/html/testscript-authoring/rule-authoring/basics.html -->
         <extension url="http://touchstone.aegis.net/touchstone/fhir/testing/StructureDefinition/testscript-rule">
             <extension url="ruleId">

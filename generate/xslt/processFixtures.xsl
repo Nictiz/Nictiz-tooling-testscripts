@@ -2,6 +2,7 @@
     xmlns="http://hl7.org/fhir"
     xmlns:f="http://hl7.org/fhir"
     xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:fn="http://www.w3.org/2005/xpath-functions"
     xmlns:nts="http://nictiz.nl/xsl/testscript"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xmlns:uuid="http://www.uuid.org"
@@ -13,9 +14,13 @@
     <xsl:strip-space elements="*"/>
     
     <!-- Checks fixtures for the nts:includeFixture element to include fixtures in other fixtures. If this element is applied in batch or transaction Bundles, Resource.id is removed and (after all fixtures are included) fullUrl and references are rewritten -->
+    <xsl:param name="inputDir" required="yes"/>
+    <xsl:param name="outputDir" required="yes"/>
     
-    <!-- The absolute path to the folder of fixtures -->
-    <xsl:param name="referenceDir"/>
+    <!-- The relative path to the folder of fixtures -->
+    <xsl:param name="referenceSubDir"/>
+    
+    <xsl:param name="referenceDir" select="concat($inputDir, '/', $referenceSubDir)"/>
     
     <!-- Convert the reference to a file:// URL and make sure it ends with a slash. -->
     <xsl:variable name="referenceDirAsUrl">
@@ -44,40 +49,45 @@
         </xsl:copy>
     </xsl:template>
     
-    <xsl:template match="/">
-        <xsl:variable name="bundleType">
-            <xsl:choose>
-                <xsl:when test="f:Bundle/f:type[@value]">
-                    <xsl:value-of select="f:Bundle/f:type/@value"/>
-                </xsl:when>
-                <xsl:otherwise>
-                    <xsl:text>null</xsl:text>
-                </xsl:otherwise>
-            </xsl:choose>
-        </xsl:variable>
-        
-        <xsl:choose>
-            <xsl:when test=".//nts:includeFixture">
-                <xsl:variable name="resolvedFixture">
-                    <xsl:apply-templates select="*" mode="resolve"/>
-                </xsl:variable>
-                
+    <xsl:template match="/" name="initialTemplate">
+        <xsl:for-each select="collection(concat($referenceDirAsUrl, '?select=*.xml;recurse=yes'))">
+            <xsl:variable name="bundleType">
                 <xsl:choose>
-                    <xsl:when test="$bundleType = ('batch', 'transaction')">
-                        <xsl:apply-templates select="$resolvedFixture" mode="rewrite">
-                            <xsl:with-param name="bundleType" tunnel="yes"/>
-                        </xsl:apply-templates>
+                    <xsl:when test="f:Bundle/f:type[@value]">
+                        <xsl:value-of select="f:Bundle/f:type/@value"/>
                     </xsl:when>
                     <xsl:otherwise>
-                        <xsl:copy-of select="$resolvedFixture"/>
+                        <xsl:text>null</xsl:text>
                     </xsl:otherwise>
                 </xsl:choose>
-            </xsl:when>
-            <xsl:otherwise>
-                <xsl:apply-templates select="*" mode="copy"/>
-            </xsl:otherwise>
-        </xsl:choose>
-        
+            </xsl:variable>
+            
+            <xsl:variable name="fixture.path.relative" select="fn:substring-after(base-uri(), concat(translate($inputDir, '\', '/'), '/'))"/>
+            
+            <xsl:result-document href="{concat('file:///', translate($outputDir, '\', '/'), '/', $fixture.path.relative)}">
+                <xsl:choose>
+                    <xsl:when test=".//nts:includeFixture">
+                        <xsl:variable name="resolvedFixture">
+                            <xsl:apply-templates select="*" mode="resolve"/>
+                        </xsl:variable>
+                        
+                        <xsl:choose>
+                            <xsl:when test="$bundleType = ('batch', 'transaction')">
+                                <xsl:apply-templates select="$resolvedFixture" mode="rewrite">
+                                    <xsl:with-param name="bundleType" tunnel="yes"/>
+                                </xsl:apply-templates>
+                            </xsl:when>
+                            <xsl:otherwise>
+                                <xsl:copy-of select="$resolvedFixture"/>
+                            </xsl:otherwise>
+                        </xsl:choose>
+                    </xsl:when>
+                    <xsl:otherwise>
+                        <xsl:apply-templates select="*" mode="copy"/>
+                    </xsl:otherwise>
+                </xsl:choose>
+            </xsl:result-document>
+        </xsl:for-each>
     </xsl:template>
     
     <xsl:template match="nts:includeFixture" mode="resolve">
