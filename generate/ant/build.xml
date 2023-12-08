@@ -166,18 +166,7 @@
             </not>
             <then>
                 <sequential>
-                    <!-- We can only set taskdef and groovy task after we are sure the jar exists, so unfortunately we have to repeat this. Cannot place it in a macrodef -->
-                    <taskdef name="groovy" classname="org.codehaus.groovy.ant.Groovy">
-                        <classpath>
-                            <pathelement location="${groovy.jar.file}"/>
-                            <pathelement location="${groovy-ant.jar.file}"/>
-                        </classpath>
-                    </taskdef>
-                    <groovy>
-                        <arg value="${outputLevel}"/>
-                        int outputLevel = args[0] as int
-                        project.getBuildListeners()[0].setMessageOutputLevel(outputLevel)
-                    </groovy>
+                    <antcall target="set-logging"/>
                 </sequential>
             </then>
         </if>
@@ -238,23 +227,6 @@
         </sequential>
     </target>
     
-    <macrodef name="saxon-transform" description="Custom task to run an XSLT transformation using Saxon (HE)">
-        <attribute name="style" description="The path to the stylesheet to use for the transformation"/>
-        <attribute name="in" description="The path to the input file" default="@{style}"/>
-        <attribute name="out" description="The path to the output file"/>
-        <element name="parameters" optional="yes" description="Optionally, a group of 'param' elements as understood by the XSLT task"/>
-
-        <sequential>
-            <xslt force="true" style="@{style}" in="@{in}" out="@{out}">
-                <factory name="net.sf.saxon.TransformerFactoryImpl">
-                    <attribute name="http://saxon.sf.net/feature/recoveryPolicy" value="2"/>
-                </factory>
-                <classpath location="${Saxon-HE.jar}"/>
-                <parameters/>
-            </xslt>
-        </sequential>
-    </macrodef>
-    
     <macrodef name="transform-NTS-folder" description="Custom task to perform the transformation of a folder with NTS files">
         <attribute name="references.file" description="The (temporary) text file to collect the list of fixtures to. See the collect-fixtures macrodef for more information."/>
         <attribute name="target.dir" default="#default" description="The name of the target to build; choose '#default' to build the default target."/>
@@ -263,10 +235,11 @@
             <propertyregex property="components.dir.abs.normalized" input="${components.dir.abs}" regexp="[\\]" replace="/" global="true" defaultValue="${components.dir.abs}"/>
             <propertyregex property="commoncomponents.dir.abs.normalized" input="${commoncomponents.dir.abs}" regexp="[\\]" replace="/" global="true" defaultValue="${commoncomponents.dir.abs}"/>
             
+            <!-- Switched to <java> because the <xslt> ant task doesn't support (an equivalent of) the -it flag -->
             <java classname="net.sf.saxon.Transform" classpath="${Saxon-HE.jar}" logError="true">
                 <classpath location="${Saxon-HE.jar}"/>
-                <arg value="-it:initialTemplate" />
-                <arg value="-xsl:${xslt.dir}/generateTestScript.xsl" />
+                <arg value="-it:buildFilesInTargetFolder" />
+                <arg value="-xsl:${xslt.dir}/generateTestScriptFolder.xsl" />
                 <arg value="inputDir=${input.dir.abs}"/>
                 <arg value="outputDir=${output.dir.abs}"/>
                 <arg value="referenceDir=${reference.dir}"/>
@@ -286,7 +259,7 @@
         <sequential>
             <java classname="net.sf.saxon.Transform" classpath="${Saxon-HE.jar}" logError="true">
                 <classpath location="${Saxon-HE.jar}"/>
-                <arg value="-it:initialTemplate" />
+                <arg value="-it:collectReferencesInFolder" />
                 <arg value="-xsl:${xslt.dir}/collectReferences.xsl" />
                 <arg value="outputDir=${output.dir.abs}"/>
                 <arg value="referencesFile=@{references.file}"/>
@@ -347,7 +320,7 @@
                         <!-- Resolve all includes in _all_ (not only referenced) fixtures and (if applicable) rewrite .id, .fullUrl and References. This overwrites the fixture copied earlier -->
                         <java classname="net.sf.saxon.Transform" classpath="${Saxon-HE.jar}" logError="true">
                             <classpath location="${Saxon-HE.jar}"/>
-                            <arg value="-it:initialTemplate" />
+                            <arg value="-it:processFixturesInFolder" />
                             <arg value="-xsl:${xslt.dir}/processFixtures.xsl" />
                             <arg value="inputDir=${input.dir.abs}"/>
                             <arg value="outputDir=${output.dir.abs}"/>
@@ -390,14 +363,16 @@
             <!-- Convert backslashes to forward slashes if needed -->
             <propertyregex property="reference.dir.loadresourcesrelative.normalized" input="${reference.dir.loadresourcesrelative}" regexp="[\\]" replace="/" global="true" defaultValue="${reference.dir.loadresourcesrelative}"/>
             
-            <saxon-transform style="${xslt.dir}/generateLoadResources.xsl" out="${loadresources.file}">
-                <parameters>
-                    <param name="referenceBase" expression="${reference.dir.loadresourcesrelative.normalized}"/>
-                    <param name="referenceDir" expression="${input.dir.abs}/${reference.subdir}/"/>
-                    <param name="loadResourcesExclude" expression="${loadresources.exclude}"/>
-                    <param name="tokensJsonFile" expression="${tokens.json.url}"/>
-                </parameters>
-            </saxon-transform>
+            <java classname="net.sf.saxon.Transform" classpath="${Saxon-HE.jar}" logError="true">
+                <classpath location="${Saxon-HE.jar}"/>
+                <arg value="-s:${xslt.dir}/generateLoadResources.xsl"/><!-- Using '-' as input as the docs suggest freezes the build, so reverting to using the stylesheet as its own input -->
+                <arg value="-o:${loadresources.file}"/>
+                <arg value="-xsl:${xslt.dir}/generateLoadResources.xsl"/>
+                <arg value="referenceBase=${reference.dir.loadresourcesrelative.normalized}"/>
+                <arg value="referenceDir=${input.dir.abs}/${reference.subdir}/"/>
+                <arg value="loadResourcesExclude=${loadresources.exclude}"/>
+                <arg value="tokensJsonFile=${tokens.json.url}"/>
+            </java>
             
             <!-- Check if output is empty. If yes, delete -->
             <if>

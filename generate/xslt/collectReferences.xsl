@@ -29,7 +29,7 @@
         </xsl:choose>
     </xsl:variable>
 
-    <xsl:template match="/" name="initialTemplate">
+    <xsl:template match="/" name="collectReferencesInFolder">
         <xsl:param name="testScripts" select="collection(concat('file:///', $outputDir, '?select=*.xml;recurse=yes'))"/>
         
         <xsl:variable name="referencesFileText" select="unparsed-text(concat('file:///', fn:translate($referencesFile, '\', '/')))"/>

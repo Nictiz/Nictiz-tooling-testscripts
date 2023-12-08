@@ -49,7 +49,7 @@
         </xsl:copy>
     </xsl:template>
     
-    <xsl:template match="/" name="initialTemplate">
+    <xsl:template match="/" name="processFixturesInFolder">
         <xsl:for-each select="collection(concat($referenceDirAsUrl, '?select=*.xml;recurse=yes'))">
             <xsl:variable name="bundleType">
                 <xsl:choose>

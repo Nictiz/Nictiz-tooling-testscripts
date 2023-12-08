@@ -23,8 +23,10 @@
     <xsl:param name="commonComponentFolder" select="'../../common-asserts/'"/>
     
     <!-- An NTS input file can nominate elements to only be included in specific named targets using the nts:only-in
-         attribute. The "target" parameter determines which target to build. '#default' is considered to be the default
-         target that always applies if nothing else is specified. -->
+         attribute. The "target.dir" parameter (which defaults to '#default' if no other target is specified) contains
+         the full target directory defined in property 'targets.additional' (comma separated) in the build properties.
+         For example: 'XIS-Server-Nictiz-intern' or 'MedicationData/Send-Nictiz-intern'. The actual target name used in
+         an NTS-file is extracted from this. -->
     <xsl:param name="target.dir" select="'#default'"/>
 
     <!-- Optional string that will be appended verbatim to the verson string. If there is no version element in the
@@ -35,23 +37,18 @@
          should hold an URL. -->
     <xsl:include href="resolveAuthTokens.xsl"/>
     
-    <xsl:template match="/" name="initialTemplate">
+    <xsl:template match="/" name="buildFilesInTargetFolder">
         <xsl:for-each select="collection(concat('file:///', $inputDir, '?select=*.xml;recurse=yes'))">
             <!-- Exclude everything in a folder that starts with '_'. Can we do this in the collection query above? -->
             <xsl:if test="not(contains(base-uri(), '/_'))">
                 <!-- Mirror logic previously present in ANT -->
                 
                 <!-- Get the relative directory of the input file within the base directory -->
-                <xsl:variable name="nts.file.dir">
-                    <xsl:call-template name="substring-before-last">
-                        <xsl:with-param name="string1" select="base-uri()"/>
-                        <xsl:with-param name="string2" select="'/'"/>
-                    </xsl:call-template>
-                </xsl:variable>
+                <xsl:variable name="nts.file.dir" select="nts:_substring-before-last(base-uri(), '/')"/>
                 <xsl:variable name="nts.file.reldir" select="fn:substring-after($nts.file.dir, translate($inputDir, '\', '/'))"/>
                 
                 <!-- Now extract the 'root' dir of the relative path, where additional targets may be
-                defined, and any subpaths following it. The 'root' is the largest combination of dir and subdirs that are defined in target.additional -->
+                defined, and any subpaths following it. The 'root' is the largest combination of dir and subdirs that are defined in targets.additional -->
                 <xsl:variable name="nts.file.reldir.root">
                     
                     <xsl:for-each select="fn:tokenize($nts.file.reldir, '/')">
@@ -109,6 +106,9 @@
                             <xsl:value-of select="$target.dir"/>
                         </xsl:when>
                         <xsl:otherwise>
+                            <!-- Extract the actual target name used in @nts:only-in from 'target.dir'.
+                                For example: 'XIS-Server-Nictiz-intern' to 'Nictiz-intern' or 
+                                'MedicationData/Send-Nictiz-intern' to 'Nictiz-intern' -->
                             <xsl:value-of select="fn:substring-after(fn:concat('/', $target.dir), fn:concat($nts.file.reldir.root, '-'))"/>
                         </xsl:otherwise>
                     </xsl:choose>
@@ -155,25 +155,6 @@
                 </xsl:if>
             </xsl:if>
         </xsl:for-each>
-    </xsl:template>
-    
-    <!--https://stackoverflow.com/questions/1119449/removing-the-last-characters-in-an-xslt-string/1119666#1119666-->
-    <xsl:template name="substring-before-last">
-        <xsl:param name="string1" select="''" />
-        <xsl:param name="string2" select="''" />
-        
-        <xsl:if test="$string1 != '' and $string2 != ''">
-            <xsl:variable name="head" select="substring-before($string1, $string2)" />
-            <xsl:variable name="tail" select="substring-after($string1, $string2)" />
-            <xsl:value-of select="$head" />
-            <xsl:if test="contains($tail, $string2)">
-                <xsl:value-of select="$string2" />
-                <xsl:call-template name="substring-before-last">
-                    <xsl:with-param name="string1" select="$tail" />
-                    <xsl:with-param name="string2" select="$string2" />
-                </xsl:call-template>
-            </xsl:if>
-        </xsl:if>
     </xsl:template>
     
     <!-- The main template, which will call the remaining templates. -->
@@ -1000,6 +981,21 @@
         
         <xsl:if test="$curr &lt; $max">
             <xsl:copy-of select="nts:addDestinations($curr + 1, $max)"/>
+        </xsl:if>
+    </xsl:function>
+    
+    <xsl:function name="nts:_substring-before-last" as="xs:string">
+        <xsl:param name="string1" as="xs:string"/>
+        <xsl:param name="string2" as="xs:string"/>
+        
+        <xsl:if test="$string1 != '' and $string2 != ''">
+            <xsl:variable name="head" select="substring-before($string1, $string2)" />
+            <xsl:variable name="tail" select="substring-after($string1, $string2)" />
+            <xsl:value-of select="$head" />
+            <xsl:if test="contains($tail, $string2)">
+                <xsl:value-of select="$string2" />
+                <xsl:value-of select="nts:_substring-before-last($tail, $string2)"/>
+            </xsl:if>
         </xsl:if>
     </xsl:function>
     
