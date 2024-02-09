@@ -14,7 +14,7 @@
 
     <!-- Load the JSON file as flat text in the patientTokenMap variable. It is assumed that the XSLT processor defers
          this operation unless/until it is actually needed. -->
-    <xsl:variable name="patientTokenMap" select="unparsed-text($tokensJsonFile)"/>
+    <xsl:variable name="patientTokenMap" select="if (unparsed-text-available($tokensJsonFile)) then unparsed-text($tokensJsonFile) else ()"/>
     
     <!-- Resolve the authorization token from the JSON file. If multiple matching tokens exist, an error is thrown.
          @param patientResourceId - the resource id of the Patient resource for which the token is resolved.
@@ -27,8 +27,11 @@
         <xsl:param name="id" as="xs:string"/>
         <xsl:param name="failOnMissing" as="xs:boolean"/>
 
-        <xsl:if test="not($tokensJsonFile)">
+        <xsl:if test="string-length($tokensJsonFile) = 0">
             <xsl:message terminate="yes">You're trying to resolve a token based on a Patient resource id, but didn't pass in a file containing the tokens using the tokensJsonFile parameter.</xsl:message>
+        </xsl:if>
+        <xsl:if test="empty($patientTokenMap)">
+            <xsl:message terminate="yes">The parameter tokensJsonFile could not be parsed "<xsl:value-of select="$tokensJsonFile"/>"</xsl:message>
         </xsl:if>
         
         <!-- Try to find the "accessToken" key associated with "resourceId": patientId in the tokens JSON file.
