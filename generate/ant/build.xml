@@ -240,7 +240,7 @@
                 <classpath location="${Saxon-HE.jar}"/>
                 <arg value="-it:buildFilesInTargetFolder" />
                 <arg value="-xsl:${xslt.dir}/generateTestScriptFolder.xsl" />
-                <arg value="inputDir=${input.dir.abs}"/>
+                <arg value="inputDir=${input.dir.temp.abs}"/>
                 <arg value="outputDir=${output.dir.abs}"/>
                 <arg value="referenceDir=${reference.dir}"/>
                 <arg value="commonComponentFolder=${commoncomponents.dir.abs.normalized}"/>
@@ -322,7 +322,7 @@
                             <classpath location="${Saxon-HE.jar}"/>
                             <arg value="-it:processFixturesInFolder" />
                             <arg value="-xsl:${xslt.dir}/processFixtures.xsl" />
-                            <arg value="inputDir=${input.dir.abs}"/>
+                            <arg value="inputDir=${input.dir.temp.abs}"/>
                             <arg value="outputDir=${output.dir.abs}"/>
                             <arg value="referenceSubDir=${reference.subdir}"/>
                         </java>
@@ -392,13 +392,13 @@
     </target>
     
     <target name="build" depends="set-logging, load, check-input, cleanBuildDir">        
-        <property name="reference.dir" location="${input.dir.abs}/${reference.subdir}"/>
+        <property name="reference.dir" location="${input.dir.temp.abs}/${reference.subdir}"/>
         
         <!-- Set default loadresources.exclude to nothing -->
         <property name="loadresources.exclude" value=""/>
         
         <!-- Collect the XML files to transform -->
-        <fileset id="nts.files" dir="${input.dir.abs}">
+        <fileset id="nts.files" dir="${input.dir.temp.abs}">
             <include name="*/**/*.xml"/>
             <exclude name="**/_*/"/><!-- Exclude every dir that starts with '_' -->
         </fileset>
