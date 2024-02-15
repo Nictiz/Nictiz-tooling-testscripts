@@ -991,11 +991,14 @@
         <xsl:if test="$string1 != '' and $string2 != ''">
             <xsl:variable name="head" select="substring-before($string1, $string2)" />
             <xsl:variable name="tail" select="substring-after($string1, $string2)" />
-            <xsl:value-of select="$head" />
-            <xsl:if test="contains($tail, $string2)">
-                <xsl:value-of select="$string2" />
-                <xsl:value-of select="nts:_substring-before-last($tail, $string2)"/>
-            </xsl:if>
+            <xsl:choose>
+                <xsl:when test="contains($tail, $string2)">
+                    <xsl:value-of select="fn:string-join(($head, $string2,nts:_substring-before-last($tail, $string2)),'')"/>
+                </xsl:when>
+                <xsl:otherwise>
+                    <xsl:value-of select="$head" />
+                </xsl:otherwise>
+            </xsl:choose>
         </xsl:if>
     </xsl:function>
     
