@@ -119,10 +119,17 @@
         <xsl:variable name="fixtures">
             <xsl:for-each select="nts:contentAsserts">
                 <xsl:variable name="href" select="@href"/>
-                <nts:fixture href="{$href}">
-                    <xsl:variable name="fixtureUri" select="concat($basePath, '/', $referenceBase, $href)"/>
-                    <xsl:copy-of select="document($fixtureUri)"/>
-                </nts:fixture>
+                <xsl:variable name="fixtureUri" select="concat($basePath, '/', $referenceBase, $href)"/>
+                <xsl:choose>
+                    <xsl:when test="doc-available($fixtureUri)">
+                        <nts:fixture href="{$href}">
+                            <xsl:copy-of select="document($fixtureUri)"/>
+                        </nts:fixture>
+                    </xsl:when>
+                    <xsl:otherwise>
+                        <xsl:message>NTS:CONTENTASSERTS fixture not available: <xsl:value-of select="$fixtureUri"/></xsl:message>
+                    </xsl:otherwise>
+                </xsl:choose>
             </xsl:for-each>
         </xsl:variable>
         
@@ -138,142 +145,144 @@
             <xsl:variable name="fixture" select="$fixtures/nts:fixture[@href = $href]/*"/>
             <xsl:variable name="fixtureId" select="$fixture/f:id/@value"/>
             
-            <xsl:variable name="resourceType" select="$fixture/local-name()"/>
-            <xsl:variable name="resourceCount" select="count($fixture/parent::nts:fixture/preceding-sibling::nts:fixture[*/local-name() = $resourceType]) + 1"/>
-            <xsl:variable name="multipleExist" select="count($fixtures/nts:fixture[*/local-name() = $resourceType]) gt 1"/>
-            
-            <!-- Sanity check -->
-            <xsl:if test="$multipleExist = true() and string-length($expression) = 0">
-                <xsl:message terminate="yes">TOEDIT: <xsl:value-of select="$testName"/> - nts:contentAsserts with a resource type that exists multiple times (<xsl:value-of select="$resourceType"/>) SHALL contain @expression</xsl:message>
-            </xsl:if>
-            
-            <xsl:variable name="structureDefinition" select="document(concat($libPath, lower-case($fhirVersion), '/', $resourceType, '.xml'))"/>
-            
-            <!-- Would preferably do this in a separate step with Xproc. We'll see what the future brings -->
-            <xsl:variable name="fixtureWithMetaData">
-                <xsl:apply-templates select="$fixture" mode="addMetaData">
-                    <xsl:with-param name="structureDefinition" select="$structureDefinition" tunnel="yes"/>
-                </xsl:apply-templates>
-            </xsl:variable>
-            <!-- debug -->
-            <!--<xsl:result-document href="test{$resourceCount}.xml"><xsl:copy-of select="$fixtureWithMetaData"/></xsl:result-document>-->
-            
-            <xsl:variable name="newTestName">
-                <xsl:value-of select="concat($testName, ' - Check ', $resourceType)"/>
-                <xsl:if test="$multipleExist = true()">
-                    <xsl:value-of select="concat(' ', $resourceCount)"/>
+            <xsl:if test="fn:exists($fixture)">
+                <xsl:variable name="resourceType" select="$fixture/local-name()"/>
+                <xsl:variable name="resourceCount" select="count($fixture/parent::nts:fixture/preceding-sibling::nts:fixture[*/local-name() = $resourceType]) + 1"/>
+                <xsl:variable name="multipleExist" select="count($fixtures/nts:fixture[*/local-name() = $resourceType]) gt 1"/>
+                
+                <!-- Sanity check -->
+                <xsl:if test="$multipleExist = true() and string-length($expression) = 0">
+                    <xsl:message terminate="yes">TOEDIT: <xsl:value-of select="$testName"/> - nts:contentAsserts with a resource type that exists multiple times (<xsl:value-of select="$resourceType"/>) SHALL contain @expression</xsl:message>
                 </xsl:if>
-            </xsl:variable>
-            
-            <test>
-                <xsl:copy-of select="parent::f:test/@nts:*"/>
-                <xsl:copy-of select="@nts:*"/>
-                <name value="{$newTestName}"/>
-                <description value="Check if the previous operation results in a FHIR {$resourceType} that contains the values that are expected following Nictiz' materials (fixture .id: {$fixtureId})"/>
                 
-                <!-- According to TestScript spec, the last available request/response will be used, so we do not specifically have to add a requestId or responseId. Could (should?) be a feature though -->
-                <xsl:call-template name="createAssert">
-                    <xsl:with-param name="description">
-                        <xsl:variable name="direction" select="if ($scenario = 'server') then 'Response' else 'Request'"/>
-                        <xsl:choose>
-                            <xsl:when test="$operationType = 'read'">
-                                <xsl:value-of select="concat($direction, ' contains exactly 1 ', $resourceType)"/>
-                            </xsl:when>
-                            <xsl:when test="string-length($description) gt 0">
-                                <xsl:value-of select="concat($direction, ' Bundle contains exactly 1 ', $resourceType, ' that ', $description)"/>
-                            </xsl:when>
-                            <xsl:otherwise>
-                                <xsl:value-of select="concat($direction, ' Bundle contains exactly 1 ', $resourceType)"/>
-                            </xsl:otherwise>
-                        </xsl:choose>
-                    </xsl:with-param>
-                    <xsl:with-param name="expression">
-                        <xsl:choose>
-                            <xsl:when test="$operationType = 'read'">
-                                <xsl:value-of select="concat($resourceType, '.count() = 1')"/>
-                            </xsl:when>
-                            <xsl:when test="$bundleExpression = 'true'">
-                                <xsl:value-of select="concat($expression, '.count() = 1')"/>
-                            </xsl:when>
-                            <xsl:otherwise>
-                                <xsl:value-of select="concat('Bundle.entry.resource.ofType(', $resourceType, ')', $expression, '.count() = 1')"/>
-                            </xsl:otherwise>
-                        </xsl:choose>
-                    </xsl:with-param>
-                    <xsl:with-param name="stopTestOnFail" select="true()"/>
-                </xsl:call-template>
+                <xsl:variable name="structureDefinition" select="document(concat($libPath, lower-case($fhirVersion), '/', $resourceType, '.xml'))"/>
                 
-                <!-- Add an explicit assert to check Resource.id in case of server response checks -->
-                <xsl:variable name="idVariable" select="concat($fixtureId,'-id')"/>
-                <xsl:if test="$scenario = 'server'">
+                <!-- Would preferably do this in a separate step with Xproc. We'll see what the future brings -->
+                <xsl:variable name="fixtureWithMetaData">
+                    <xsl:apply-templates select="$fixture" mode="addMetaData">
+                        <xsl:with-param name="structureDefinition" select="$structureDefinition" tunnel="yes"/>
+                    </xsl:apply-templates>
+                </xsl:variable>
+                <!-- debug -->
+                <!--<xsl:result-document href="test{$resourceCount}.xml"><xsl:copy-of select="$fixtureWithMetaData"/></xsl:result-document>-->
+                
+                <xsl:variable name="newTestName">
+                    <xsl:value-of select="concat($testName, ' - Check ', $resourceType)"/>
+                    <xsl:if test="$multipleExist = true()">
+                        <xsl:value-of select="concat(' ', $resourceCount)"/>
+                    </xsl:if>
+                </xsl:variable>
+                
+                <test>
+                    <xsl:copy-of select="parent::f:test/@nts:*"/>
+                    <xsl:copy-of select="@nts:*"/>
+                    <name value="{$newTestName}"/>
+                    <description value="Check if the previous operation results in a FHIR {$resourceType} that contains the values that are expected following Nictiz' materials (fixture .id: {$fixtureId})"/>
+                    
+                    <!-- According to TestScript spec, the last available request/response will be used, so we do not specifically have to add a requestId or responseId. Could (should?) be a feature though -->
                     <xsl:call-template name="createAssert">
-                        <xsl:with-param name="description" select="concat($resourceType, ' resource evaluated in the previous assert contains an .id')"/>
+                        <xsl:with-param name="description">
+                            <xsl:variable name="direction" select="if ($scenario = 'server') then 'Response' else 'Request'"/>
+                            <xsl:choose>
+                                <xsl:when test="$operationType = 'read'">
+                                    <xsl:value-of select="concat($direction, ' contains exactly 1 ', $resourceType)"/>
+                                </xsl:when>
+                                <xsl:when test="string-length($description) gt 0">
+                                    <xsl:value-of select="concat($direction, ' Bundle contains exactly 1 ', $resourceType, ' that ', $description)"/>
+                                </xsl:when>
+                                <xsl:otherwise>
+                                    <xsl:value-of select="concat($direction, ' Bundle contains exactly 1 ', $resourceType)"/>
+                                </xsl:otherwise>
+                            </xsl:choose>
+                        </xsl:with-param>
                         <xsl:with-param name="expression">
                             <xsl:choose>
                                 <xsl:when test="$operationType = 'read'">
-                                    <xsl:value-of select="concat($resourceType, '.id.exists()')"/>
+                                    <xsl:value-of select="concat($resourceType, '.count() = 1')"/>
                                 </xsl:when>
                                 <xsl:when test="$bundleExpression = 'true'">
-                                    <xsl:value-of select="concat($expression, '.id.exists()')"/>
+                                    <xsl:value-of select="concat($expression, '.count() = 1')"/>
                                 </xsl:when>
                                 <xsl:otherwise>
-                                    <xsl:value-of select="concat('Bundle.entry.resource.ofType(', $resourceType, ')', $expression, '.id.exists()')"/>
+                                    <xsl:value-of select="concat('Bundle.entry.resource.ofType(', $resourceType, ')', $expression, '.count() = 1')"/>
                                 </xsl:otherwise>
                             </xsl:choose>
                         </xsl:with-param>
                         <xsl:with-param name="stopTestOnFail" select="true()"/>
                     </xsl:call-template>
                     
-                    <!-- If the assert above passes, we know by definition that this variable will be evaluated. TestScripts will fail with an error if a variable cannot be evaluated, but to users it is not really clear what happens. The setup with the asserts above will prevent that hopefully. -->
-                    <variable>
-                        <name value="{$idVariable}"/>
-                        <description value="Resource.id for {$resourceType} {$resourceCount}"/>
-                        <expression>
-                            <xsl:attribute name="value">
+                    <!-- Add an explicit assert to check Resource.id in case of server response checks -->
+                    <xsl:variable name="idVariable" select="concat($fixtureId,'-id')"/>
+                    <xsl:if test="$scenario = 'server'">
+                        <xsl:call-template name="createAssert">
+                            <xsl:with-param name="description" select="concat($resourceType, ' resource evaluated in the previous assert contains an .id')"/>
+                            <xsl:with-param name="expression">
                                 <xsl:choose>
                                     <xsl:when test="$operationType = 'read'">
-                                        <xsl:value-of select="concat($resourceType, '.id')"/>
+                                        <xsl:value-of select="concat($resourceType, '.id.exists()')"/>
                                     </xsl:when>
                                     <xsl:when test="$bundleExpression = 'true'">
-                                        <xsl:value-of select="concat($expression, '.id')"/>
+                                        <xsl:value-of select="concat($expression, '.id.exists()')"/>
                                     </xsl:when>
                                     <xsl:otherwise>
-                                        <xsl:value-of select="concat('Bundle.entry.resource.ofType(', $resourceType, ')', $expression, '.id')"/>
+                                        <xsl:value-of select="concat('Bundle.entry.resource.ofType(', $resourceType, ')', $expression, '.id.exists()')"/>
                                     </xsl:otherwise>
                                 </xsl:choose>
-                            </xsl:attribute>
-                        </expression>
-                        <sourceId value="{$requestResponseId}"/>
-                    </variable>
-                </xsl:if>
-                
-                <xsl:variable name="resourceIdExpression">
-                    <xsl:choose>
-                        <xsl:when test="$scenario = 'server'">
-                            <xsl:value-of select="concat('.where(id = ''${', $idVariable, '}'')')"/>
-                        </xsl:when>
-                        <xsl:when test="$scenario = 'client' and $multipleExist = false()"/>
-                        <xsl:when test="$scenario = 'client' and $multipleExist = true()">
-                            <xsl:choose>
-                                <xsl:when test="$bundleExpression = 'true'">
-                                    <xsl:message terminate="yes">NOT SUPPORTED</xsl:message>
-                                </xsl:when>
-                                <xsl:otherwise>
-                                    <xsl:value-of select="$expression"/>
-                                </xsl:otherwise>
-                            </xsl:choose>
-                        </xsl:when>
-                    </xsl:choose>
-                </xsl:variable>
-                
-                <!-- After this, we can use the variable in all following asserts -->
-                <xsl:apply-templates select="$fixtureWithMetaData/f:*/f:*" mode="generateAsserts">
-                    <xsl:with-param name="operationType" select="$operationType" tunnel="yes"/>
-                    <xsl:with-param name="resourceType" select="$resourceType" tunnel="yes"/>
-                    <xsl:with-param name="resourceIdExpression" select="$resourceIdExpression" tunnel="yes"/>
-                    <xsl:with-param name="parentLabel" select="$resourceCount"/>
-                </xsl:apply-templates>
-            </test>
+                            </xsl:with-param>
+                            <xsl:with-param name="stopTestOnFail" select="true()"/>
+                        </xsl:call-template>
+                        
+                        <!-- If the assert above passes, we know by definition that this variable will be evaluated. TestScripts will fail with an error if a variable cannot be evaluated, but to users it is not really clear what happens. The setup with the asserts above will prevent that hopefully. -->
+                        <variable>
+                            <name value="{$idVariable}"/>
+                            <description value="Resource.id for {$resourceType} {$resourceCount}"/>
+                            <expression>
+                                <xsl:attribute name="value">
+                                    <xsl:choose>
+                                        <xsl:when test="$operationType = 'read'">
+                                            <xsl:value-of select="concat($resourceType, '.id')"/>
+                                        </xsl:when>
+                                        <xsl:when test="$bundleExpression = 'true'">
+                                            <xsl:value-of select="concat($expression, '.id')"/>
+                                        </xsl:when>
+                                        <xsl:otherwise>
+                                            <xsl:value-of select="concat('Bundle.entry.resource.ofType(', $resourceType, ')', $expression, '.id')"/>
+                                        </xsl:otherwise>
+                                    </xsl:choose>
+                                </xsl:attribute>
+                            </expression>
+                            <sourceId value="{$requestResponseId}"/>
+                        </variable>
+                    </xsl:if>
+                    
+                    <xsl:variable name="resourceIdExpression">
+                        <xsl:choose>
+                            <xsl:when test="$scenario = 'server'">
+                                <xsl:value-of select="concat('.where(id = ''${', $idVariable, '}'')')"/>
+                            </xsl:when>
+                            <xsl:when test="$scenario = 'client' and $multipleExist = false()"/>
+                            <xsl:when test="$scenario = 'client' and $multipleExist = true()">
+                                <xsl:choose>
+                                    <xsl:when test="$bundleExpression = 'true'">
+                                        <xsl:message terminate="yes">NOT SUPPORTED</xsl:message>
+                                    </xsl:when>
+                                    <xsl:otherwise>
+                                        <xsl:value-of select="$expression"/>
+                                    </xsl:otherwise>
+                                </xsl:choose>
+                            </xsl:when>
+                        </xsl:choose>
+                    </xsl:variable>
+                    
+                    <!-- After this, we can use the variable in all following asserts -->
+                    <xsl:apply-templates select="$fixtureWithMetaData/f:*/f:*" mode="generateAsserts">
+                        <xsl:with-param name="operationType" select="$operationType" tunnel="yes"/>
+                        <xsl:with-param name="resourceType" select="$resourceType" tunnel="yes"/>
+                        <xsl:with-param name="resourceIdExpression" select="$resourceIdExpression" tunnel="yes"/>
+                        <xsl:with-param name="parentLabel" select="$resourceCount"/>
+                    </xsl:apply-templates>
+                </test>
+            </xsl:if>
         </xsl:for-each>
     </xsl:template>
     
