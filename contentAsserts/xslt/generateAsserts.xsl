@@ -812,7 +812,7 @@
                             <xsl:text>$')</xsl:text>
                         </xsl:when>
                         <xsl:otherwise>
-                            <xsl:value-of select="concat(' = ''', @value, '''')"/>
+                            <xsl:value-of select="concat(' = ''', nf:escape-string(@value), '''')"/>
                         </xsl:otherwise>
                     </xsl:choose>
                 </xsl:when>
@@ -1451,6 +1451,28 @@
                 <xsl:value-of select="$dataType"/>
             </xsl:otherwise>
         </xsl:choose>
+    </xsl:function>
+    
+    <!-- https://www.hl7.org/fhirpath/#string
+        Escape	Character
+        \'        Single-quote
+        \"        Double-quote
+        \`        Backtick
+        \r        Carriage Return
+        \n        Line Feed
+        \t        Tab
+        \f        Form Feed
+        \\        Backslash
+        \uXXXX    Unicode character, where XXXX is the hexadecimal representation of the character
+        
+        Does not handle form feed (not legal in xml) and 'any Unicode character'. 
+    -->
+    <xsl:function name="nf:escape-string" as="xs:string*">
+        <xsl:param name="in" as="xs:string*"/>
+        
+        <xsl:for-each select="$in">
+            <xsl:value-of select="replace($in, '(['&apos;`\r\n\t\\])', '\\$1')"/>
+        </xsl:for-each>
     </xsl:function>
     
     <xsl:template name="substring-before-last">
