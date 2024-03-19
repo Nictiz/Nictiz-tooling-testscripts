@@ -512,6 +512,9 @@
                                         <path path="${nts.file.reldir}"/>
                                         <map from="${nts.file.reldir.root}" to=""/>
                                         <map from="c:${nts.file.reldir.root}" to=""/>
+                                        <map from="h:${nts.file.reldir.root}" to=""/>
+                                        <map from="y:${nts.file.reldir.root}" to=""/>
+                                        <map from="z:${nts.file.reldir.root}" to=""/>
                                     </pathconvert>
                                     
                                     <if>
@@ -540,6 +543,9 @@
                                                         <path location="/@{target.dir}"/>
                                                         <map from="${nts.file.reldir.root}-" to=""/>
                                                         <map from="c:${nts.file.reldir.root}-" to=""/>
+                                                        <map from="h:${nts.file.reldir.root}" to=""/>
+                                                        <map from="y:${nts.file.reldir.root}" to=""/>
+                                                        <map from="z:${nts.file.reldir.root}-" to=""/>
                                                     </pathconvert>
                                                     <transform-NTS-file 
                                                         nts.file="@{nts.file}"
