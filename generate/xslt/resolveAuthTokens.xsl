@@ -14,7 +14,17 @@
 
     <!-- Load the JSON file as flat text in the patientTokenMap variable. It is assumed that the XSLT processor defers
          this operation unless/until it is actually needed. -->
-    <xsl:variable name="patientTokenMap" select="unparsed-text($tokensJsonFile)"/>
+    <!-- Windows f:// works, and file:/// does not. Unix/macOS the other way around. For Unix/macOS you may just strip file:/* and replace with /. -->
+    <xsl:variable name="patientTokenMap">
+        <xsl:choose>
+            <xsl:when test="unparsed-text-available($tokensJsonFile)">
+                <xsl:copy-of select="unparsed-text($tokensJsonFile)"/>
+            </xsl:when>
+            <xsl:when test="unparsed-text-available(replace($tokensJsonFile, '^file:/*', '/'))">
+                <xsl:copy-of select="unparsed-text(replace($tokensJsonFile, '^file:/*', '/'))"/>
+            </xsl:when>
+        </xsl:choose>
+    </xsl:variable>
     
     <!-- Resolve the authorization token from the JSON file. If multiple matching tokens exist, an error is thrown.
          @param patientResourceId - the resource id of the Patient resource for which the token is resolved.
@@ -26,10 +36,15 @@
         <xsl:param name="patientResourceId" as="xs:string"/>
         <xsl:param name="id" as="xs:string"/>
         <xsl:param name="failOnMissing" as="xs:boolean"/>
-
-        <xsl:if test="not($tokensJsonFile)">
-            <xsl:message terminate="yes">You're trying to resolve a token based on a Patient resource id, but didn't pass in a file containing the tokens using the tokensJsonFile parameter.</xsl:message>
-        </xsl:if>
+        
+        <xsl:choose>
+            <xsl:when test="empty($tokensJsonFile)">
+                <xsl:message terminate="yes">You're trying to resolve a token based on a Patient resource id, but didn't pass a file containing the tokens using the tokensJsonFile parameter.</xsl:message>
+            </xsl:when>
+            <xsl:when test="empty($patientTokenMap)">
+                <xsl:message terminate="yes">You're trying to resolve a token based on a Patient resource id, but didn't pass a valid file containing the tokens using the tokensJsonFile parameter: "<xsl:value-of select="$tokensJsonFile"/>"</xsl:message>
+            </xsl:when>
+        </xsl:choose>
         
         <!-- Try to find the "accessToken" key associated with "resourceId": patientId in the tokens JSON file.
              This is done in two steps: first the block with the relevant resourceId is identified, and then the
