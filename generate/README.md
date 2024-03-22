@@ -389,6 +389,10 @@ Because of the verbosity of the ANT build, the logging level is set to 1 (warnin
 
 ## Changelog
 
+### 2.7.1
+- Improved support for *nix/macOS based paths. Windows file://C:/ ... is file:/// ... on *nix/macOS
+- Improved support for running on Windows from H:, Y: and Z: drives which is more common in a VM than C:
+
 ### 2.7.0
 - Add support for rule outputs using the `<nts:output>` tag within `<nts:rule>`. WARNING: the `<nts:param>` tag for rules is renamed to `<nts:parameter>` as well!
 
