@@ -12,8 +12,18 @@
                                 NOTE: This parameter MUST be set before build.properties is read, so it should be set it in
                                       a derived build script, passed on the command line or the property files should be 
                                       explicitly loaded using ANT's -propertyfile flag.
+    - output.dir              : The folder where the output should be placed. See below for an explanation on folder structures.
+    - commoncomonents.dir     : The directory containing the common components.
     - lib.dir                 : The directory where all build dependency's will be placed. It's a good idea to add this to
                                 .gitignore.
+    - [components.dir]        : Optional - the directory containing the project components, relative to input.dir. Defaults to '_components'.
+    - [tokens.json]           : Optional - the relative path to a JSON file linking Patient resource id's to authorization tokens. This is a feature specifically for the mocked authorization mechanism on Touchstone.
+    - [loadresources.exclude] : Optional - A relative path to a folder containing the fixtures or to specific filenames to be excluded from 
+                                the LoadResources script. Multiple entries can be comma separated. `*` is accepted as a wildcard.
+    - [processfixtures.skip]  : Optional - If 'true' (or any other non-empty value) processing fixtures is skipped.
+    - [reference.subdir]      : Optional - The _name_ (not the path!) of the folder containing fixtures. Defaults to '_reference'.
+    - [targets]               : Optional - All targets to be built, including the 'default'-target. Defaults to '#default,[targets.additional]'. 
+    - [targets.additional]    : Optional - The additional targets to be built.
 
     Additionally, the following optional parameters may be used:
     - outputLevel: the verbosity level of the script output  
@@ -25,6 +35,7 @@
             build.properties: properties  
             InputFolder1/   : folder containing NTS files (may contain nested folders with more NTS files)
             InputFolder2/   : folder containing NTS files (may contain nested folders with more NTS files)
+            _components/    : the components specific for that project - may be overridden using the components.dir parameter
             _reference/     : the fixtures for that project
     The input folder structure will be recreated in the output directory, together with the _reference folder.
 
@@ -39,8 +50,18 @@
     <!-- Make the directories passed as parameters absolute (except for output.dir.abs, because we first need to
          guarantee that this folder exists. This is done in check-input. -->
     <property name="input.dir.abs"            location="${input.dir.temp}"/>
+    <property name="components.dir"           location="${input.dir.temp}/_components"/>
+    <property name="components.dir.abs"       location="${components.dir}"/>
+    <property name="commoncomponents.dir.abs" location="${commoncomponents.dir}"/>
+    <property name="reference.subdir"         value="_reference"/>
     
-    <!-- Try to read all project property's defined in build.properties -->
+    <!-- Construct a file URL to the tokens JSON file. -->
+    <pathconvert property="tokens.json.url" targetos="unix">
+        <path location="${tokens.json}"/>
+        <mapper type="regexp" from="(.*)" to="file:/\1"/>
+    </pathconvert>
+    
+    <!-- Try to read all project properties defined in build.properties -->
     <property file="${input.dir.abs}/build.properties"/>
     
     <!-- Set testscripttools.dir if it is not supplied by the including build file. -->
@@ -54,12 +75,47 @@
     <property name="dependency.dir" value="${lib.dir}/ant-dependencies"/>
     <property name="ivy.local.jar.file" value="${dependency.dir}/ivy.jar" />
     
-    <!-- Set the verbosity level of the output. A higher value means more verbose output -->
+    <property name="version.addition" value=""/>
+    
+    <property name="targets.additional" value=""/> <!-- By default, we don't build additional targets -->
+    <property name="targets" value="#default,${targets.additional}"/>
+    
+    <!-- Set the verbosity level of the output.
+         0 = error
+         1 = warn
+         2 = info
+         3 = verbose
+         4 = debug -->
     <property name="outputLevel" value="1" />
-    <script language="javascript"> <!-- Gives a script warning. It is advised to switch to Groovy, haven't figured that one out. -->
-        var verboseMode = project.getProperty( "outputLevel" )
-        project.getBuildListeners().firstElement().setMessageOutputLevel(verboseMode);
-    </script>
+    <!-- Can we do this smarter? Using ${groovy.jar} is not available until after Ivy has ran -->
+    <property name="groovy.jar.file" location="${dependency.dir}/jar/groovy-4.0.9.jar" />
+    <property name="groovy-ant.jar.file" location="${dependency.dir}/jar/groovy-ant-4.0.9.jar" />
+    
+    <!-- LOGGING -->
+    <target name="check-groovy">
+        <!-- We need Groovy, and we need Ivy to get that, but we also need this script to suppress Ivy output. 
+        So this part does not work the first time you run the script. After that, Groovy is available and the setting works, after outputting some Ant task names-->
+        <condition property="groovy.exists">
+            <and>
+                <available file="${groovy.jar.file}" type="file"/>
+                <available file="${groovy-ant.jar.file}" type="file"/>
+            </and>
+        </condition>
+    </target>
+    
+    <target name="set-logging" depends="check-groovy" if="groovy.exists">
+        <taskdef name="groovy" classname="org.codehaus.groovy.ant.Groovy">
+            <classpath>
+                <pathelement location="${groovy.jar.file}"/>
+                <pathelement location="${groovy-ant.jar.file}"/>
+            </classpath>
+        </taskdef>
+        <groovy>
+            <arg value="${outputLevel}"/>
+            int outputLevel = args[0] as int
+            project.getBuildListeners()[0].setMessageOutputLevel(outputLevel)
+        </groovy>
+    </target>
     
     <!-- IVY -->
     
@@ -102,12 +158,73 @@
             </classpath>
         </taskdef>
         <property name="ant.contrib.loaded" value="true" />
+        
+        <!-- If Groovy didn't exist before, it does now after Ivy, so now we can set the logging correctly even if it's the first time running -->
+        <if>
+            <not>
+                <isset property="groovy.exists"/>
+            </not>
+            <then>
+                <sequential>
+                    <!-- We can only set taskdef and groovy task after we are sure the jar exists, so unfortunately we have to repeat this. Cannot place it in a macrodef -->
+                    <taskdef name="groovy" classname="org.codehaus.groovy.ant.Groovy">
+                        <classpath>
+                            <pathelement location="${groovy.jar.file}"/>
+                            <pathelement location="${groovy-ant.jar.file}"/>
+                        </classpath>
+                    </taskdef>
+                    <groovy>
+                        <arg value="${outputLevel}"/>
+                        int outputLevel = args[0] as int
+                        project.getBuildListeners()[0].setMessageOutputLevel(outputLevel)
+                    </groovy>
+                </sequential>
+            </then>
+        </if>
     </target>
     
     <!-- BUILD XML -->
     
     <target name="check-input">
         <sequential>
+            <if>
+                <not>
+                    <and>
+                        <isset property="input.dir"/>
+                        <available file="${input.dir.abs}" type="dir"/>
+                    </and>
+                </not>
+                <then>
+                    <fail message="Please set 'input.dir' to a directory containing the project files."/>
+                </then>
+            </if>
+            
+            <if>
+                <not>
+                    <isset property="output.dir"/>
+                </not>
+                <then>
+                    <fail message="Please set 'output.dir' to the directory where the output should be placed."/>
+                </then>
+            </if>
+            <!-- In order to construct output.dir.abs, the directory needs to exist, so we create it here and
+                 then set output.dir.abs -->
+            <mkdir dir="${output.dir}"/>
+            <property name="output.dir.abs" location="${output.dir}"/>
+            
+            <if>
+                <not>
+                    <and>
+                        <isset property="commoncomponents.dir"/>
+                        <available file="${commoncomponents.dir.abs}" type="dir"/>
+                    </and>
+                </not>
+                <then>
+                    <echo message="commoncomponents.dir = ${commoncomponents.dir.abs}"/>
+                    <fail message="Please set 'commoncomponents.dir' to the directory that holds the folder with common components."/>
+                </then>
+            </if>
+            
             <if>
                 <not>
                     <and>
@@ -155,7 +272,7 @@
         </sequential>
     </macrodef>
     
-    <target name="build" depends="load, check-input">
+    <target name="build" depends="set-logging, load, check-input">
         
         <fileset id="nts.files" dir="${input.dir.temp.abs}">
             <include name="*/**/*.xml"/>
