@@ -54,13 +54,44 @@
     <property name="dependency.dir" value="${lib.dir}/ant-dependencies"/>
     <property name="ivy.local.jar.file" value="${dependency.dir}/ivy.jar" />
     
-    <!-- Set the verbosity level of the output. A higher value means more verbose output -->
+    <!-- LOGGING -->
+
+    <!-- Set the verbosity level of the output.
+         0 = error
+         1 = warn
+         2 = info
+         3 = verbose
+         4 = debug -->
     <property name="outputLevel" value="1" />
-    <script language="javascript"> <!-- Gives a script warning. It is advised to switch to Groovy, haven't figured that one out. -->
-        var verboseMode = project.getProperty( "outputLevel" )
-        project.getBuildListeners().firstElement().setMessageOutputLevel(verboseMode);
-    </script>
+    <!-- Can we do this smarter? Using ${groovy.jar} is not available until after Ivy has ran -->
+    <property name="groovy.jar.file" location="${dependency.dir}/jar/groovy-4.0.9.jar" />
+    <property name="groovy-ant.jar.file" location="${dependency.dir}/jar/groovy-ant-4.0.9.jar" />
     
+    <target name="check-groovy">
+        <!-- We need Groovy, and we need Ivy to get that, but we also need this script to suppress Ivy output. 
+        So this part does not work the first time you run the script. After that, Groovy is available and the setting works, after outputting some Ant task names-->
+        <condition property="groovy.exists">
+            <and>
+                <available file="${groovy.jar.file}" type="file"/>
+            <available file="${groovy-ant.jar.file}" type="file"/>
+            </and>
+        </condition>
+    </target>
+
+    <target name="set-logging" depends="check-groovy" if="groovy.exists">
+        <taskdef name="groovy" classname="org.codehaus.groovy.ant.Groovy">
+            <classpath>
+                <pathelement location="${groovy.jar.file}"/>
+                <pathelement location="${groovy-ant.jar.file}"/>
+            </classpath>
+        </taskdef>
+        <groovy>
+            <arg value="${outputLevel}"/>
+            int outputLevel = args[0] as int
+            project.getBuildListeners()[0].setMessageOutputLevel(outputLevel)
+        </groovy>
+    </target>     
+
     <!-- IVY -->
     
     <target name="check-ivy">
