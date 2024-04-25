@@ -58,8 +58,9 @@
     <!-- Construct a file URL to the tokens JSON file. -->
     <pathconvert property="tokens.json.url" targetos="unix">
         <path location="${tokens.json}"/>
-        <!-- output needs 3 slashes, i.e. file:/// -->
-        <mapper type="regexp" from="(.*)" to="file://\1"/>
+        <!-- Output needs 3 slashes, i.e. file:///. For win style paths that start with a drive letter, simply prepend
+             file:///. For unix style paths that start with a slash, only the part after the slash is taken. -->
+        <mapper type="regexp" from="\/?(.*)" to="file:///\1"/>
     </pathconvert>
     
     <!-- Try to read all project property's defined in build.properties -->
