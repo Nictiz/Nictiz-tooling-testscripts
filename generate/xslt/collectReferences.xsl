@@ -7,14 +7,16 @@
     <xsl:output method="text"/>
     <xsl:strip-space elements="*"/>
 
-    <!-- Create a de-duplicated list of all fixtures and rules referenced from a TestScript resource, formatted as 
-         strings that can be read by Ant. Reading this output will result in the property's "fixtures" and "rules",
-         each containing a list of files separated by semicolons.
-         The parameters "additionalFixtures" and "additionalRules" can be used to specify lists of additional fixtures
-         and rules (in the same format), so that this stylesheet can be used iteratively.
-         The parameter "includesDir" can be given as the part that should be removed from the fixture/rules path. -->
+    <!-- Create a de-duplicated list of all fixtures and rules referenced from the TestScript resource in a folder and
+         its subfolders, formatted as strings that can be read by Ant. Reading that output by Ant will result in the
+         property's "fixtures" and "rules", each containing a list of files separated by semicolons.
+         Parameters:
+         - inputDir: the directory containing TestScript resources, directly and in subdirectory's.
+         - referencesFile: the path to the resulting Ant propertyfile.
+         - includesDir: can be given as the part that should be removed from the fixture/rules path.
+    -->
     
-    <xsl:param name="outputDir" required="yes"/>
+    <xsl:param name="inputDir" required="yes"/>
     <xsl:param name="referencesFile" required="yes"/>
     <xsl:param name="includesDir" select="'../_reference/'"/>
     
@@ -30,9 +32,7 @@
     </xsl:variable>
 
     <xsl:template match="/" name="collectReferencesInFolder">
-        <xsl:param name="testScripts" select="collection(concat('file:///', $outputDir, '?select=*.xml;recurse=yes'))"/>
-        
-        <xsl:variable name="referencesFileText" select="unparsed-text(concat('file:///', fn:translate($referencesFile, '\', '/')))"/>
+        <xsl:param name="testScripts" select="collection(concat('file:///', $inputDir, '?select=*.xml;recurse=yes'))"/>
         
         <xsl:variable name="fixtures" as="xs:string*">
             <xsl:for-each select="$testScripts//f:fixture">

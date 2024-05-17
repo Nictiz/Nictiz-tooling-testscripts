@@ -255,7 +255,7 @@
         </sequential>
     </macrodef>
     
-    <macrodef name="collect-references" description="Analyze a FHIR TestScript for the fixtures and rules used, and store them in a file.">
+    <macrodef name="collect-references" description="Analyze a FHIR TestScript folder for the fixtures and rules used, and store them in a file.">
         <attribute name="references.file" description="The file to store the list of references fixtures and rules to, formatted as an Ant property file with the property's 'fixtures' and 'rules', each containing a list of files separated by a semicolon. If there are already fixtures/rules listed in this file, the new ones are appended."/>
         
         <sequential>
@@ -263,7 +263,7 @@
                 <classpath location="${Saxon-HE.jar}"/>
                 <arg value="-it:collectReferencesInFolder" />
                 <arg value="-xsl:${xslt.dir}/collectReferences.xsl" />
-                <arg value="outputDir=${output.dir.abs}"/>
+                <arg value="inputDir=${output.dir.abs}"/>
                 <arg value="referencesFile=@{references.file}"/>
                 <arg value="includesDir=../${reference.subdir}/"/>
             </java>
