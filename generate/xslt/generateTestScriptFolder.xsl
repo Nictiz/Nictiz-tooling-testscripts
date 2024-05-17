@@ -10,7 +10,10 @@
     <xsl:output method="xml" indent="yes"/>
     <xsl:strip-space elements="*"/>
     
+    <!-- Directory containing the NTS files to be processed. -->
     <xsl:param name="inputDir" required="yes"/>
+
+    <!-- The directory where the resulting TestScripts should be stored. -->
     <xsl:param name="outputDir" required="yes"/>
         
     <!-- The path to the base folder of fixtures. -->
@@ -41,14 +44,13 @@
         <xsl:for-each select="collection(concat('file:///', $inputDir, '?select=*.xml;recurse=yes'))">
             <!-- Exclude everything in a folder that starts with '_'. Can we do this in the collection query above? -->
             <xsl:if test="not(contains(base-uri(), '/_'))">
-                <!-- Mirror logic previously present in ANT -->
-                
                 <!-- Get the relative directory of the input file within the base directory -->
                 <xsl:variable name="nts.file.dir" select="nts:_substring-before-last(base-uri(), '/')"/>
                 <xsl:variable name="nts.file.reldir" select="fn:substring-after($nts.file.dir, translate($inputDir, '\', '/'))"/>
                 
-                <!-- Now extract the 'root' dir of the relative path, where additional targets may be
-                defined, and any subpaths following it. The 'root' is the largest combination of dir and subdirs that are defined in targets.additional -->
+                <!-- Now extract the 'root' dir of the relative path, where additional targets may be defined, and any
+                     subpaths following it. The 'root' is the largest combination of dir and subdirs that are defined
+                     in targets.additional -->
                 <xsl:variable name="nts.file.reldir.root">
                     
                     <xsl:for-each select="fn:tokenize($nts.file.reldir, '/')">
@@ -623,8 +625,7 @@
     </xsl:template>
 
     <!-- Expand a nts:include element that uses absolute references with href.
-         It will read all f:parts elements in the referenced file and process them further.
-         param inputDir is the base to include files relative to. --> 
+         It will read all f:parts elements in the referenced file and process them further. --> 
     <xsl:template match="nts:include[@href]" mode="expand">
         <xsl:param name="inclusionParameters" tunnel="yes" as="element(nts:with-parameter)*"/>
         
