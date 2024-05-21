@@ -14,6 +14,7 @@
         <dirset id="input.dirset" dir="${basedir}" includes="${input.dirs}"/>
     </target>
     
+    <!-- Note: set-logging needs to be called explicitly here to circumvent some ANT inclusion dependency issues. -->
     <target name="build" depends="get-input-dirs, main.set-logging, main.load">
         <for  param="input.dir">
             <dirset refid="input.dirset"/>

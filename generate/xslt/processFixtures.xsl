@@ -14,7 +14,11 @@
     <xsl:strip-space elements="*"/>
     
     <!-- Checks fixtures for the nts:includeFixture element to include fixtures in other fixtures. If this element is applied in batch or transaction Bundles, Resource.id is removed and (after all fixtures are included) fullUrl and references are rewritten -->
+
+    <!-- Directory containing the fixtures to be processed. -->
     <xsl:param name="inputDir" required="yes"/>
+
+    <!-- The directory where the resulting fixtures should be stored. -->
     <xsl:param name="outputDir" required="yes"/>
     
     <!-- The relative path to the folder of fixtures -->

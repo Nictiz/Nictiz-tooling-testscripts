@@ -231,7 +231,7 @@
     
     <macrodef name="transform-NTS-folder" description="Custom task to perform the transformation of a folder with NTS files">
         <attribute name="references.file" description="The (temporary) text file to collect the list of fixtures to. See the collect-fixtures macrodef for more information."/>
-        <attribute name="target.dir" default="#default" description="The name of the target to build; choose '#default' to build the default target."/>
+        <attribute name="target" default="#default" description="The name of the target to build; choose '#default' to build the default target."/>
         
         <sequential>
             <propertyregex property="components.dir.abs.normalized" input="${components.dir.abs}" regexp="[\\]" replace="/" global="true" defaultValue="${components.dir.abs}"/>
@@ -247,7 +247,7 @@
                 <arg value="referenceDir=${reference.dir}"/>
                 <arg value="commonComponentFolder=${commoncomponents.dir.abs.normalized}"/>
                 <arg value="projectComponentFolder=${components.dir.abs.normalized}"/>
-                <arg value="target.dir=@{target.dir}"/>
+                <arg value="target.dir=@{target}"/>
                 <arg value="versionAddition=${version.addition}"/>
                 <arg value="tokensJsonFile=${tokens.json.url}"/>
                 <arg value="referencesFile=@{references.file}"/> 
@@ -255,7 +255,7 @@
         </sequential>
     </macrodef>
     
-    <macrodef name="collect-references" description="Analyze a FHIR TestScript for the fixtures and rules used, and store them in a file.">
+    <macrodef name="collect-references" description="Analyze a FHIR TestScript folder for the fixtures and rules used, and store them in a file.">
         <attribute name="references.file" description="The file to store the list of references fixtures and rules to, formatted as an Ant property file with the property's 'fixtures' and 'rules', each containing a list of files separated by a semicolon. If there are already fixtures/rules listed in this file, the new ones are appended."/>
         
         <sequential>
@@ -263,7 +263,7 @@
                 <classpath location="${Saxon-HE.jar}"/>
                 <arg value="-it:collectReferencesInFolder" />
                 <arg value="-xsl:${xslt.dir}/collectReferences.xsl" />
-                <arg value="outputDir=${output.dir.abs}"/>
+                <arg value="inputDir=${output.dir.abs}"/>
                 <arg value="referencesFile=@{references.file}"/>
                 <arg value="includesDir=../${reference.subdir}/"/>
             </java>
@@ -437,7 +437,7 @@
                             </if>
                             
                             <transform-NTS-folder
-                                target.dir="@{target.dir}"
+                                target="@{target.dir}"
                                 references.file="${references.file}"/>
                             <collect-references references.file="${references.file}"/>
                         </sequential>
