@@ -386,6 +386,16 @@
         </sequential>
     </macrodef>
     
+    <!-- Transformations are done on a copy of the files in a temporary dir, before the final output is copied to the destination -->
+    <target name="setup-tmp-dir">
+        <sequential>
+            <tempfile property="input.dir.temp.abs" destDir="${java.io.tmpdir}" prefix="build"/>
+            <copy todir="${input.dir.temp.abs}">
+                <fileset dir="${input.dir.abs}"/>
+            </copy>
+        </sequential>
+    </target>
+
     <target name="cleanBuildDir">
         <sequential>
             <echo message="Deleting previous output dir"/>
@@ -393,7 +403,7 @@
         </sequential>
     </target>
     
-    <target name="build" depends="set-logging, load, check-input, cleanBuildDir">        
+    <target name="build" depends="set-logging, load, check-input, setup-tmp-dir, cleanBuildDir">        
         <property name="reference.dir" location="${input.dir.temp.abs}/${reference.subdir}"/>
         
         <!-- Set default loadresources.exclude to nothing -->
