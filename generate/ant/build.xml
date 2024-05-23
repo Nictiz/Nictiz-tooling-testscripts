@@ -250,6 +250,7 @@
                 <arg value="target.dir=@{target}"/>
                 <arg value="versionAddition=${version.addition}"/>
                 <arg value="tokensJsonFile=${tokens.json.url}"/>
+                <arg value="fhirVersion=${fhir.version}"/>
                 <arg value="referencesFile=@{references.file}"/> 
             </java>
         </sequential>
