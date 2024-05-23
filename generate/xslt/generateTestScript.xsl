@@ -22,6 +22,7 @@
 
     <xsl:include href="_processInclusions.xsl"/>
     <xsl:include href="_expand.xsl"/>
+    <xsl:include href="../../contentAsserts/xslt/generateAsserts.xsl"/>
     <xsl:include href="_filter.xsl"/>
 
     <!-- The main template, which will call the remaining templates. -->
@@ -73,11 +74,12 @@
             </xsl:for-each>
         </xsl:variable>
 
-        <!-- The process to generate the final TestScript resources consists of three steps:
+        <!-- The process to generate the final TestScript resources consists of multiple steps:
              1. First, all inclusions (and their recursive inclusions) are processed to produce a single document.
                 This is done by the templates with the "processInclusions" mode.
-             2. Then, all (other) nts:tags are "expanded" in-place to the corresponding FHIR TestScript snippet. This
-                is done by the templates with the "expand" mode.
+             2. Then, all (other) nts:tags except nts:contentAsserts are "expanded" in-place to the corresponding
+                FHIR TestScript snippet. This is done by the templates with the "expand" mode.
+             4. Then the content asserts are generated. This is a separate step, because it is quite involved.
              3. At last, the result is filtered: all the resulting bits are de-duplicated, put in the proper order,
                 and all required metadata is added. This is done by the templates with the "filter" mode.
         -->
@@ -100,13 +102,21 @@
             </xsl:apply-templates>
         </xsl:variable>
     
-        <!-- Step 3: Filter the expanded TestScript and produce the final output. This will add the required elements
+        <!-- Step 3: generate the content asserts --> 
+        <xsl:variable name="withContentAsserts">
+            <xsl:apply-templates mode="generateContentAsserts" select="$expanded">
+                <xsl:with-param name="scenario" select="$scenario" tunnel="yes"/>
+                <xsl:with-param name="basePath" select="$basePath" tunnel="yes"/>
+            </xsl:apply-templates>
+        </xsl:variable>
+
+        <!-- Step 4: Filter the expanded TestScript and produce the final output. This will add the required elements
              and put everything in the right position --> 
-        <xsl:apply-templates mode="filter" select="$expanded">
-            <xsl:with-param name="fixtures" select="$expanded//f:fixture" tunnel="yes"/>
-            <xsl:with-param name="profiles" select="$expanded//f:profile[not(ancestor::f:origin | ancestor::f:destination)]" tunnel="yes"/>
-            <xsl:with-param name="variables" select="$expanded//f:variable" tunnel="yes"/>
-            <xsl:with-param name="rules" select="$expanded//f:extension[@url = 'http://touchstone.aegis.net/touchstone/fhir/testing/StructureDefinition/testscript-rule']" tunnel="yes"/>
+        <xsl:apply-templates mode="filter" select="$withContentAsserts">
+            <xsl:with-param name="fixtures" select="$withContentAsserts//f:fixture" tunnel="yes"/>
+            <xsl:with-param name="profiles" select="$withContentAsserts//f:profile[not(ancestor::f:origin | ancestor::f:destination)]" tunnel="yes"/>
+            <xsl:with-param name="variables" select="$withContentAsserts//f:variable" tunnel="yes"/>
+            <xsl:with-param name="rules" select="$withContentAsserts//f:extension[@url = 'http://touchstone.aegis.net/touchstone/fhir/testing/StructureDefinition/testscript-rule']" tunnel="yes"/>
             <xsl:with-param name="scenario" select="$scenario" tunnel="yes"/>
             <xsl:with-param name="expectedResponseFormat" select="$expectedResponseFormat" tunnel="yes"/>
         </xsl:apply-templates>

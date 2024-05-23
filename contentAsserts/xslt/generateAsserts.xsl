@@ -11,17 +11,8 @@
     <xsl:output method="xml" indent="yes"/>
     <xsl:strip-space elements="*"/>
         
-    <!-- The path to the base folder of fixtures, relative to the output. Defaults to '../_reference'. -->
-    <xsl:param name="referenceBase" select="'../_reference/'"/>
-    
-    <!-- FHIR version to be able to retrieve the correct FHIR core resource type StructureDefinition -->
-    <xsl:param name="fhirVersion">
-        <xsl:choose>
-            <xsl:when test="starts-with(lower-case(f:TestScript/f:version/@value), 'stu3')">STU3</xsl:when>
-            <xsl:when test="starts-with(lower-case(f:TestScript/f:version/@value), 'r4')">R4</xsl:when>
-            <xsl:otherwise>UNK</xsl:otherwise>
-        </xsl:choose>
-    </xsl:param>
+    <!-- FHIR version to be able to retrieve the correct FHIR core resource type StructureDefinition, euther 'stu3' or 'r4'. -->
+    <xsl:param name="fhirVersion"/>
     
     <!-- Fixed, but could be dependant on fhirVersion -->
     <xsl:variable name="simpleDataTypes" as="xs:string*">
@@ -29,9 +20,11 @@
             <xsl:when test="lower-case($fhirVersion) = 'stu3'">
                 <xsl:sequence select="('boolean','integer','string','decimal','uri','base64Binary','instant','date','dateTime','time','code','oid','id','markdown','unsignedInt','positiveInt')"/>
             </xsl:when>
-            <xsl:otherwise>
-                <!-- R4 -->
+            <xsl:when test="lower-case($fhirVersion) = 'r4'">
                 <xsl:sequence select="('boolean','integer','string','decimal','uri','url','canonical','base64Binary','instant','date','dateTime','time','code','oid','id','markdown','unsignedInt','positiveInt','uuid')"/>
+            </xsl:when>
+            <xsl:otherwise>
+                <xsl:message terminate="yes">fhirVersion is not set. This parameter is required for generating content asserts.</xsl:message>
             </xsl:otherwise>
         </xsl:choose>
     </xsl:variable>
@@ -46,25 +39,9 @@
     
     <xsl:param name="libPath" select="concat(string-join(tokenize(static-base-uri(), '/')[fn:position() lt last() - 1], '/'), '/lib/')"/>
     
-    <!-- The main template, which will call the remaining templates. -->
-    <xsl:template name="generateAsserts" match="f:TestScript">
-        <xsl:if test="not(lower-case($fhirVersion) = ('stu3', 'r4'))">
-            <xsl:message terminate="yes">FHIR Version <xsl:value-of select="$fhirVersion"/> not supported or not set.</xsl:message>
-        </xsl:if>
-        <xsl:variable name="scenario" select="@nts:scenario"/>
-        <xsl:copy>
-            <xsl:apply-templates select="@*"/>
-            <!-- Copy everything blindly except test elements -->
-            <xsl:apply-templates select="*[not(self::f:test) and not(self::f:teardown)]"/>
-            <xsl:apply-templates select="f:test">
-                <xsl:with-param name="scenario" select="$scenario" tunnel="yes"/>
-            </xsl:apply-templates>
-            <xsl:apply-templates select="f:teardown"/>
-        </xsl:copy>
-    </xsl:template>
-    
-    <xsl:template match="f:test[nts:contentAsserts]">
+    <xsl:template match="f:test[//nts:contentAsserts]" mode="generateContentAsserts">
         <xsl:param name="scenario" tunnel="yes"/>
+        <xsl:param name="referenceDirAsUrl" tunnel="yes"/> <!-- absolute file:/// URL for the base path to the fixtures -->
         <xsl:variable name="requestResponseId">
             <xsl:choose>
                 <xsl:when test="nts:include[@value = ('medmij/test.xis.successfulSearch','test.server.successfulSearch')]/@responseId">
@@ -109,17 +86,12 @@
                 <xsl:with-param name="requestResponseId" select="$requestResponseId" tunnel="yes"/>
             </xsl:apply-templates>
         </xsl:copy>
-        
-        <xsl:variable name="basePath">
-            <xsl:variable name="tokenize" select="tokenize(base-uri(), '/')"/>
-            <xsl:value-of select="string-join($tokenize[position() lt last()], '/')"/>
-        </xsl:variable>
-        
+                
         <!-- Load all fixtures -->
         <xsl:variable name="fixtures">
             <xsl:for-each select="nts:contentAsserts">
                 <xsl:variable name="href" select="@href"/>
-                <xsl:variable name="fixtureUri" select="concat($basePath, '/', $referenceBase, $href)"/>
+                <xsl:variable name="fixtureUri" select="concat($referenceDirAsUrl, '/', $href)"/>
                 <xsl:choose>
                     <xsl:when test="doc-available($fixtureUri)">
                         <nts:fixture href="{$href}">
@@ -1355,7 +1327,7 @@
             </xsl:when>
             <xsl:otherwise>
                 <xsl:copy>
-                    <xsl:apply-templates select="@*"/>
+                    <xsl:apply-templates select="@*" mode="addMetaData"/>
                     <xsl:attribute name="nts:dataType" select="$dataType"/>
                     <xsl:attribute name="nts:max" select="$max"/>
                     <xsl:attribute name="nts:elementPath" select="$elementPath"/>
@@ -1395,12 +1367,24 @@
         </xsl:choose>
     </xsl:template>
     
-    <xsl:template match="node()|@*" mode="#all">
+    <xsl:template match="node()|@*" mode="generateContentAsserts">
+        <xsl:copy>
+            <xsl:apply-templates select="node()|@*" mode="#current"/>
+        </xsl:copy>
+    </xsl:template>
+
+    <xsl:template match="node()|@*" mode="addMetaData">
         <xsl:copy>
             <xsl:apply-templates select="node()|@*" mode="#current"/>
         </xsl:copy>
     </xsl:template>
     
+    <xsl:template match="node()|@*" mode="modifyNts">
+        <xsl:copy>
+            <xsl:apply-templates select="node()|@*" mode="#current"/>
+        </xsl:copy>
+    </xsl:template>
+
     <xsl:function name="nf:get-element-base" as="xs:string">
         <xsl:param name="localName"/>
         <xsl:variable name="output">

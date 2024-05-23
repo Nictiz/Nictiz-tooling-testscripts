@@ -15,7 +15,7 @@
     <!-- Include the machinery to resolve auth tokens from a JSON file. This adds the parameter tokensJSONFile, which
          should hold an URL. -->
     <xsl:include href="resolveAuthTokens.xsl"/>
-       
+    
     <!-- Expand a nts:profile element to a FHIR profile element -->
     <xsl:template match="nts:profile" mode="expand">
         <profile id="{@id}">

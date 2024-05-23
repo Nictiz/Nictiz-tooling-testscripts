@@ -121,6 +121,7 @@
                                     <xsl:apply-templates select="$ntsFile">
                                         <xsl:with-param name="target" select="$target" tunnel="yes"/>
                                         <xsl:with-param name="referenceBase" select="$referenceBase" tunnel="yes"/>
+                                        <xsl:with-param name="referenceDirAsUrl" select="concat('file:///', translate($referenceDir, '\', '/'))" tunnel="yes"/>
                                         <xsl:with-param name="expectedResponseFormat" select="." tunnel="yes"/>
                                     </xsl:apply-templates>
                                 </xsl:variable>
