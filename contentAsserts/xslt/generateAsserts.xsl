@@ -29,13 +29,9 @@
         </xsl:choose>
     </xsl:variable>
     <xsl:variable name="complexDataTypes" select="('Annotation','Attachment','Coding','CodeableConcept','Quantity','SimpleQuantity','Distance','Age','Count','Duration','Money','Range','Ratio','Period','SampledData','Identifier','HumanName','Address','ContactPoint','Timing','Signature','Reference','Narrative',(:'Extension',:)'Meta','Dosage')"/>
-    
+    <xsl:variable name="dataTypes" select="($simpleDataTypes, $complexDataTypes)"/> 
     <!-- This list of dataTypes is kind of arbitrary. I guess you can say that types like Reference or Quantity are somewhat compact (like max. 4 or 5 children?) that convey meaning _together_. The dataTypes below are more like bundles of elements that contain multiple individual pieces of information -->
     <xsl:variable name="containerTypes" select="('Address','BackboneElement','Element','ContactPoint','Dosage','HumanName','Timing')"/>
-    
-    <xsl:variable name="dataTypes" select="($simpleDataTypes, $complexDataTypes)"/>
-    <xsl:variable name="dataTypesLower" select="for $i in $dataTypes return lower-case($i)"/>
-    <xsl:variable name="simpleDataTypesLower" select="for $i in $simpleDataTypes return lower-case($i)"/>
     
     <xsl:param name="libPath" select="concat(string-join(tokenize(static-base-uri(), '/')[fn:position() lt last() - 1], '/'), '/lib/')"/>
     
@@ -1401,6 +1397,7 @@
     =================
     -->
 
+    <!-- Cut off the data type from an element name in a fixture. -->
     <xsl:function name="nf:get-element-base" as="xs:string">
         <xsl:param name="localName"/>
         <xsl:variable name="output">
@@ -1408,7 +1405,7 @@
                 <xsl:matching-substring>
                     <xsl:value-of select="substring-before($localName, regex-group(1))"/>
                     <xsl:choose>
-                        <xsl:when test="lower-case(regex-group(1)) = $dataTypesLower"/>
+                        <xsl:when test="index-of($dataTypes, regex-group(1), 'http://www.w3.org/2005/xpath-functions/collation/html-ascii-case-insensitive') gt 0"/>
                         <xsl:otherwise>
                             <xsl:value-of select="nf:get-element-base(regex-group(1))"/>
                         </xsl:otherwise>
@@ -1416,7 +1413,7 @@
                 </xsl:matching-substring>
             </xsl:analyze-string>
         </xsl:variable>
-        
+
         <!-- Always return _something_ -->
         <xsl:choose>
             <xsl:when test="string-length($output) gt 0">
@@ -1427,25 +1424,22 @@
             </xsl:otherwise>
         </xsl:choose>
     </xsl:function>
-    
+
+    <!-- Convert a datatype with arbitrary casing to the correct case. -->
     <xsl:function name="nf:datatype-case" as="xs:string">
         <xsl:param name="dataType"/>
         <xsl:choose>
-            <xsl:when test="lower-case($dataType) = $simpleDataTypesLower">
+            <xsl:when test="string-length($dataType) gt 0">
+                <xsl:variable name="indices" select="fn:index-of($dataTypes, $dataType, 'http://www.w3.org/2005/xpath-functions/collation/html-ascii-case-insensitive')"/>
                 <xsl:choose>
-                    <xsl:when test="lower-case($dataType) = 'datetime'">
-                        <xsl:text>dateTime</xsl:text>
-                    </xsl:when>
-                    <xsl:when test="lower-case($dataType) = 'unsignedint'">
-                        <xsl:text>unsignedInt</xsl:text>
-                    </xsl:when>
-                    <xsl:when test="lower-case($dataType) = 'positiveint'">
-                        <xsl:text>positiveInt</xsl:text>
+                    <xsl:when test="count($indices) = 1">
+                        <xsl:value-of select="$dataTypes[$indices]"/>
                     </xsl:when>
                     <xsl:otherwise>
-                        <xsl:value-of select="lower-case($dataType)"/>
+                        <xsl:message select="concat('Encountered unknown datatype ', $dataType)"/>
+                        <xsl:value-of select="$dataType"/>
                     </xsl:otherwise>
-                </xsl:choose>
+                </xsl:choose>    
             </xsl:when>
             <xsl:otherwise>
                 <xsl:value-of select="$dataType"/>
