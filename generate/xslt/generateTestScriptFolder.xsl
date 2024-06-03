@@ -16,9 +16,9 @@
     <!-- The directory where the resulting TestScripts should be stored. -->
     <xsl:param name="outputDir" required="yes"/>
         
-    <!-- The path to the base folder of fixtures. -->
+    <!-- The path to the base folder of fixtures, as an absolute path. -->
     <xsl:param name="referenceDir" required="yes"/>
-    
+
     <!-- An NTS input file can nominate elements to only be included in specific named targets using the nts:only-in
          attribute. The "target.dir" parameter (which defaults to '#default' if no other target is specified) contains
          the full target directory defined in property 'targets.additional' (comma separated) in the build properties.
@@ -120,9 +120,8 @@
                                 <xsl:variable name="testScript">
                                     <xsl:apply-templates select="$ntsFile">
                                         <xsl:with-param name="target" select="$target" tunnel="yes"/>
-                                        <xsl:with-param name="referenceBase" select="$referenceBase" tunnel="yes"/>
-                                        <xsl:with-param name="referenceDirAsUrl" select="concat('file:///', translate($referenceDir, '\', '/'))" tunnel="yes"/>
                                         <xsl:with-param name="expectedResponseFormat" select="." tunnel="yes"/>
+                                        <xsl:with-param name="referenceBase" select="$referenceBase" tunnel="yes"/>
                                     </xsl:apply-templates>
                                 </xsl:variable>
                                 <xsl:result-document href="{concat($testscript.path, $testscript.filename)}">

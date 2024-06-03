@@ -10,7 +10,11 @@
     <xsl:output method="xml" indent="yes"/>
     <xsl:strip-space elements="*"/>
        
-    <!-- This file contains all the templates needed for the filtering step. All templates here have mode "filter". -->
+    <!--
+        This file contains all the templates needed for the filtering step. All templates here have mode "filter".
+        It expects the following global parameters to be set:
+        - versionAddition
+    -->
 
     <!-- Match the root to organize and/or edit all children -->
     <xsl:template match="f:TestScript" mode="filter">

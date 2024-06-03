@@ -10,7 +10,12 @@
     <xsl:output method="xml" indent="yes"/>
     <xsl:strip-space elements="*"/>
 
-    <!-- This file contains all the templates needed for the inclusion processing step. All templates here have mode "processInclusions". -->
+    <!--
+        This file contains all the templates needed for the inclusion processing step. All templates here have mode "processInclusions".
+        It expects the following global parameters to be set:
+        - projectComponentFolder
+        - commonComponentFolder
+    -->
     
     <!-- Expand a nts:include element that uses absolute references with href.
          It will read all f:parts elements in the referenced file and process them further. --> 

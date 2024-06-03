@@ -10,7 +10,13 @@
     exclude-result-prefixes="#all">
     <xsl:output method="xml" indent="yes"/>
     <xsl:strip-space elements="*"/>
-        
+
+    <!--
+        This file contains all the templates needed for the content assert generation step.
+        It expects the following global parameters to be set:
+        - referenceDir
+    -->
+
     <!-- FHIR version to be able to retrieve the correct FHIR core resource type StructureDefinition, euther 'stu3' or 'r4'. -->
     <xsl:param name="fhirVersion"/>
     
@@ -39,7 +45,6 @@
          result for each nts:contentAsserts will be an additional sibling test. -->
     <xsl:template match="f:test[//nts:contentAsserts]" mode="generateContentAsserts">
         <xsl:param name="scenario" tunnel="yes"/>
-        <xsl:param name="referenceDirAsUrl" tunnel="yes"/> <!-- absolute file:/// URL for the base path to the fixtures -->
         
         <!-- Construct the variables for the test -->
         <xsl:variable name="requestResponseId">
@@ -73,7 +78,7 @@
         <xsl:variable name="fixtures">
             <xsl:for-each select="nts:contentAsserts">
                 <xsl:variable name="href" select="@href"/>
-                <xsl:variable name="fixtureUri" select="concat($referenceDirAsUrl, '/', $href)"/>
+                <xsl:variable name="fixtureUri" select="concat('file:///', translate($referenceDir, '\', '/'), '/', $href)"/>
                 <xsl:choose>
                     <xsl:when test="doc-available($fixtureUri)">
                         <nts:fixture href="{$href}">
