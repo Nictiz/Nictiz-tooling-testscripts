@@ -39,13 +39,13 @@
     <!-- This list of dataTypes is kind of arbitrary. I guess you can say that types like Reference or Quantity are somewhat compact (like max. 4 or 5 children?) that convey meaning _together_. The dataTypes below are more like bundles of elements that contain multiple individual pieces of information -->
     <xsl:variable name="containerTypes" select="('Address','BackboneElement','Element','ContactPoint','Dosage','HumanName','Timing')"/>
     
-    <xsl:param name="libPath" select="concat(string-join(tokenize(static-base-uri(), '/')[fn:position() lt last() - 1], '/'), '/lib/')"/>
+    <xsl:param name="libPath" select="resolve-uri(concat('../StructureDefinitions/', lower-case($fhirVersion)), static-base-uri())"/>
     
     <!-- The "main" template. It matches not on nts:contentAsserts itself but on the containing test, because the
          result for each nts:contentAsserts will be an additional sibling test. -->
     <xsl:template match="f:test[//nts:contentAsserts]" mode="generateContentAsserts">
         <xsl:param name="scenario" tunnel="yes"/>
-        
+
         <!-- Construct the variables for the test -->
         <xsl:variable name="requestResponseId">
             <xsl:choose>
@@ -122,7 +122,7 @@
                 <xsl:message terminate="yes">TOEDIT: <xsl:value-of select="$testName"/> - nts:contentAsserts with a resource type that exists multiple times (<xsl:value-of select="$resourceType"/>) SHALL contain @expression</xsl:message>
             </xsl:if>
             
-            <xsl:variable name="structureDefinition" select="document(concat($libPath, lower-case($fhirVersion), '/', $resourceType, '.xml'))"/>
+            <xsl:variable name="structureDefinition" select="document(concat($libPath, '/', $resourceType, '.xml'))"/>
             
             <!-- Annotate the fixture with the metadata needed to write out the individual asserts -->
             <xsl:variable name="fixtureWithMetaData">
@@ -334,7 +334,7 @@
         <xsl:variable name="structureDefinition">
             <xsl:choose>
                 <xsl:when test="$parentResourceDataType = $complexDataTypes and not($parentResourceDataType = 'Extension')">
-                    <xsl:copy-of select="document(concat($libPath, lower-case($fhirVersion), '/', $parentResourceDataType, '.xml'))"/>
+                    <xsl:copy-of select="document(concat($libPath, '/', $parentResourceDataType, '.xml'))"/>
                 </xsl:when>
                 <xsl:otherwise>
                     <xsl:copy-of select="$structureDefinition"/>

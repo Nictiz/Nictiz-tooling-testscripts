@@ -22,7 +22,7 @@
 
     <xsl:include href="_processInclusions.xsl"/>
     <xsl:include href="_expand.xsl"/>
-    <xsl:include href="../../contentAsserts/xslt/generateAsserts.xsl"/>
+    <xsl:include href="_generateContentAsserts.xsl"/>
     <xsl:include href="_filter.xsl"/>
 
     <!-- The main template, which will call the remaining templates. -->
