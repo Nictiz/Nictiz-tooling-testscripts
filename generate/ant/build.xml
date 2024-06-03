@@ -242,7 +242,7 @@
                 <classpath location="${Saxon-HE.jar}"/>
                 <arg value="-it:buildFilesInTargetFolder" />
                 <arg value="-xsl:${xslt.dir}/generateTestScriptFolder.xsl" />
-                <arg value="inputDir=${input.dir.temp.abs}"/>
+                <arg value="inputDir=${input.dir.abs}"/>
                 <arg value="outputDir=${output.dir.abs}"/>
                 <arg value="referenceDir=${reference.dir}"/>
                 <arg value="commonComponentFolder=${commoncomponents.dir.abs.normalized}"/>
@@ -325,7 +325,7 @@
                             <classpath location="${Saxon-HE.jar}"/>
                             <arg value="-it:processFixturesInFolder" />
                             <arg value="-xsl:${xslt.dir}/processFixtures.xsl" />
-                            <arg value="inputDir=${input.dir.temp.abs}"/>
+                            <arg value="inputDir=${input.dir.abs}"/>
                             <arg value="outputDir=${output.dir.abs}"/>
                             <arg value="referenceSubDir=${reference.subdir}"/>
                         </java>
@@ -386,32 +386,22 @@
             </if>
         </sequential>
     </macrodef>
-    
-    <!-- Transformations are done on a copy of the files in a temporary dir, before the final output is copied to the destination -->
-    <target name="setup-tmp-dir">
-        <sequential>
-            <tempfile property="input.dir.temp.abs" destDir="${java.io.tmpdir}" prefix="build"/>
-            <copy todir="${input.dir.temp.abs}">
-                <fileset dir="${input.dir.abs}"/>
-            </copy>
-        </sequential>
-    </target>
 
-    <target name="cleanBuildDir">
+    <target name="clean-build-dir">
         <sequential>
             <echo message="Deleting previous output dir"/>
             <delete dir="${output.dir.abs}"/>
         </sequential>
     </target>
     
-    <target name="build" depends="set-logging, load, check-input, setup-tmp-dir, cleanBuildDir">        
-        <property name="reference.dir" location="${input.dir.temp.abs}/${reference.subdir}"/>
+    <target name="build" depends="set-logging, load, check-input, clean-build-dir">        
+        <property name="reference.dir" location="${input.dir.abs}/${reference.subdir}"/>
         
         <!-- Set default loadresources.exclude to nothing -->
         <property name="loadresources.exclude" value=""/>
         
         <!-- Collect the XML files to transform -->
-        <fileset id="nts.files" dir="${input.dir.temp.abs}">
+        <fileset id="nts.files" dir="${input.dir.abs}">
             <include name="*/**/*.xml"/>
             <exclude name="**/_*/"/><!-- Exclude every dir that starts with '_' -->
         </fileset>
