@@ -103,10 +103,25 @@
         <!-- Expand all nts:contentAsserts tags -->
         <xsl:for-each select="nts:contentAsserts">
             <xsl:variable name="href" select="@href"/>
-            <xsl:variable name="expression" select="@expression"/>
-            <xsl:variable name="bundleExpression" select="@bundleExpression"/>
-            <xsl:if test="ends-with(translate($expression, ' ', ''), 'count()=1') or ends-with($expression, 'exists()') and not($bundleExpression = 'true')">
-                <xsl:message terminate="yes">TOEDIT: Expression shouldn't end in count() or exists() - <xsl:value-of select="$expression"/></xsl:message>
+            <xsl:variable name="discriminator">
+                <xsl:choose>
+                    <xsl:when test="@discriminator">
+                        <xsl:value-of select="concat('.where(', @discriminator, ')')"/>
+                    </xsl:when>
+                    <xsl:when test=".[nts:discriminator]">
+                        <xsl:value-of select="concat('.where(', string-join(./nts:discriminator, ' and '), ')')"/>
+                    </xsl:when>
+                    <xsl:otherwise>
+                        <xsl:value-of select="''"/>
+                    </xsl:otherwise>
+                </xsl:choose>
+            </xsl:variable>
+            <xsl:variable name="selector" select="if (@selector) then @selector else ''"/>
+            <xsl:if test="ends-with(translate($discriminator, ' ', ''), 'count()=1') or ends-with($discriminator, 'exists()')">
+                <xsl:message terminate="yes">discriminator shouldn't end in count() or exists() - <xsl:value-of select="$discriminator"/></xsl:message>
+            </xsl:if>
+            <xsl:if test="ends-with(translate($selector, ' ', ''), 'count()=1') or ends-with($selector, 'exists()')">
+                <xsl:message terminate="yes">selector shouldn't end in count() or exists() - <xsl:value-of select="$selector"/></xsl:message>
             </xsl:if>
             <xsl:variable name="description" select="@description"/>
             
@@ -118,8 +133,8 @@
             <xsl:variable name="multipleExist" select="count($fixtures/nts:fixture[*/local-name() = $resourceType]) gt 1"/>
             
             <!-- Sanity check -->
-            <xsl:if test="$multipleExist = true() and string-length($expression) = 0">
-                <xsl:message terminate="yes">TOEDIT: <xsl:value-of select="$testName"/> - nts:contentAsserts with a resource type that exists multiple times (<xsl:value-of select="$resourceType"/>) SHALL contain @expression</xsl:message>
+            <xsl:if test="$multipleExist = true() and string-length($discriminator) = 0">
+                <xsl:message terminate="yes">TOEDIT: <xsl:value-of select="$testName"/> - nts:contentAsserts with a resource type that exists multiple times (<xsl:value-of select="$resourceType"/>) SHALL contain @discriminator</xsl:message>
             </xsl:if>
             
             <xsl:variable name="structureDefinition" select="document(concat($libPath, '/', $resourceType, '.xml'))"/>
@@ -155,7 +170,7 @@
                                 <xsl:value-of select="concat($direction, ' contains exactly 1 ', $resourceType)"/>
                             </xsl:when>
                             <xsl:when test="string-length($description) gt 0">
-                                <xsl:value-of select="concat($direction, ' Bundle contains exactly 1 ', $resourceType, ' that ', $description)"/>
+                                <xsl:value-of select="concat($direction, ' Bundle contains exactly 1 ', $resourceType, ' with properties: ', $description)"/>
                             </xsl:when>
                             <xsl:otherwise>
                                 <xsl:value-of select="concat($direction, ' Bundle contains exactly 1 ', $resourceType)"/>
@@ -167,11 +182,11 @@
                             <xsl:when test="$operationType = 'read'">
                                 <xsl:value-of select="concat($resourceType, '.count() = 1')"/>
                             </xsl:when>
-                            <xsl:when test="$bundleExpression = 'true'">
-                                <xsl:value-of select="concat($expression, '.count() = 1')"/>
+                            <xsl:when test="$selector != ''">
+                                <xsl:value-of select="concat($selector, '.count() = 1')"/>
                             </xsl:when>
                             <xsl:otherwise>
-                                <xsl:value-of select="concat('Bundle.entry.resource.ofType(', $resourceType, ')', $expression, '.count() = 1')"/>
+                                <xsl:value-of select="concat('Bundle.entry.resource.ofType(', $resourceType, ')', $discriminator, '.count() = 1')"/>
                             </xsl:otherwise>
                         </xsl:choose>
                     </xsl:with-param>
@@ -188,11 +203,11 @@
                                 <xsl:when test="$operationType = 'read'">
                                     <xsl:value-of select="concat($resourceType, '.id.exists()')"/>
                                 </xsl:when>
-                                <xsl:when test="$bundleExpression = 'true'">
-                                    <xsl:value-of select="concat($expression, '.id.exists()')"/>
+                                <xsl:when test="$selector != ''">
+                                    <xsl:value-of select="concat($selector, '.id.exists()')"/>
                                 </xsl:when>
                                 <xsl:otherwise>
-                                    <xsl:value-of select="concat('Bundle.entry.resource.ofType(', $resourceType, ')', $expression, '.id.exists()')"/>
+                                    <xsl:value-of select="concat('Bundle.entry.resource.ofType(', $resourceType, ')', $discriminator, '.id.exists()')"/>
                                 </xsl:otherwise>
                             </xsl:choose>
                         </xsl:with-param>
@@ -209,11 +224,11 @@
                                     <xsl:when test="$operationType = 'read'">
                                         <xsl:value-of select="concat($resourceType, '.id')"/>
                                     </xsl:when>
-                                    <xsl:when test="$bundleExpression = 'true'">
-                                        <xsl:value-of select="concat($expression, '.id')"/>
+                                    <xsl:when test="$selector != ''">
+                                        <xsl:value-of select="concat($selector, '.id')"/>
                                     </xsl:when>
                                     <xsl:otherwise>
-                                        <xsl:value-of select="concat('Bundle.entry.resource.ofType(', $resourceType, ')', $expression, '.id')"/>
+                                        <xsl:value-of select="concat('Bundle.entry.resource.ofType(', $resourceType, ')', $discriminator, '.id')"/>
                                     </xsl:otherwise>
                                 </xsl:choose>
                             </xsl:attribute>
@@ -234,11 +249,11 @@
                             <xsl:when test="$scenario = 'client' and $multipleExist = false()"/>
                             <xsl:when test="$scenario = 'client' and $multipleExist = true()">
                                 <xsl:choose>
-                                    <xsl:when test="$bundleExpression = 'true'">
+                                    <xsl:when test="$selector != ''">
                                         <xsl:message terminate="yes">NOT SUPPORTED</xsl:message>
                                     </xsl:when>
                                     <xsl:otherwise>
-                                        <xsl:value-of select="$expression"/>
+                                        <xsl:value-of select="$discriminator"/>
                                     </xsl:otherwise>
                                 </xsl:choose>
                             </xsl:when>
@@ -578,8 +593,8 @@
 
     <!--
     Output one or more TestScript asserts for each element encountered in the fixture.
-    - resourceIdExpression: the expression to select the resource to check (aligns with nts:contentAsserts@expression
-      in the relevant scenarios).
+    - resourceIdExpression: the expression to select the resource to check (aligns with 
+      nts:contentAsserts@selector in the relevant scenarios).
     - parentLabel: the label of the overarching test.
     - skipExtensions: if true, extension setting will be skipped. TODO: make this parameter available from the
       public interface.
@@ -917,9 +932,7 @@
                                 <xsl:if test="f:extension|f:modifierExtension"> and </xsl:if>
                             </xsl:if>
                             <!-- Check if (reference OR identifier) and display exist -->
-                            <xsl:text>(reference</xsl:text>
-                            <xsl:text> or identifier</xsl:text>
-                            <xsl:text>) and </xsl:text>
+                            <xsl:text>(reference or identifier) and </xsl:text>
                             <xsl:if test="$fhirPath = 'R4'">
                                 <xsl:text>type and </xsl:text>
                             </xsl:if>
