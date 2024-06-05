@@ -133,8 +133,8 @@
             <xsl:variable name="multipleExist" select="count($fixtures/nts:fixture[*/local-name() = $resourceType]) gt 1"/>
             
             <!-- Sanity check -->
-            <xsl:if test="$multipleExist = true() and string-length($discriminator) = 0">
-                <xsl:message terminate="yes">TOEDIT: <xsl:value-of select="$testName"/> - nts:contentAsserts with a resource type that exists multiple times (<xsl:value-of select="$resourceType"/>) SHALL contain @discriminator</xsl:message>
+            <xsl:if test="$multipleExist = true() and string-length($discriminator) = 0 and string-length($selector) = 0">
+                <xsl:message terminate="yes">TOEDIT: <xsl:value-of select="$testName"/> - nts:contentAsserts with a resource type that exists multiple times (<xsl:value-of select="$resourceType"/>) SHALL contain a discriminator or a selector</xsl:message>
             </xsl:if>
             
             <xsl:variable name="structureDefinition" select="document(concat($libPath, '/', $resourceType, '.xml'))"/>
@@ -290,7 +290,7 @@
             <xsl:if test="($operationType = ('update', 'create')) and not(.[f:requestId])">
                 <requestId value="{$requestResponseId}"/>
             </xsl:if>
-            <xsl:apply-templates select="(f:sourceId | self::f:targetId | self::f:url)" mode="#current"/>
+            <xsl:apply-templates select="(f:sourceId | f:targetId | f:url)" mode="#current"/>
         </xsl:copy>
     </xsl:template>
 
