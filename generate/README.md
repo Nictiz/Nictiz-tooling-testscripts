@@ -296,6 +296,7 @@ or
     <nts:discriminator>code.where(coding.code = '30350-3')</nts:discriminator>
     <nts:discriminator>value.ofType(Quantity).where(value = '5.9')</nts:discriminator>
 </nts:contentAsserts>
+```
 
 In the case discriminators are too limited, a _selector_ can be defined as a full FHIRPath expression to select the relevant resource. This is done using the `selector` attribute, e.g.
 
