@@ -250,6 +250,7 @@
                 <arg value="target.dir=@{target}"/>
                 <arg value="versionAddition=${version.addition}"/>
                 <arg value="tokensJsonFile=${tokens.json.url}"/>
+                <arg value="fhirVersion=${fhir.version}"/>
                 <arg value="referencesFile=@{references.file}"/> 
             </java>
         </sequential>
@@ -385,15 +386,15 @@
             </if>
         </sequential>
     </macrodef>
-    
-    <target name="cleanBuildDir">
+
+    <target name="clean-build-dir">
         <sequential>
             <echo message="Deleting previous output dir"/>
             <delete dir="${output.dir.abs}"/>
         </sequential>
     </target>
     
-    <target name="build" depends="set-logging, load, check-input, cleanBuildDir">        
+    <target name="build" depends="set-logging, load, check-input, clean-build-dir">        
         <property name="reference.dir" location="${input.dir.abs}/${reference.subdir}"/>
         
         <!-- Set default loadresources.exclude to nothing -->
