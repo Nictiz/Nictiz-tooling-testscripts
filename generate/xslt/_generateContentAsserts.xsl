@@ -43,7 +43,7 @@
     
     <!-- The "main" template. It matches not on nts:contentAsserts itself but on the containing test, because the
          result for each nts:contentAsserts will be an additional sibling test. -->
-    <xsl:template match="f:test[//nts:contentAsserts]" mode="generateContentAsserts">
+    <xsl:template match="f:test[.//nts:contentAsserts]" mode="generateContentAsserts">
         <xsl:param name="scenario" tunnel="yes"/>
 
         <!-- Construct the variables for the test -->
