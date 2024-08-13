@@ -56,7 +56,7 @@
                     <xsl:text>fixture-response</xsl:text>
                 </xsl:when>
                 <xsl:otherwise>
-                    <xsl:message>TOCHECK: responseId/responseId and test/@id not found, reverting to default.</xsl:message>
+                    <xsl:message>TOCHECK: <xsl:value-of select="parent::f:TestScript/f:id/@value"/>: responseId/responseId and test/@id not found, reverting to default.</xsl:message>
                     <xsl:value-of select="generate-id()"/>
                 </xsl:otherwise>
             </xsl:choose>
@@ -86,7 +86,7 @@
                         </nts:fixture>
                     </xsl:when>
                     <xsl:otherwise>
-                        <xsl:message terminate="yes">nts:contentAsserts fixture not available: <xsl:value-of select="$fixtureUri"/></xsl:message>
+                        <xsl:message terminate="yes"><xsl:value-of select="parent::f:TestScript/f:id/@value"/>: nts:contentAsserts fixture not available: <xsl:value-of select="$fixtureUri"/></xsl:message>
                     </xsl:otherwise>
                 </xsl:choose>
             </xsl:for-each>
