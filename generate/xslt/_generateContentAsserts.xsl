@@ -250,7 +250,7 @@
                             <xsl:when test="$scenario = 'client' and $multipleExist = true()">
                                 <xsl:choose>
                                     <xsl:when test="$selector != ''">
-                                        <xsl:message terminate="yes">NOT SUPPORTED</xsl:message>
+                                        <xsl:message terminate="yes">NOT SUPPORTED: scenario "<xsl:value-of select="$scenario"/>", selector "<xsl:value-of select="$selector"/>", multipleExist "<xsl:value-of select="$multipleExist"/>"</xsl:message>
                                     </xsl:when>
                                     <xsl:otherwise>
                                         <xsl:value-of select="$discriminator"/>
