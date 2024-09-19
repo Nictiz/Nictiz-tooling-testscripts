@@ -17,7 +17,7 @@
         - referenceDir
     -->
 
-    <!-- FHIR version to be able to retrieve the correct FHIR core resource type StructureDefinition, euther 'stu3' or 'r4'. -->
+    <!-- FHIR version to be able to retrieve the correct FHIR core resource type StructureDefinition, either 'stu3' or 'r4'. -->
     <xsl:param name="fhirVersion"/>
     
     <!-- Fixed, but could be dependant on fhirVersion -->
@@ -414,13 +414,13 @@
                 </xsl:when>
                 <xsl:otherwise>
                     <xsl:message>Could not find ElementDefinition <xsl:value-of select="$elementPath"/></xsl:message>
-                    <xsl:message select="$parentResourceDataType"/>
-                    <xsl:message select="$parentDataType"/>
-                    <xsl:message select="concat($structureDefinition/f:StructureDefinition/f:id/@value,'')"/>
-                    <xsl:message select="$isPolymorphic"/>
-                    <xsl:message select="$polymorphicElementPath"/>
-                    <xsl:message select="$parentResourceElementPath"/>
-                    <xsl:message select="$parentElementPath"/>
+                    <xsl:message>$parentResourceDataType        - <xsl:value-of select="$parentResourceDataType"/></xsl:message>
+                    <xsl:message>$parentDataType                - <xsl:value-of select="$parentDataType"/></xsl:message>
+                    <xsl:message>StrucDef.id                    - <xsl:value-of select="concat($structureDefinition/f:StructureDefinition/f:id/@value,'')"/></xsl:message>
+                    <xsl:message>$isPolymorphic                 - <xsl:value-of select="$isPolymorphic"/></xsl:message>
+                    <xsl:message>$polymorphicElementPath        - <xsl:value-of select="$polymorphicElementPath"/></xsl:message>
+                    <xsl:message>$parentResourceElementPath     - <xsl:value-of select="$parentResourceElementPath"/></xsl:message>
+                    <xsl:message>$parentElementPath             - <xsl:value-of select="$parentElementPath"/></xsl:message>
                 </xsl:otherwise>
             </xsl:choose>
         </xsl:variable>
@@ -1366,7 +1366,7 @@
                 <xsl:value-of select="concat('''', @value, '''')"/>
             </xsl:when>
             <xsl:when test="$dataType = 'uri'">
-                <!-- Nothing to be added, as we only check existance -->
+                <!-- Nothing to be added, as we only check existence -->
                 <xsl:text> </xsl:text>
             </xsl:when>
             <xsl:when test="$dataType = 'code'">
