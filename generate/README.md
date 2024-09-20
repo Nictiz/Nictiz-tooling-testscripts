@@ -343,6 +343,14 @@ All other asserts perform the actual content checks. A numeric label is added to
 
 To aid with this setup, a `.requestId` or `.responseId` is always added to the `.operation`'s in the TestScript.
 
+#### Dealing with optional resources
+
+Sometimes, there is some degree of freedom in serving or sending resources, so a TestScript may need to be able to perform content asserts when a resource is there or skip them if the resource isn't there.
+
+Although TestScript has very limited abilities to hand conditionality, a workaround can be used by setting the `nts:optional` attribute on the `<nts:contentAsserts>` tag to `true`. This result is that, when the resource is absent, the first check which asserts its presence will fail with a warning, and that all subsequent asserts for that particular resource will pass. If the resource is present, all asserts will be performed normally.
+
+The test for that resource will also be marked as optional in the description.
+
 ### Number of origins and destinations
 
 The tooling will by default add one `origin` and one `destination`, both with `index` set to 1. If more than one origin or destination is needed, the number can be set using the `nts:numOrigins` and `nts:numDestination` attributes on the `TestScript` root, like:
