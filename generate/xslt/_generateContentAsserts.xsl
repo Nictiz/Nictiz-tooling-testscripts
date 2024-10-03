@@ -164,7 +164,7 @@
                     <xsl:attribute name="value">
                         <xsl:value-of select="concat('Check if the previous operation results in a FHIR ', $resourceType, ' that contains the values that are expected following Nictiz'' materials (fixture .id: ', $fixtureId, ')')"/>
                         <xsl:if test="@nts:optional = 'true'">
-                            <xsl:value-of> This resource may be absent. In that case, there will be a warning on the first assert.</xsl:value-of>
+                            <xsl:value-of>. This resource may be absent. In this case, there will be a warning on the first assert.</xsl:value-of>
                         </xsl:if>
                     </xsl:attribute>
                 </description>
@@ -175,15 +175,25 @@
                 <xsl:call-template name="createAssert">
                     <xsl:with-param name="description">
                         <xsl:variable name="direction" select="if ($scenario = 'server') then 'Response' else 'Request'"/>
+                        <xsl:variable name="baseDescription">
+                            <xsl:choose>
+                                <xsl:when test="$operationType = 'read'">
+                                    <xsl:value-of select="concat($direction, ' contains exactly 1 ', $resourceType)"/>
+                                </xsl:when>
+                                <xsl:when test="string-length($description) gt 0">
+                                    <xsl:value-of select="concat($direction, ' Bundle contains exactly 1 ', $resourceType, ' with properties: ', $description)"/>
+                                </xsl:when>
+                                <xsl:otherwise>
+                                    <xsl:value-of select="concat($direction, ' Bundle contains exactly 1 ', $resourceType)"/>
+                                </xsl:otherwise>
+                            </xsl:choose>
+                        </xsl:variable>
                         <xsl:choose>
-                            <xsl:when test="$operationType = 'read'">
-                                <xsl:value-of select="concat($direction, ' contains exactly 1 ', $resourceType)"/>
-                            </xsl:when>
-                            <xsl:when test="string-length($description) gt 0">
-                                <xsl:value-of select="concat($direction, ' Bundle contains exactly 1 ', $resourceType, ' with properties: ', $description)"/>
+                            <xsl:when test="@nts:optional = 'true'">
+                                <xsl:value-of select="concat($baseDescription, '. If this optional resource is absent, a warning is emitted.')"/>
                             </xsl:when>
                             <xsl:otherwise>
-                                <xsl:value-of select="concat($direction, ' Bundle contains exactly 1 ', $resourceType)"/>
+                                <xsl:value-of select="$baseDescription"/>
                             </xsl:otherwise>
                         </xsl:choose>
                     </xsl:with-param>
