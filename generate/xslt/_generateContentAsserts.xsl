@@ -154,10 +154,20 @@
                         <xsl:value-of select="concat($testName, ' - Check ', $resourceType)"/>
                         <xsl:if test="$multipleExist = true()">
                             <xsl:value-of select="concat(' ', $resourceCount)"/>
-                        </xsl:if>       
+                        </xsl:if>
+                        <xsl:if test="@nts:optional = 'true'">
+                            <xsl:value-of> (optional)</xsl:value-of>
+                        </xsl:if>
                     </xsl:attribute>
                 </name>
-                <description value="Check if the previous operation results in a FHIR {$resourceType} that contains the values that are expected following Nictiz' materials (fixture .id: {$fixtureId})"/>
+                <description>
+                    <xsl:attribute name="value">
+                        <xsl:value-of select="concat('Check if the previous operation results in a FHIR ', $resourceType, ' that contains the values that are expected following Nictiz'' materials (fixture .id: ', $fixtureId, ')')"/>
+                        <xsl:if test="@nts:optional = 'true'">
+                            <xsl:value-of>. This resource may be absent. In this case, there will be a warning on the first assert.</xsl:value-of>
+                        </xsl:if>
+                    </xsl:attribute>
+                </description>
                 
                 <!-- According to TestScript spec, the last available request/response will be used, so we do not specifically have to add a requestId or responseId. Could (should?) be a feature though -->
 
@@ -165,15 +175,25 @@
                 <xsl:call-template name="createAssert">
                     <xsl:with-param name="description">
                         <xsl:variable name="direction" select="if ($scenario = 'server') then 'Response' else 'Request'"/>
+                        <xsl:variable name="baseDescription">
+                            <xsl:choose>
+                                <xsl:when test="$operationType = 'read'">
+                                    <xsl:value-of select="concat($direction, ' contains exactly 1 ', $resourceType)"/>
+                                </xsl:when>
+                                <xsl:when test="string-length($description) gt 0">
+                                    <xsl:value-of select="concat($direction, ' Bundle contains exactly 1 ', $resourceType, ' with properties: ', $description)"/>
+                                </xsl:when>
+                                <xsl:otherwise>
+                                    <xsl:value-of select="concat($direction, ' Bundle contains exactly 1 ', $resourceType)"/>
+                                </xsl:otherwise>
+                            </xsl:choose>
+                        </xsl:variable>
                         <xsl:choose>
-                            <xsl:when test="$operationType = 'read'">
-                                <xsl:value-of select="concat($direction, ' contains exactly 1 ', $resourceType)"/>
-                            </xsl:when>
-                            <xsl:when test="string-length($description) gt 0">
-                                <xsl:value-of select="concat($direction, ' Bundle contains exactly 1 ', $resourceType, ' with properties: ', $description)"/>
+                            <xsl:when test="@nts:optional = 'true'">
+                                <xsl:value-of select="concat($baseDescription, '. If this optional resource is absent, a warning is emitted.')"/>
                             </xsl:when>
                             <xsl:otherwise>
-                                <xsl:value-of select="concat($direction, ' Bundle contains exactly 1 ', $resourceType)"/>
+                                <xsl:value-of select="$baseDescription"/>
                             </xsl:otherwise>
                         </xsl:choose>
                     </xsl:with-param>
@@ -191,23 +211,36 @@
                         </xsl:choose>
                     </xsl:with-param>
                     <xsl:with-param name="stopTestOnFail" select="true()"/>
+                    <xsl:with-param name="warningOnly" select="@nts:optional = 'true'"/>
                 </xsl:call-template>
                 
                 <!-- Add an explicit assert to check Resource.id in case of server response checks -->
                 <xsl:variable name="idVariable" select="concat($fixtureId,'-id')"/>
                 <xsl:if test="$scenario = 'server'">
+                    <xsl:variable name="resourceSelector">
+                        <xsl:choose>
+                            <xsl:when test="$operationType = 'read'">
+                                <xsl:value-of select="$resourceType"/>
+                            </xsl:when>
+                            <xsl:when test="$selector != ''">
+                                <xsl:value-of select="$selector"/>
+                            </xsl:when>
+                            <xsl:otherwise>
+                                <xsl:value-of select="concat('Bundle.entry.resource.ofType(', $resourceType, ')', $discriminator)"/>
+                            </xsl:otherwise>
+                        </xsl:choose>
+                    </xsl:variable>
+                    
                     <xsl:call-template name="createAssert">
                         <xsl:with-param name="description" select="concat($resourceType, ' resource evaluated in the previous assert contains an .id')"/>
                         <xsl:with-param name="expression">
                             <xsl:choose>
-                                <xsl:when test="$operationType = 'read'">
-                                    <xsl:value-of select="concat($resourceType, '.id.exists()')"/>
-                                </xsl:when>
-                                <xsl:when test="$selector != ''">
-                                    <xsl:value-of select="concat($selector, '.id.exists()')"/>
+                                <xsl:when test="@nts:optional = 'true'">
+                                    <!-- When this resource is optional, only check for the id if the resource actually exists. -->
+                                    <xsl:value-of select="concat($resourceSelector, '.exists() implies ', $resourceSelector, '.id.exists()')"/>
                                 </xsl:when>
                                 <xsl:otherwise>
-                                    <xsl:value-of select="concat('Bundle.entry.resource.ofType(', $resourceType, ')', $discriminator, '.id.exists()')"/>
+                                    <xsl:value-of select="concat($resourceSelector, '.id.exists()')"/>
                                 </xsl:otherwise>
                             </xsl:choose>
                         </xsl:with-param>
@@ -221,14 +254,15 @@
                         <expression>
                             <xsl:attribute name="value">
                                 <xsl:choose>
-                                    <xsl:when test="$operationType = 'read'">
-                                        <xsl:value-of select="concat($resourceType, '.id')"/>
-                                    </xsl:when>
-                                    <xsl:when test="$selector != ''">
-                                        <xsl:value-of select="concat($selector, '.id')"/>
+                                    <xsl:when test="@nts:optional = 'true'">
+                                        <!--
+                                            If this resource is optional, make sure it is set to an empty string if it
+                                            is absent. We can later use this a simple check in the individual asserts
+                                            expression to see if they should be performed. -->
+                                        <xsl:value-of select="concat('iif(', $resourceSelector, '.exists(), ', $resourceSelector, '.id, '''')')"/>
                                     </xsl:when>
                                     <xsl:otherwise>
-                                        <xsl:value-of select="concat('Bundle.entry.resource.ofType(', $resourceType, ')', $discriminator, '.id')"/>
+                                        <xsl:value-of select="concat($resourceSelector, '.id')"/>
                                     </xsl:otherwise>
                                 </xsl:choose>
                             </xsl:attribute>
@@ -241,6 +275,7 @@
                 <xsl:apply-templates select="$fixtureWithMetaData/f:*/f:*" mode="generateContentAsserts.addAsserts">
                     <xsl:with-param name="operationType" select="$operationType" tunnel="yes"/>
                     <xsl:with-param name="resourceType" select="$resourceType" tunnel="yes"/>
+                    <xsl:with-param name="idVariable" select="$idVariable"/>
                     <xsl:with-param name="resourceIdExpression" tunnel="yes">
                         <xsl:choose>
                             <xsl:when test="$scenario = 'server'">
@@ -258,8 +293,9 @@
                                 </xsl:choose>
                             </xsl:when>
                         </xsl:choose>
-                    </xsl:with-param>
+                     </xsl:with-param>
                     <xsl:with-param name="parentLabel" select="$resourceCount"/>
+                    <xsl:with-param name="optional" select="@nts:optional = 'true'"/>
                 </xsl:apply-templates>
             </test>
         </xsl:for-each>
@@ -603,14 +639,37 @@
         <xsl:param name="operationType" tunnel="yes"/>
         <xsl:param name="resourceType" tunnel="yes"/>
         <xsl:param name="scenario" tunnel="yes"/>
+        <xsl:param name="idVariable"/>
         <xsl:param name="resourceIdExpression" tunnel="yes"/>
         <xsl:param name="parentLabel" required="yes"/>
+        <xsl:param name="optional" as="xs:boolean" select="false()"/>
         <xsl:param name="skipExtensions" select="false()"/>
         
         <xsl:variable name="parentFhirPath" select="parent::*/@nts:fhirPath"/>
         <xsl:variable name="fhirPath" select="@nts:fhirPath"/>
         
         <xsl:variable name="expressionBase">
+            <xsl:if test="$optional">
+                <!-- 
+                    When the resource is optional, every assert gets prepended by a check to see if it actually exists.
+                    (In normal situations, this check is left out because it creates really complex expressions).
+                -->
+                <xsl:choose>
+                    <xsl:when test="$scenario = 'server'">
+                        <!--
+                            resourceIdExpression contains the id of the resource in this case, but if the resource is
+                            absent, it'll be an empty string. So instead of using $resourceIdExpression, we simply test
+                            if the resource id is an empty string. -->
+                        <xsl:value-of select="concat('''${', $idVariable, '}''.length() &gt; 0 implies ')"/>
+                    </xsl:when>
+                    <xsl:when test="$operationType = 'read'">
+                        <xsl:value-of select="concat($resourceType, $resourceIdExpression, 'exists() implies ')"/>
+                    </xsl:when>
+                    <xsl:otherwise>
+                        <xsl:value-of select="concat('Bundle.entry.resource.ofType(', $resourceType, ')',$resourceIdExpression, '.exists() implies ')"/>
+                    </xsl:otherwise>
+                </xsl:choose>
+            </xsl:if>
             <xsl:choose>
                 <xsl:when test="$operationType = 'read'">
                     <xsl:value-of select="concat($resourceType, $resourceIdExpression)"/>
