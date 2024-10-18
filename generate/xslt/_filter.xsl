@@ -246,27 +246,37 @@
         </xsl:copy>
     </xsl:template>
     
-    <!--Add TouchStone assert-stopTestOnFail extension and warningOnly flag by default.-->
+    <!--Add stopTestOnFail and warningOnly flag. stopTestOnFail can be set directly, via nts:stopTestOnFail or via the
+      Touchstone extension for legacy reasons. -->
     <xsl:template match="f:TestScript/f:test/f:action/f:assert" mode="filter">
-        <xsl:copy>
-            <xsl:apply-templates select="@*" mode="#current"/>
+        <xsl:variable name="stopTestOnFail" as="xs:boolean">
             <xsl:choose>
-                <xsl:when test="f:extension/@url = 'http://touchstone.aegis.net/touchstone/fhir/testing/StructureDefinition/testscript-assert-stopTestOnFail'"/>
                 <xsl:when test="@nts:stopTestOnFail='true'">
-                    <extension url="http://touchstone.aegis.net/touchstone/fhir/testing/StructureDefinition/testscript-assert-stopTestOnFail">
-                        <valueBoolean value="true"/>
-                    </extension>
+                    <xsl:value-of select="true()"/>
+                </xsl:when>
+                <xsl:when test="@nts:stopTestOnFail='false'">
+                    <xsl:value-of select="false()"/>
+                </xsl:when>
+                <xsl:when test="f:extension[@url = 'http://touchstone.aegis.net/touchstone/fhir/testing/StructureDefinition/testscript-assert-stopTestOnFail'][valueBoolean/@value = 'true']">
+                    <xsl:value-of select="true()"/>
+                </xsl:when>
+                <xsl:when test="f:extension[@url = 'http://touchstone.aegis.net/touchstone/fhir/testing/StructureDefinition/testscript-assert-stopTestOnFail'][valueBoolean/@value = 'false']">
+                    <xsl:value-of select="false()"/>
                 </xsl:when>
                 <xsl:otherwise>
-                    <extension url="http://touchstone.aegis.net/touchstone/fhir/testing/StructureDefinition/testscript-assert-stopTestOnFail">
-                        <valueBoolean value="false"/>
-                    </extension>
+                    <xsl:value-of select="false()"/>
                 </xsl:otherwise>
             </xsl:choose>
-            <xsl:apply-templates select="node()" mode="#current"/>
+        </xsl:variable>
+        <xsl:copy>
+            <xsl:apply-templates select="@*" mode="#current"/>
+            <xsl:apply-templates select="f:*[not(self::f:validateProfileId or self::f:value or self::f:warningOnly or self::f:requirement)]" mode="#current"/>
+            <stopTestOnFail value="{$stopTestOnFail}"/>
+            <xsl:apply-templates select="f:validateProfileId | f:value" mode="#current"/>
             <xsl:if test="not(f:warningOnly)">
                 <warningOnly value="false"/>
             </xsl:if>
+            <xsl:apply-templates select="f:warningOnly | f:requirement" mode="#current"/>
         </xsl:copy>
     </xsl:template>
     
