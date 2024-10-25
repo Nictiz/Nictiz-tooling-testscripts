@@ -18,7 +18,7 @@
     
     <!-- Expand a nts:profile element to a FHIR profile element -->
     <xsl:template match="nts:profile" mode="expand">
-        <profile id="{@id}" value="http://hl7.org/fhir/StructureDefinition/{@value}"/>
+        <profile id="{@id}" value="{@value}"/>
     </xsl:template>
     
     <!-- Expand a nts:fixture element to a FHIR fixture element -->
