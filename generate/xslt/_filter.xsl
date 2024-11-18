@@ -225,13 +225,13 @@
     </xsl:template>
     
     <!--Add the Accept header and encodeRequestUrl, if necessary-->
-    <xsl:template match="f:TestScript/f:test/f:action/f:operation" mode="filter">
+    <xsl:template match="f:TestScript/f:*[self::f:setup or self::f:test or self::f:teardown]/f:action/f:operation" mode="filter">
         <xsl:param name="scenario" tunnel="yes"/>
         <xsl:param name="expectedResponseFormat" tunnel="yes"/>
-        
+
         <!--All elements that can exist before the accept element following the FHIR spec.-->
         <xsl:variable name="pre-accept" select="('type','resource','label','description')"/>
-        <xsl:variable name="pre-encodeRequestUrl" select="('contentType','destination','accept')"/>
+        <xsl:variable name="pre-encodeRequestUrl" select="('contentType','destination','accept','encodeRequestUrl')"/>
         <xsl:copy>
             <xsl:apply-templates select="@*" mode="#current"/>
             <xsl:apply-templates select="f:*[local-name()=$pre-accept]" mode="#current"/>
@@ -248,7 +248,7 @@
     
     <!--Add stopTestOnFail and warningOnly flag. stopTestOnFail can be set directly, via nts:stopTestOnFail or via the
       Touchstone extension for legacy reasons. -->
-    <xsl:template match="f:TestScript/f:test/f:action/f:assert" mode="filter">
+    <xsl:template match="f:TestScript/f:*[self::f:setup or self::f:test or self::f:teardown]/f:action/f:assert" mode="filter">
         <xsl:variable name="stopTestOnFail" as="xs:boolean">
             <xsl:choose>
                 <xsl:when test="@nts:stopTestOnFail='true'">
