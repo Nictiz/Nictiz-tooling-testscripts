@@ -281,10 +281,12 @@
     </xsl:template>
     
     <!--Remove unwanted space from FHIRPath expressions-->
-    <xsl:template match="f:TestScript/f:test/f:action/f:assert/f:expression/@value" mode="filter">
-        <xsl:attribute name="value">
-            <xsl:value-of select="normalize-space(.)"/>
-        </xsl:attribute>
+    <xsl:template match="f:TestScript/f:test/f:action/f:assert/f:expression[@value]" mode="filter">
+        <xsl:variable name="expression" select="replace(./@value, 'ofType\((.*?)\)', 'where(\$this is $1)')"/>
+        <xsl:if test="not(./@value = $expression)">
+            <xsl:comment>FHIRPath expressions with .ofType(...) are poorly supported at the moment, so it was rewritten. Original expression: '<xsl:value-of select="./@value"/>'</xsl:comment>
+        </xsl:if>
+        <expression value="{normalize-space($expression)}"/>
     </xsl:template>
 
     <!-- Rewrite the pre-r5 code system for operations to the r5-and-up code system, but be pedantic about it. -->
@@ -302,7 +304,7 @@
         </type>
         <xsl:message>NTS input uses the old (before r5) 'testscript-operation-codes' code system on .operation.type. I'll fix it for you, but please use the newer 'restful-interaction` code system on your input.</xsl:message>
     </xsl:template>
-
+    
     <!-- Default template in the filter mode -->
     <xsl:template match="@*|node()" mode="filter">
         <xsl:copy>
