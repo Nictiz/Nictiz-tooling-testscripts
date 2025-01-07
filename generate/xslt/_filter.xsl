@@ -280,8 +280,8 @@
         </xsl:copy>
     </xsl:template>
     
-    <!--Remove unwanted space from FHIRPath expressions-->
-    <xsl:template match="f:TestScript/f:test/f:action/f:assert/f:expression[@value]" mode="filter">
+    <!--Remove unwanted space from FHIRPath expressions. Also, rewrite FHIRPath expressions as a workaround for a ConformanceLab limitation. -->
+    <xsl:template match="(f:TestScript/f:test/f:action/f:assert | f:TestScript//f:variable)/f:expression[@value]" mode="filter">
         <xsl:variable name="expression" select="replace(./@value, 'ofType\((.*?)\)', 'where(\$this is $1)')"/>
         <xsl:if test="not(./@value = $expression)">
             <xsl:comment>FHIRPath expressions with .ofType(...) are poorly supported at the moment, so it was rewritten. Original expression: '<xsl:value-of select="./@value"/>'</xsl:comment>
