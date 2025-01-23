@@ -243,6 +243,14 @@
         </extension>
     </xsl:template>
     
+    <xsl:template match="nts:package" mode="expand">
+        <extension url="http://fhir.interoplab.eu/fhir/StructureDefinition/Interoplab-CL-ext-Package">
+            <extension url="package">
+                <valueString value="{./@canonical}"/>
+            </extension>
+        </extension>
+    </xsl:template>
+    
     <!-- Default template in the expand mode -->
     <xsl:template match="node()|@*" mode="expand">
         <xsl:copy>
