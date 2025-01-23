@@ -244,9 +244,19 @@
     </xsl:template>
     
     <xsl:template match="nts:package" mode="expand">
+        <xsl:variable name="version">
+            <xsl:variable name="index" select="index-of(tokenize($packageCanonicals, ','), @canonical)"/>
+            <xsl:if test="$index = ()">
+                <xsl:message terminate="yes" select="concat('No version has been defined for package ', @canonical)"/>
+            </xsl:if>
+            <xsl:value-of select="tokenize($packageVersion, ',')[$index[1]]"/>
+        </xsl:variable>
         <extension url="http://fhir.interoplab.eu/fhir/StructureDefinition/Interoplab-CL-ext-Package">
             <extension url="package">
-                <valueString value="{./@canonical}"/>
+                <valueString value="{@canonical}"/>
+            </extension>
+            <extension url="version">
+                <valueString value="{$version}"/>
             </extension>
         </extension>
     </xsl:template>
