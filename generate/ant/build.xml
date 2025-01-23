@@ -78,6 +78,21 @@
     <property name="ivy.local.jar.file" value="${dependency.dir}/ivy.jar" />
     
     <property name="version.addition" value=""/>
+
+    <!-- Somewhat involved approach to create the 'packages' input parameter for the XSLT conversion; a single string
+         containing 'canonical=version' entries, separated by commas. -->
+    <pathconvert property="packages.raw" pathsep=",">
+        <propertyset>
+            <propertyref prefix="package."/>
+            <mapper type="regexp" from="package\.(.*)" to="\1=${package.\1}"/>
+        </propertyset>
+    </pathconvert>
+    <loadresource property="packages">
+        <propertyresource name="packages.raw"/>
+        <filterchain>
+            <expandproperties/>
+        </filterchain>
+    </loadresource>
     
     <property name="targets.additional" value=""/> <!-- By default, we don't build additional targets -->
     <property name="targets" value="#default,${targets.additional}"/>
@@ -252,6 +267,7 @@
                 <arg value="tokensJsonFile=${tokens.json.url}"/>
                 <arg value="fhirVersion=${fhir.version}"/>
                 <arg value="referencesFile=@{references.file}"/> 
+                <arg value="packages=${packages}"/>
             </java>
         </sequential>
     </macrodef>

@@ -243,19 +243,32 @@
         </extension>
     </xsl:template>
     
+    <!--
+        Expand a nts:package element to the ConformanceLab extension.
+        Note: the package element only contains the canonical of the package. The corresponding package version should
+        come from the packages stylesheet parameter.
+    -->
     <xsl:template match="nts:package" mode="expand">
-        <xsl:variable name="version">
-            <xsl:variable name="index" select="index-of(tokenize($packageCanonicals, ','), @canonical)"/>
-            <xsl:if test="$index = ()">
-                <xsl:message terminate="yes" select="concat('No version has been defined for package ', @canonical)"/>
-            </xsl:if>
-            <xsl:value-of select="tokenize($packageVersion, ',')[$index[1]]"/>
-        </xsl:variable>
+        <xsl:variable name="canonical" select="@canonical"/>
         <extension url="http://fhir.interoplab.eu/fhir/StructureDefinition/Interoplab-CL-ext-Package">
             <extension url="package">
-                <valueString value="{@canonical}"/>
+                <valueString value="{$canonical}"/>
             </extension>
             <extension url="version">
+                <!-- The packages parameter is a string formatted as a comma separated list with 'canonical=version'
+                     entries. We use a simple regex approach to extact the version for the specified canonical.
+                -->
+                <xsl:variable name="version">
+                    <xsl:for-each select="tokenize($packages, ',')">
+                        <xsl:variable name="parts" select="tokenize(., '=')"/>
+                        <xsl:if test="$parts[1] = $canonical">
+                            <xsl:value-of select="$parts[2]"/>
+                        </xsl:if>
+                    </xsl:for-each>
+                </xsl:variable>
+                <xsl:if test="string-length($version) = 0">
+                    <xsl:message terminate="yes" select="concat('No version has been defined for package ', @canonical)"/>
+                </xsl:if>
                 <valueString value="{$version}"/>
             </extension>
         </extension>

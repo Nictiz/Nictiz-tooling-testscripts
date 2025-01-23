@@ -19,6 +19,10 @@
     <!-- Optional string that will be appended verbatim to the verson string. If there is no version element in the
          input, it will be set to this parameter. -->
     <xsl:param name="versionAddition" select="''"/>
+    
+    <!-- A list matching package canonicals to their versions. This list is formatted as a single comma-separated
+         string with "canonical=version" entries. --> 
+    <xsl:param name="packages" as="xs:string"/>
 
     <xsl:include href="_processInclusions.xsl"/>
     <xsl:include href="_expand.xsl"/>
@@ -26,7 +30,7 @@
     <xsl:include href="_filter.xsl"/>
 
     <!-- The main template, which will call the remaining templates. -->
-    <xsl:template name="generate" match="f:TestScript">
+    <xsl:template name="generate" match="f:TestScript">       
         <xsl:param name="expectedResponseFormat" tunnel="yes"/>
         <xsl:variable name="scenario" select="@nts:scenario"/>
         
