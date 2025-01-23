@@ -20,9 +20,12 @@
          input, it will be set to this parameter. -->
     <xsl:param name="versionAddition" select="''"/>
     
-    <!-- A list matching package canonicals to their versions. This list is formatted as a single comma-separated
-         string with "canonical=version" entries. --> 
-    <xsl:param name="packages" as="xs:string"/>
+    <!-- A list of packages, formatted as a single comma-separated string. --> 
+    <xsl:param name="packages"/>
+    
+    <!-- A list matching packages to their versions. This list is formatted as a single comma-separated string with
+         "package=version" entries. --> 
+    <xsl:param name="packageVersions" as="xs:string"/>
 
     <xsl:include href="_processInclusions.xsl"/>
     <xsl:include href="_expand.xsl"/>

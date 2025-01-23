@@ -26,7 +26,9 @@
     - [targets.additional]    : Optional - The additional targets to be built.
 
     Additionally, the following optional parameters may be used:
-    - outputLevel: the verbosity level of the script output  
+    - outputLevel: the verbosity level of the script output
+    - packages: a comma-separated list of package dependencies to add to the TestScripts
+    - package.*: per package, the version that should be used
 
     # Project dirs
     
@@ -77,18 +79,20 @@
     <property name="dependency.dir" value="${lib.dir}/ant-dependencies"/>
     <property name="ivy.local.jar.file" value="${dependency.dir}/ivy.jar" />
     
+    <!-- Empty strings as defaults -->
     <property name="version.addition" value=""/>
-
+    <property name="packages" value=""/>
+    
     <!-- Somewhat involved approach to create the 'packages' input parameter for the XSLT conversion; a single string
          containing 'canonical=version' entries, separated by commas. -->
-    <pathconvert property="packages.raw" pathsep=",">
+    <pathconvert property="packages.versions.raw" pathsep=",">
         <propertyset>
             <propertyref prefix="package."/>
             <mapper type="regexp" from="package\.(.*)" to="\1=${package.\1}"/>
         </propertyset>
     </pathconvert>
-    <loadresource property="packages">
-        <propertyresource name="packages.raw"/>
+    <loadresource property="packages.versions">
+        <propertyresource name="packages.versions.raw"/>
         <filterchain>
             <expandproperties/>
         </filterchain>
@@ -268,6 +272,7 @@
                 <arg value="fhirVersion=${fhir.version}"/>
                 <arg value="referencesFile=@{references.file}"/> 
                 <arg value="packages=${packages}"/>
+                <arg value="packageVersions=${packages.versions}"/>
             </java>
         </sequential>
     </macrodef>
