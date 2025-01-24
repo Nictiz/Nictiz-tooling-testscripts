@@ -16,7 +16,7 @@
          should hold an URL. -->
     <xsl:include href="resolveAuthTokens.xsl"/>
     
-    <xsl:template match="f:TestScript" mode="expand">
+    <xsl:template match="f:TestScript" mode="expand">        
         <TestScript>
             <xsl:apply-templates select="@*" mode="expand"/>
 
@@ -49,6 +49,16 @@
             
             <xsl:apply-templates select="node()" mode="expand"/>
         </TestScript>
+    </xsl:template>
+    
+    <!-- Expand a nts:origin element to a FHIR origin element -->
+    <xsl:template match="nts:origin" mode="expand">
+        <xsl:copy-of select="nts:addOriginOrDestination('origin', @index, ./@isSUT)"/>
+    </xsl:template>
+
+    <!-- Expand a nts:destination element to a FHIR destination element -->
+    <xsl:template match="nts:destination" mode="expand">
+        <xsl:copy-of select="nts:addOriginOrDestination('destination', @index, ./@isSUT)"/>
     </xsl:template>
     
     <!-- Expand a nts:profile element to a FHIR profile element -->

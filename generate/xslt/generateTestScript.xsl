@@ -195,40 +195,26 @@
         <xsl:value-of select="string-join(($base, $filename), $separator)"/>
     </xsl:function>
 
-    <!-- Recursive function to add curr to max origin elements -->
-    <xsl:function name="nts:addOrigins">
-        <xsl:param name="curr" as="xs:integer"/>
-        <xsl:param name="max"  as="xs:integer"/>
+    <!-- Add an origin or destination element.
+         - type: either 'origin' or 'destination'
+         - index: the origin.index or destination.index to set
+         - isSUT: set the "SUT extension" by Interoplab to this value
+    -->
+    <xsl:function name="nts:addOriginOrDestination">
+        <xsl:param name="type"  as="xs:string"/>
+        <xsl:param name="index" as="xs:integer"/>
+        <xsl:param name="isSUT" as="xs:boolean"/>
         
-        <origin>
-            <index value="{$curr}"/>
+        <xsl:element name="{if ($type='origin') then 'origin' else 'destination'}">
+            <extension url="http://fhir.interoplab.eu/fhir/StructureDefinition/Interoplab-CL-ext-SUT">
+                <valueBoolean value="{$isSUT}"/>
+            </extension>
+            <index value="{$index}"/>
             <profile>
-                <system value="http://terminology.hl7.org/CodeSystem/testscript-profile-origin-types"/>
-                <code value="FHIR-Client"/>
+                <system value="{concat('http://terminology.hl7.org/CodeSystem/testscript-profile-', $type, '-types')}"/>
+                <code value="{if ($type='origin') then 'FHIR-Client' else 'FHIR-Server'}"/>
             </profile>
-        </origin>
-        
-        <xsl:if test="$curr &lt; $max">
-            <xsl:copy-of select="nts:addOrigins($curr + 1, $max)"/>
-        </xsl:if>
-    </xsl:function>
-
-    <!-- Recursive function to add curr to max destination elements -->
-    <xsl:function name="nts:addDestinations">
-        <xsl:param name="curr" as="xs:integer"/>
-        <xsl:param name="max"  as="xs:integer"/>
-        
-        <destination>
-            <index value="{$curr}"/>
-            <profile>
-                <system value="http://terminology.hl7.org/CodeSystem/testscript-profile-destination-types"/>
-                <code value="FHIR-Server"/>
-            </profile>
-        </destination>
-        
-        <xsl:if test="$curr &lt; $max">
-            <xsl:copy-of select="nts:addDestinations($curr + 1, $max)"/>
-        </xsl:if>
+        </xsl:element>
     </xsl:function>
     
     <xsl:function name="nts:_substring-before-last" as="xs:string">

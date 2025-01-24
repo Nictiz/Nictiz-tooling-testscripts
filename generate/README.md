@@ -343,15 +343,18 @@ All other asserts perform the actual content checks. A numeric label is added to
 
 To aid with this setup, a `.requestId` or `.responseId` is always added to the `.operation`'s in the TestScript.
 
-### Number of origins and destinations
+### Origins and destinations
 
-The tooling will by default add one `origin` and one `destination`, both with `index` set to 1. If more than one origin or destination is needed, the number can be set using the `nts:numOrigins` and `nts:numDestination` attributes on the `TestScript` root, like:
+The tooling will by default add one `origin` and one `destination`, both with `index` set to 1. The ConformanceLab extension to define if the origin/destination is the system under test is added and populated based on the scenario.
 
-```xml
-<TestScript xmlns="..." xmlns:nts="..." nts:numOrigins="2" nts:numDestinations="3" />
-```
+If needed, this behavior can be overrules with the following tags:
 
-The `origin`s and `destination`s will be sequentially numbered, starting at 1.
+* `<nts:origin index="..." isSUT="[true|false]"/>`
+* `<nts:destination index="..." isSUT="[true|false]"/>`
+
+When these tags are used, no defaults are generated.
+ 
+*Please note*: in version 2 of the tooling, the `nts:numOrigins` and `nts:numDestination` attributes on the `TestScript` root could be used. These have been deprecated, as these would not allow to specify which origin/destination is the system under test.
 
 ### Building different variants
 

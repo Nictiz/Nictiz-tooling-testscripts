@@ -103,10 +103,26 @@
             </contact>
             <xsl:apply-templates select="f:description | f:useContext | f:jurisdiction | f:purpose | f:copyright" mode="#current"/>
 
-            <!-- Include origin and destination elements -->
-            <xsl:copy-of select="nts:addOrigins(1, if (./@nts:numOrigins) then ./@nts:numOrigins else 1)"/>
-            <xsl:copy-of select="nts:addDestinations(1, if (./@nts:numDestinations) then ./@nts:numDestinations else 1)"/>
-
+            <!-- Include origin and destination elements. If they were not explicitly added (using
+                 nts:origin/nts:destination or plain FHIR origin/destination elements) a default origin and destination
+                 are added, with SUT role set according to the scenario. -->
+            <xsl:choose>
+                <xsl:when test=".[f:origin]">
+                    <xsl:apply-templates select="f:origin" mode="#current"/>
+                </xsl:when>
+                <xsl:otherwise>
+                    <xsl:copy-of select="nts:addOriginOrDestination('origin', 1, if ($scenario='client') then true() else false())"/>        
+                </xsl:otherwise>
+            </xsl:choose>
+            <xsl:choose>
+                <xsl:when test=".[f:destination]">
+                    <xsl:apply-templates select="f:destination" mode="#current"/>
+                </xsl:when>
+                <xsl:otherwise>
+                    <xsl:copy-of select="nts:addOriginOrDestination('destination', 1, if ($scenario='server') then true() else false())"/>        
+                </xsl:otherwise>
+            </xsl:choose>
+            
             <xsl:apply-templates select="f:metadata" mode="#current"/>
             <xsl:for-each-group select="$fixtures" group-by="@id">
                 <xsl:for-each select="subsequence(current-group(), 2)">
@@ -150,7 +166,7 @@
             <xsl:next-match/>
         </xsl:if>
     </xsl:template>
-    <xsl:template match="f:TestScript//f:profile" mode="filter">
+    <xsl:template match="f:TestScript//f:profile[not(ancestor::f:origin | ancestor::f:destination)]" mode="filter">
         <xsl:param name="doCopy" select="false()"/>
         <xsl:if test="$doCopy">
             <xsl:next-match/>
