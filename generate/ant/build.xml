@@ -273,6 +273,9 @@
                 <arg value="referencesFile=@{references.file}"/> 
                 <arg value="packages=${packages}"/>
                 <arg value="packageVersions=${packages.versions}"/>
+                <arg value="usecase=${usecase}"/>
+                <arg value="actions=${actions}"/>
+                <arg value="adminOnlyTargets=${targets.adminonly}"/>
             </java>
         </sequential>
     </macrodef>

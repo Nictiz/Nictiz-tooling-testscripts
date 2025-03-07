@@ -121,6 +121,16 @@
                     <xsl:if test="not(unparsed-text-available($propertiesFileUrl))">
                         <xsl:call-template name="generatePropertiesFile">
                             <xsl:with-param name="fileUrl" select="$propertiesFileUrl"/>
+                            <xsl:with-param name="relFolderPath">
+                                <xsl:choose>
+                                    <xsl:when test="not($target.dir = '#default')">
+                                        <xsl:value-of select="fn:concat('/', $target.dir, $nts.file.reldir.leaf)"/>
+                                    </xsl:when>
+                                    <xsl:otherwise>
+                                        <xsl:value-of select="$nts.file.reldir"/>
+                                    </xsl:otherwise>
+                                </xsl:choose>
+                            </xsl:with-param>
                         </xsl:call-template>
                     </xsl:if>
 
