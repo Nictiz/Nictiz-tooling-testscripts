@@ -16,41 +16,6 @@
          should hold an URL. -->
     <xsl:include href="resolveAuthTokens.xsl"/>
     
-    <xsl:template match="f:TestScript" mode="expand">        
-        <TestScript>
-            <xsl:apply-templates select="@*" mode="expand"/>
-
-            <!-- Expand the packages/packageVersions parameters to the ConformanceLab extensions. -->
-            <xsl:for-each select="tokenize($packages, ',')">
-                <xsl:variable name="package" select="."/>
-                <extension url="http://fhir.interoplab.eu/fhir/StructureDefinition/Interoplab-CL-ext-Package">
-                    <extension url="package">
-                        <valueString value="{$package}"/>
-                    </extension>
-                    <extension url="version">
-                        <!-- The packageVersions parameter is a string formatted as a comma separated list with
-                             'package=version' entries. We use a simple regex approach to extact the version for the
-                             specified canonical. -->
-                        <xsl:variable name="version">
-                            <xsl:for-each select="tokenize($packageVersions, ',')">
-                                <xsl:variable name="parts" select="tokenize(., '=')"/>
-                                <xsl:if test="$parts[1] = $package">
-                                    <xsl:value-of select="$parts[2]"/>
-                                </xsl:if>
-                            </xsl:for-each>
-                        </xsl:variable>
-                        <xsl:if test="string-length($version) = 0">
-                            <xsl:message terminate="yes" select="concat('No version has been defined for package ', $package)"/>
-                        </xsl:if>
-                        <valueString value="{$version}"/>
-                    </extension>
-                </extension>
-            </xsl:for-each>
-            
-            <xsl:apply-templates select="node()" mode="expand"/>
-        </TestScript>
-    </xsl:template>
-    
     <!-- Expand a nts:origin element to a FHIR origin element -->
     <xsl:template match="nts:origin" mode="expand">
         <xsl:copy-of select="nts:addOriginOrDestination('origin', @index, ./@isSUT)"/>

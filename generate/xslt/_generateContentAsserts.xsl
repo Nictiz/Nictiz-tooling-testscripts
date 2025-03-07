@@ -15,10 +15,8 @@
         This file contains all the templates needed for the content assert generation step.
         It expects the following global parameters to be set:
         - referenceDir
+        - fhirVersion (either 'stu3' or 'r4')
     -->
-
-    <!-- FHIR version to be able to retrieve the correct FHIR core resource type StructureDefinition, either 'stu3' or 'r4'. -->
-    <xsl:param name="fhirVersion"/>
     
     <!-- Fixed, but could be dependant on fhirVersion -->
     <xsl:variable name="simpleDataTypes" as="xs:string*">
