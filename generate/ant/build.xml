@@ -274,7 +274,7 @@
                 <arg value="packages=${packages}"/>
                 <arg value="packageVersions=${packages.versions}"/>
                 <arg value="usecase=${usecase}"/>
-                <arg value="actions=${actions}"/>
+                <arg value="roles=${roles}"/>
                 <arg value="adminOnlyTargets=${targets.adminonly}"/>
             </java>
         </sequential>

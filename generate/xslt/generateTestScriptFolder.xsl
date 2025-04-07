@@ -117,7 +117,7 @@
                 
                 <xsl:if test="$target = '#default' or (fn:contains(fn:concat('/',$target.dir), $nts.file.reldir.root) and $targetLevel = $rootLevel)">
                     <!-- Write out a folder properties file if it doesn't exist yet. -->
-                    <xsl:variable name="propertiesFileUrl" select="concat($testscript.path, 'properties.yml')"/>
+                    <xsl:variable name="propertiesFileUrl" select="concat($testscript.path, 'properties.json')"/>
                     <xsl:if test="not(unparsed-text-available($propertiesFileUrl))">
                         <xsl:call-template name="generatePropertiesFile">
                             <xsl:with-param name="fileUrl" select="$propertiesFileUrl"/>
