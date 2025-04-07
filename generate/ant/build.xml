@@ -98,6 +98,20 @@
         </filterchain>
     </loadresource>
     
+    <!-- The same trick as above is used to create the 'targetDescriptions' input parameter for the XSLT conversion. -->
+    <pathconvert property="target.descriptions.raw" pathsep=",">
+        <propertyset>
+            <propertyref prefix="target.description."/>
+            <mapper type="regexp" from="target\.description\.(.*)" to="\1=${target.description.\1}"/>
+        </propertyset>
+    </pathconvert>
+    <loadresource property="target.descriptions">
+        <propertyresource name="target.descriptions.raw"/>
+        <filterchain>
+            <expandproperties/>
+        </filterchain>
+    </loadresource>
+    
     <property name="targets.additional" value=""/> <!-- By default, we don't build additional targets -->
     <property name="targets" value="#default,${targets.additional}"/>
     
@@ -271,10 +285,12 @@
                 <arg value="tokensJsonFile=${tokens.json.url}"/>
                 <arg value="fhirVersion=${fhir.version}"/>
                 <arg value="referencesFile=@{references.file}"/> 
-                <arg value="packages=${packages}"/>
-                <arg value="packageVersions=${packages.versions}"/>
+                <arg value="informationStandard=${informationStandard}"/>
                 <arg value="usecase=${usecase}"/>
                 <arg value="roles=${roles}"/>
+                <arg value="targetDescriptions=${target.descriptions}"/>
+                <arg value="packages=${packages}"/>
+                <arg value="packageVersions=${packages.versions}"/>
                 <arg value="adminOnlyTargets=${targets.adminonly}"/>
             </java>
         </sequential>

@@ -23,19 +23,30 @@
          "package=version" entries. --> 
     <xsl:param name="packageVersions" as="xs:string"/>
     
+    <!-- The "informationStandard" according to the Conformancelab spec. -->
+    <xsl:param name="informationStandard" as="xs:string" required="yes"/>
+    
     <!-- The "usecase" according to the Conformancelab spec. -->
     <xsl:param name="usecase" as="xs:string" required="yes"/>
     
     <!-- A comma-separated list of roles that we recognize within the current folder structure. --> 
     <xsl:param name="roles" as="xs:string" required="yes"/>
     
+    <!-- A list matching targets to their descriptions. This list is formatted as a single comma-separated string with
+         "target=description" entries. The targets are the full folder names, and the descriptions may contain 
+         unescaped comma's. -->
+    <xsl:param name="targetDescriptions"/>
+    
     <xsl:template name="generatePropertiesFile">
         <xsl:param name="fileUrl" as="xs:string" required="yes"/>
         <xsl:param name="relFolderPath" as="xs:string" required="yes"/>
-        
+
         <!-- Create an XML representation of the desired JSON structure, which can be written as JSON using xml-to-json. --> 
         <xsl:variable name="properties">
             <map xmlns="http://www.w3.org/2005/xpath-functions">
+                <string key="informationStandard">
+                    <xsl:value-of select="$informationStandard"/>
+                </string>
                 <string key="usecase">
                     <xsl:value-of select="$usecase"/>
                 </string>
@@ -54,29 +65,34 @@
                     the folder name).
                     First element is discarded because it is empty ($relFolderPath always starts with a '/')
                 -->
-                <xsl:variable name="role">
-                    <xsl:for-each select="tokenize($relFolderPath, '/')">
-                        <xsl:variable name="subfolder" select="."/>
-                        <xsl:for-each select="$roleList">
-                            <xsl:if test="starts-with($subfolder, .)">
-                                <xsl:value-of select="."/>
-                            </xsl:if>
+                <xsl:variable name="roleFolder" as="map(*)">
+                    <xsl:map>
+                        <xsl:for-each select="tokenize($relFolderPath, '/')">
+                            <xsl:variable name="subfolder" select="."/>
+                            <xsl:for-each select="$roleList">
+                                <xsl:variable name="role" select="."/>
+                                <xsl:if test="starts-with($subfolder, $role)">
+                                    <xsl:map-entry key="'role'" select="$role"/>
+                                    <xsl:map-entry key="'target'" select="substring-after($subfolder, concat(., '-'))"/>
+                                    <xsl:map-entry key="'folder'" select="$subfolder"/>
+                                </xsl:if>
+                            </xsl:for-each>
                         </xsl:for-each>
-                    </xsl:for-each>
+                    </xsl:map>
                 </xsl:variable>
+                <xsl:if test="not(map:contains($roleFolder, 'role'))">
+                    <xsl:message terminate="yes" select="concat('No folder dedicated to a role could be found in path ''', $relFolderPath, '''. Known role names are: ', string-join($roleList, ', '))"/>
+                </xsl:if>
                 <xsl:variable name="subfolders" as="xs:string*">
                     <xsl:for-each select="tokenize($relFolderPath, '/')">
-                        <xsl:if test="string-length(normalize-space(.)) &gt; 0 and not(starts-with(., $role))">
+                        <xsl:if test="string-length(normalize-space(.)) &gt; 0 and not(starts-with(., $roleFolder('role')))">
                             <xsl:value-of select="."/>
                         </xsl:if>
                     </xsl:for-each>
                 </xsl:variable>
                 
-                <xsl:if test="fn:string-length($role) = 0">
-                    <xsl:message terminate="yes" select="concat('No folder dedicated to a role could be found in path ''', $relFolderPath, '''. Known role names are: ', string-join($roleList, ', '))"/>
-                </xsl:if>
                 <string key="role">
-                    <xsl:value-of select="$role"/>
+                    <xsl:value-of select="$roleFolder('role')"/>
                 </string>
                 <xsl:if test="$subfolders[1]">
                     <string key="category">
@@ -90,6 +106,28 @@
                 </xsl:if>
                 <xsl:if test="count($subfolders) &gt; 2">
                     <xsl:message terminate="yes" select="concat('Folders nested too deep: ', $relFolderPath)"/>
+                </xsl:if>
+                <xsl:if test="$roleFolder('target')">
+                    <map key="variant">
+                        <string key="name">
+                            <xsl:value-of select="$roleFolder('target')"/>
+                        </string>
+                        <xsl:if test="contains($targetDescriptions, $roleFolder('folder'))">
+                            <!--
+                                The $targetDescriptions string is formatted as a single string with target=description
+                                pairs, separated by comma's. The descriptions are literaly what's in the ant properties
+                                file, no escaping, and so it might contain comma's and we can't just split on comma's.
+                                So the surest way to fish out the description is to use a regex where we search for
+                                'our target=' up until the start of the next pair (or the end of the string). The
+                                start of the next pair always begins by a comma and the role, so that's our clue.
+                            -->
+                            <xsl:variable name="pattern" select="concat('.*', $roleFolder('folder'), '=(.*?)($|,', $roleFolder('role'), ').*')"/>
+                            <xsl:variable name="description" select="replace($targetDescriptions, $pattern, '$1')"/>
+                            <string key="description">
+                                <xsl:value-of select="$description"/>
+                            </string>
+                        </xsl:if>
+                    </map>
                 </xsl:if>
                 
                 <!-- Expand the packages/packageVersions parameters. -->
