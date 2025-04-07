@@ -291,7 +291,7 @@
                 <arg value="targetDescriptions=${target.descriptions}"/>
                 <arg value="packages=${packages}"/>
                 <arg value="packageVersions=${packages.versions}"/>
-                <arg value="adminOnlyTargets=${targets.adminonly}"/>
+                <arg value="adminOnlyTargets=${targets.adminOnly}"/>
             </java>
         </sequential>
     </macrodef>

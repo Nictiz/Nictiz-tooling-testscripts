@@ -37,6 +37,9 @@
          unescaped comma's. -->
     <xsl:param name="targetDescriptions"/>
     
+    <!-- A comma separated list of targets that are considered "admin only". -->
+    <xsl:param name="adminOnlyTargets"/>
+    
     <xsl:template name="generatePropertiesFile">
         <xsl:param name="fileUrl" as="xs:string" required="yes"/>
         <xsl:param name="relFolderPath" as="xs:string" required="yes"/>
@@ -129,6 +132,12 @@
                         </xsl:if>
                     </map>
                 </xsl:if>
+                
+                <xsl:for-each select="for $target in tokenize($adminOnlyTargets, ',') return normalize-space($target)">
+                    <xsl:if test=". = $roleFolder('folder')">
+                        <boolean key="adminOnly">true</boolean>
+                    </xsl:if>
+                </xsl:for-each>
                 
                 <!-- Expand the packages/packageVersions parameters. -->
                 <xsl:variable name="packageList" select="for $package in tokenize($packages, ',') return normalize-space($package)"/>
