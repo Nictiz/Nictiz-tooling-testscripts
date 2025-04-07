@@ -652,7 +652,7 @@
                 <xsl:if test="($dataType = $containerTypes and count(*) gt 1) or ((f:extension or f:modifierExtension) and $skipExtensions = false())">
                     <xsl:value-of select="'. This assert checks if all children exist (if applicable with their specific values) and if they are present within one element. Following asserts check if individual children exist to help you debug if this assert fails'"/>
                 </xsl:if>
-                <xsl:if test="$dataType = 'string'">
+                <xsl:if test="$dataType = ('string','markdown')">
                     <xsl:value-of select="'. This assert only checks existence of a value, because string comparisons can have many possible caveats'"/>
                 </xsl:if>
             </xsl:variable>
@@ -1077,7 +1077,7 @@
                     <!-- In Attachment, there is hardly anything that we can reliably check for more than existance, so we do nothing here. -->
                     <xsl:text> </xsl:text>
                 </xsl:when>
-                <xsl:when test="$dataType = ('boolean', 'decimal','integer')">
+                <xsl:when test="$dataType = ('boolean', 'decimal','integer', 'unsignedInt', 'positiveInt')">
                     <xsl:if test="$includeThis = true()">
                         <xsl:text>$this</xsl:text>
                     </xsl:if>
@@ -1087,7 +1087,7 @@
                     <!-- This is .display (in Coding) or .unit (in Quantity), so we only check for existence. No need to add .exists() -->
                     <xsl:text> </xsl:text>
                 </xsl:when>
-                <xsl:when test="$dataType = 'string'">
+                <xsl:when test="$dataType = ('string','markdown')">
                     <!--<!-\- '~' (equivalence) ignores case and whitespace. replace('.', '') removes dot and comma (or other characters - hyphens perhaps?). Or should we be allowed to define overrides in our NTS-script? -\->
                     <xsl:if test="$includeThis = true()">
                         <xsl:text>$this</xsl:text>
@@ -1103,6 +1103,17 @@
                 <xsl:when test="$dataType = ('dateTime','date','instant')">
                     <!-- For now we only check if date or dateTime exist -->
                     <xsl:text> </xsl:text>
+                </xsl:when>
+                <xsl:when test="$dataType = 'time'">
+                    <!-- Time data type is basically hours, minutes and seconds, without time zone. According to the
+                         spec, seconds may be zero-padded and are somewhat optional, but it is reasonable to assume
+                         here that hours and minutes should match. -->
+                    <xsl:if test="$includeThis = true()">
+                        <xsl:text>$this</xsl:text>
+                    </xsl:if>
+                    <xsl:text>.startsWith(</xsl:text>
+                    <xsl:value-of select="substring(@value, 0, 6)"/>
+                    <xsl:text>)</xsl:text>
                 </xsl:when>
                 <xsl:when test="$dataType = 'code' and $parentDataType = 'Quantity'">
                     <xsl:if test="$includeThis = true()">
@@ -1358,10 +1369,13 @@
                 <!-- Nothing to be added, as we only check existance -->
                 <xsl:text> </xsl:text>
             </xsl:when>
-            <xsl:when test="$dataType = 'string'">
+            <xsl:when test="$dataType = 'time'">
+                <xsl:value-of select="concat('that starts with ''', substring(@value, 0, 6), '''')"/>
+            </xsl:when>
+            <xsl:when test="$dataType = ('string','markdown')">
                 <xsl:text>with a value</xsl:text>
             </xsl:when>
-            <xsl:when test="$dataType = ('boolean','decimal','integer'(:,'string':)) or ($dataType = ('uri','canonical') and $parentDataType = ('Coding','Meta','Quantity'))">
+            <xsl:when test="$dataType = ('boolean','decimal','integer','unsignedInt','positiveInt'(:,'string':)) or ($dataType = ('uri','canonical') and $parentDataType = ('Coding','Meta','Quantity'))">
                 <!-- For uri's in Coding and Quantity (.system) or Meta (.profile, uri is canonical in R4), we want an exact match. I can imagine that in some situations we want to only check for existance. -->
                 <xsl:value-of select="concat('''', @value, '''')"/>
             </xsl:when>
