@@ -127,7 +127,7 @@
             </map>
         </xsl:variable>
         <xsl:result-document href="{$fileUrl}" method="text" indent="no">
-            <xsl:value-of select="xml-to-json($properties)"/>
+            <xsl:value-of select="xml-to-json($properties, map {'indent': true()})"/>
         </xsl:result-document>
     </xsl:template>    
 </xsl:stylesheet>
