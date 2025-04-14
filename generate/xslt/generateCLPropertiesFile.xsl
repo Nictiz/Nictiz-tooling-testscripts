@@ -20,13 +20,13 @@
     <xsl:param name="goal" as="xs:string"/>
     
     <!-- The "informationStandard" according to the Conformancelab spec. -->
-    <xsl:param name="informationStandard" as="xs:string" required="yes"/>
+    <xsl:param name="informationStandard" as="xs:string"/>
     
     <!-- The "usecase" according to the Conformancelab spec. -->
-    <xsl:param name="usecase" as="xs:string" required="yes"/>
+    <xsl:param name="usecase" as="xs:string"/>
     
     <!-- A comma-separated list of roles that we recognize within the current folder structure. --> 
-    <xsl:param name="roles" as="xs:string" required="yes"/>
+    <xsl:param name="roles" as="xs:string"/>
     
     <!-- A list matching targets to their descriptions. This list is formatted as a single comma-separated string with
          "target=description" entries. The targets are the full folder names, and the descriptions may contain 

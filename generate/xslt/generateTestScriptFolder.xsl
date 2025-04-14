@@ -29,8 +29,10 @@
     <!-- The FHIR version that the scripts in the folder target. Either 'stu3' or 'r4'. -->
     <xsl:param name="fhirVersion"/>
     
+    <xsl:param name="generateCLPropertiesFile" select="false()"/>
+    
     <xsl:include href="generateTestScript.xsl"/>
-    <xsl:include href="generatePropertiesFile.xsl"/>
+    <xsl:include href="generateCLPropertiesFile.xsl"/>
     
     <xsl:template match="/" name="buildFilesInTargetFolder">
         <xsl:for-each select="collection(concat('file:///', $inputDir, '?select=*.xml;recurse=yes'))">
@@ -118,7 +120,7 @@
                 <xsl:if test="$target = '#default' or (fn:contains(fn:concat('/',$target.dir), $nts.file.reldir.root) and $targetLevel = $rootLevel)">
                     <!-- Write out a folder properties file if it doesn't exist yet. -->
                     <xsl:variable name="propertiesFileUrl" select="concat($testscript.path, 'properties.json')"/>
-                    <xsl:if test="not(unparsed-text-available($propertiesFileUrl))">
+                    <xsl:if test="$generateCLPropertiesFile and not(unparsed-text-available($propertiesFileUrl))">
                         <xsl:call-template name="generatePropertiesFile">
                             <xsl:with-param name="fileUrl" select="$propertiesFileUrl"/>
                             <xsl:with-param name="relFolderPath">
