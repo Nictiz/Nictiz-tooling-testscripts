@@ -257,15 +257,6 @@
                 <arg value="tokensJsonFile=${tokens.json.url}"/>
                 <arg value="fhirVersion=${fhir.version}"/>
                 <arg value="referencesFile=@{references.file}"/>
-                <arg value="buildCLPropertiesFile=${build.cl.propertiesfile}"/>
-                <arg value="goal=${cl.goal}"/>
-                <arg value="informationStandard=${informationStandard}"/>
-                <arg value="usecase=${usecase}"/>
-                <arg value="roles=${roles}"/>
-                <arg value="targetDescriptions=${cl.target.descriptions}"/>
-                <arg value="adminOnlyTargets=${targets.adminOnly}"/>
-                <arg value="packages=${cl.packages}"/>
-                <arg value="packageVersions=${cl.packages.versions}"/>
             </java>
         </sequential>
     </macrodef>

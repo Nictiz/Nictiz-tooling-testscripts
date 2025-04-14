@@ -12,9 +12,11 @@
     
     <!--
         This file contains the machinery to write a ConformanceLab properties file.
-        It expects the following global parameters to be set:
-        - fhirVersion (either 'stu3' or 'r4')
     -->
+
+    <xsl:param name="baseDirUrl"/>
+
+    <xsl:param name="fhirVersion" as="xs:string"/>
     
     <!-- The "goal" according to the Conformancelab spec. -->
     <xsl:param name="goal" as="xs:string"/>
@@ -42,9 +44,45 @@
     <!-- A list matching packages to their versions. This list is formatted as a single comma-separated string with
          "package=version" entries. --> 
     <xsl:param name="packageVersions" as="xs:string"/>
+
+    <xsl:template name="generatePropertiesFiles">
+        <!--
+            We need to place property files in all folders containing files, but not in the folders in between or in
+            empty folders (and excluding everything starting with an underscore). Getting only the folders with files
+            is not trivial in XSLT (or in ANT) unfortunately.
+            The approach is to loop over all TestScript content in folders and nested folders using collection(),
+            extract the uri of the TestScript using base-uri(), and than extract the relative path beneath baseDirUrl
+            from that. Once we have the collection, we can de-duplicate it.
+            The assumption is that at least, by working with file uri's, we can assume that the path separator is
+            always a backslash, so we don't need to worry about *that*.
+        -->
+        <xsl:variable name="path" select="replace($baseDirUrl, 'file:/*', '')"/>
+        <xsl:variable name="relFolderPaths" as="xs:string*">
+            <xsl:variable name="unfiltered" as="xs:string*">
+                <xsl:for-each select="collection(iri-to-uri(concat($baseDirUrl, '?select=', '*.xml;recurse=yes')))//f:TestScript">
+                    <!-- One would assume that working with file uri's we have a stable 'base part' with scheme,
+                         slashes, etc. so we can strip that from the file uri and be left with the relative path.
+                         But nonono, that would be simple. So base-uri() returns (at this time and place at least) a
+                         file uri with a single slash instead of three slashes. Our replace strategy now has to account
+                         for any number of forward slashes following the 'file:' part.
+                    -->
+                    <xsl:variable name="relative" select="replace(base-uri(.), concat('file:/+', $path), '')"/>
+                    <xsl:if test="not(starts-with($relative, '/_'))"> <!-- Filter out folders starting with an underscore -->
+                        <xsl:value-of select="replace($relative, '/(.*)/.*?\.xml', '$1')"/>
+                    </xsl:if>
+                </xsl:for-each>
+            </xsl:variable>
+            <xsl:copy-of select="distinct-values($unfiltered)"/>
+        </xsl:variable>
+        
+        <xsl:for-each select="$relFolderPaths">
+            <xsl:call-template name="generatePropertiesFile">
+                <xsl:with-param name="relFolderPath" select="."/>
+            </xsl:call-template>
+        </xsl:for-each>
+    </xsl:template>
     
     <xsl:template name="generatePropertiesFile">
-        <xsl:param name="fileUrl" as="xs:string" required="yes"/>
         <xsl:param name="relFolderPath" as="xs:string" required="yes"/>
 
         <!-- Create an XML representation of the desired JSON structure, which can be written as JSON using xml-to-json. --> 
@@ -184,7 +222,7 @@
                 </xsl:if>
             </map>
         </xsl:variable>
-        <xsl:result-document href="{$fileUrl}" method="text" indent="no">
+        <xsl:result-document href="{concat($baseDirUrl, '/', $relFolderPath, '/properties.json')}" method="text" indent="no">
             <xsl:value-of select="xml-to-json($properties, map {'indent': true()})"/>
         </xsl:result-document>
     </xsl:template>    
