@@ -47,6 +47,13 @@
         <!-- Create an XML representation of the desired JSON structure, which can be written as JSON using xml-to-json. --> 
         <xsl:variable name="properties">
             <map xmlns="http://www.w3.org/2005/xpath-functions">
+                <xsl:if test="not(upper-case($fhirVersion) = ('DSTU1', 'DSTU2', 'STU3', 'R4', 'R4B', 'R5'))">
+                    <xsl:message terminate="yes" select="concat('Unrecognized FHIR version: ', $fhirVersion)"/>
+                </xsl:if>
+                <string key="fhirVersion">
+                    <xsl:value-of select="upper-case($fhirVersion)"/>
+                </string>
+
                 <string key="informationStandard">
                     <xsl:value-of select="$informationStandard"/>
                 </string>
@@ -57,9 +64,6 @@
                 <xsl:if test="string-length(normalize-space($fhirVersion)) = 0">
                     <xsl:message terminate="yes">No FHIR version has been supplied</xsl:message>
                 </xsl:if>
-                <string key="fhirVersion">
-                    <xsl:value-of select="upper-case($fhirVersion)"/>
-                </string>
                 
                 <xsl:variable name="roleList" select="for $role in tokenize($roles, ',') return fn:normalize-space($role)"/>
                 <!--
