@@ -284,7 +284,8 @@
                 <arg value="versionAddition=${version.addition}"/>
                 <arg value="tokensJsonFile=${tokens.json.url}"/>
                 <arg value="fhirVersion=${fhir.version}"/>
-                <arg value="referencesFile=@{references.file}"/> 
+                <arg value="referencesFile=@{references.file}"/>
+                <arg value="goal=${goal}"/>
                 <arg value="informationStandard=${informationStandard}"/>
                 <arg value="usecase=${usecase}"/>
                 <arg value="roles=${roles}"/>

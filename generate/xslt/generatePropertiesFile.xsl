@@ -16,12 +16,8 @@
         - fhirVersion (either 'stu3' or 'r4')
     -->
     
-    <!-- A list of packages, formatted as a single comma-separated string. --> 
-    <xsl:param name="packages"/>
-    
-    <!-- A list matching packages to their versions. This list is formatted as a single comma-separated string with
-         "package=version" entries. --> 
-    <xsl:param name="packageVersions" as="xs:string"/>
+    <!-- The "goal" according to the Conformancelab spec. -->
+    <xsl:param name="goal" as="xs:string"/>
     
     <!-- The "informationStandard" according to the Conformancelab spec. -->
     <xsl:param name="informationStandard" as="xs:string" required="yes"/>
@@ -39,6 +35,13 @@
     
     <!-- A comma separated list of targets that are considered "admin only". -->
     <xsl:param name="adminOnlyTargets"/>
+
+    <!-- A list of packages, formatted as a single comma-separated string. --> 
+    <xsl:param name="packages"/>
+    
+    <!-- A list matching packages to their versions. This list is formatted as a single comma-separated string with
+         "package=version" entries. --> 
+    <xsl:param name="packageVersions" as="xs:string"/>
     
     <xsl:template name="generatePropertiesFile">
         <xsl:param name="fileUrl" as="xs:string" required="yes"/>
@@ -47,6 +50,10 @@
         <!-- Create an XML representation of the desired JSON structure, which can be written as JSON using xml-to-json. --> 
         <xsl:variable name="properties">
             <map xmlns="http://www.w3.org/2005/xpath-functions">
+                <string key="goal">
+                    <xsl:value-of select="$goal"/>
+                </string>
+                
                 <xsl:if test="not(upper-case($fhirVersion) = ('DSTU1', 'DSTU2', 'STU3', 'R4', 'R4B', 'R5'))">
                     <xsl:message terminate="yes" select="concat('Unrecognized FHIR version: ', $fhirVersion)"/>
                 </xsl:if>
