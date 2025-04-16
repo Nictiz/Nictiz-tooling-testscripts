@@ -88,6 +88,9 @@
         <!-- Create an XML representation of the desired JSON structure, which can be written as JSON using xml-to-json. --> 
         <xsl:variable name="properties">
             <map xmlns="http://www.w3.org/2005/xpath-functions">
+                <xsl:if test="not($goal = ('Test', 'Cert'))">
+                    <xsl:message terminate="yes" select="concat('Unrecognized goal: ', $goal, '. It should be either ''Test'' or ''Cert''.')"/>
+                </xsl:if>
                 <string key="goal">
                     <xsl:value-of select="$goal"/>
                 </string>
