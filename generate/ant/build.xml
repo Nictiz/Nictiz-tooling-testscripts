@@ -49,8 +49,6 @@
 -->
 
 <project xmlns:ivy="antlib:org.apache.ivy.ant" basedir="." name="buildNTSProject" default="build">
-    <import file="cl-properties.xml"/>
-
     <!-- Make the directories passed as parameters absolute (except for output.dir.abs, because we first need to
          guarantee that this folder exists. This is done in check-input. -->
     <property name="input.dir.abs" location="${input.dir}"/>
@@ -399,7 +397,7 @@
         </sequential>
     </target>
 
-    <target name="build" depends="set-logging, load, check-input, clean-build-dir, prepare-cl-properties">
+    <target name="build" depends="set-logging, load, check-input, clean-build-dir">
         <property name="reference.dir" location="${input.dir.abs}/${reference.subdir}"/>
 
         <!-- Set default loadresources.exclude to nothing -->
