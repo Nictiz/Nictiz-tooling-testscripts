@@ -428,7 +428,7 @@
 
                     <!-- Iteratate over all targets that are defined as build parameter (targets.additional) plus the 
                          default target ('#default') -->
-                    <for list="${targets}" delimiter="," param="target.dir">
+                    <for list="${targets}" delimiter="," param="target.dir" trim="true">
                         <sequential>
                             <if>
                                 <equals arg1="@{target.dir}" arg2="#default"/>
