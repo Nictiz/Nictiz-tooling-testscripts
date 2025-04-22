@@ -30,6 +30,10 @@
     <!-- A comma-separated list of roles that we recognize within the current folder structure. --> 
     <xsl:param name="roles" as="xs:string"/>
     
+    <!-- A list matching roles to their descriptions. This list is formatted as a single comma-separated string with
+         "role=description" entries. The descriptions may contain unescaped comma's. -->
+    <xsl:param name="roleDescriptions" as="xs:string"/>
+    
     <!-- A list matching targets to their descriptions. This list is formatted as a single comma-separated string with
          "target=description" entries. The targets are the full folder names, and the descriptions may contain 
          unescaped comma's. -->
@@ -146,9 +150,28 @@
                     </xsl:for-each>
                 </xsl:variable>
                 
-                <string key="role">
-                    <xsl:value-of select="$roleFolder('role')"/>
-                </string>
+                <map key="role">
+                    <string key="name">
+                        <xsl:value-of select="$roleFolder('role')"/>
+                    </string>
+                    <xsl:if test="contains($roleDescriptions, concat($roleFolder('role'), '='))">
+                        <!--
+                            The $targetRoles string is formatted as a single string with role=description
+                            pairs, separated by comma's. The descriptions are literaly what's in the ant properties
+                            file, no escaping, and so it might contain comma's and we can't just split on comma's.
+                            So the surest way to fish out the description is to use a regex where we search for
+                            'our role=' up until the start of the next pair (or the end of the string). The
+                            start of the next pair always begins by a comma, followed by a set of non-whitespace
+                            characters, followed by an = sign, so that's our clue.
+                            -->
+                        <xsl:variable name="pattern" select="concat('.*', $roleFolder('role'), '=(.*?)($|,\S+=.*)')"/>
+                        <xsl:variable name="description" select="replace($roleDescriptions, $pattern, '$1')"/>
+                        <string key="description">
+                            <xsl:value-of select="$description"/>
+                        </string>
+                    </xsl:if>
+                </map>
+
                 <xsl:if test="$subfolders[1]">
                     <string key="category">
                         <xsl:value-of select="$subfolders[1]"/>

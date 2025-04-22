@@ -72,9 +72,25 @@
             
         <!-- category, subcategory and role must not be explicitly set, they come from the folder structure. -->
         <!-- variant must not be explicitly set, it comes from the target machinery. -->
-            
-        <!-- Somewhat involved approach to create the 'targetDescriptions' input parameter for the XSLT conversion; a
-             single string containing a comma-separated list of all target descriptions. -->
+
+        <!-- Somewhat involved approach to create the 'roleDescriptions' input parameter for the XSLT conversion; a
+             single string containing a comma-separated list with '[role]=[description]' pairs. -->
+        <pathconvert property="role.descriptions.raw" pathsep=",">
+            <propertyset>
+                <propertyref prefix="role.description."/>
+                <mapper type="regexp" from="role\.description\.(.*)"
+                    to="\1=${role.description.\1}"/>
+            </propertyset>
+        </pathconvert>
+        <loadresource property="role.descriptions">
+            <propertyresource name="role.descriptions.raw"/>
+            <filterchain>
+                <expandproperties/>
+            </filterchain>
+        </loadresource>
+        
+        <!-- Same approach as above to create the 'roleDescriptions' input parameter for the XSLT conversion; a
+             single string containing a comma-separated list of '[target]=[description]' pairs. -->
         <pathconvert property="target.descriptions.raw" pathsep=",">
             <propertyset>
                 <propertyref prefix="target.description."/>
@@ -96,7 +112,7 @@
         <property name="packages" value=""/>
             
         <!-- Same approach as above to create the 'packages' input parameter for the XSLT conversion; a single string
-             containing 'canonical=version' entries, separated by commas. -->
+             containing '[canonical]=[version]' pairs, separated by commas. -->
         <pathconvert property="packages.versions.raw" pathsep=",">
             <propertyset>
                 <propertyref prefix="package."/>
@@ -124,6 +140,7 @@
             <arg value="informationStandard=${informationStandard}"/>
             <arg value="usecase=${usecase}"/>
             <arg value="roles=${roles}"/>
+            <arg value="roleDescriptions=${role.descriptions}"/>
             <arg value="targetDescriptions=${target.descriptions}"/>
             <arg value="adminOnlyTargets=${targets.adminOnly}"/>
             <arg value="packages=${packages}"/>
