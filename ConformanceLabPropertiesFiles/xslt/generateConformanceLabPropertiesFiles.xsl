@@ -57,6 +57,27 @@
     <xsl:param name="defaultServers" as="xs:string"/>
 
     <xsl:template name="generatePropertiesFiles">
+        <xsl:for-each select="nts:findFolders(fn:false())">
+            <xsl:call-template name="generatePropertiesFile">
+                <xsl:with-param name="relFolderPath" select="."/>
+                <xsl:with-param name="loadscriptFolder" select="fn:false()"/>
+            </xsl:call-template>
+        </xsl:for-each>
+
+        <xsl:for-each select="nts:findFolders(fn:true())">
+            <xsl:call-template name="generatePropertiesFile">
+                <xsl:with-param name="relFolderPath" select="."/>
+                <xsl:with-param name="loadscriptFolder" select="fn:true()"/>
+            </xsl:call-template>
+        </xsl:for-each>
+    </xsl:template>
+    
+    <!-- Return all relative paths of folder with TestScripts in them.
+         - loadscriptFolders: If false, find non-loadscript folders only. If true, find loadscript folders only.
+    -->
+    <xsl:function name="nts:findFolders" as="xs:string*">
+        <xsl:param name="loadscriptFolders" as="xs:boolean"/>
+        
         <!--
             We need to place property files in all folders containing files, but not in the folders in between or in
             empty folders (and excluding everything starting with an underscore). Getting only the folders with files
@@ -68,33 +89,39 @@
             always a backslash, so we don't need to worry about *that*.
         -->
         <xsl:variable name="path" select="replace($baseDirUrl, 'file:/*', '')"/>
-        <xsl:variable name="relFolderPaths" as="xs:string*">
-            <xsl:variable name="unfiltered" as="xs:string*">
-                <xsl:for-each select="collection(iri-to-uri(concat($baseDirUrl, '?select=', '*.xml;recurse=yes')))//f:TestScript">
-                    <!-- One would assume that working with file uri's we have a stable 'base part' with scheme,
-                         slashes, etc. so we can strip that from the file uri and be left with the relative path.
-                         But nonono, that would be simple. So base-uri() returns (at this time and place at least) a
-                         file uri with a single slash instead of three slashes. Our replace strategy now has to account
-                         for any number of forward slashes following the 'file:' part.
-                    -->
-                    <xsl:variable name="relative" select="replace(base-uri(.), concat('file:/+', $path), '')"/>
-                    <xsl:if test="not(starts-with($relative, '/_'))"> <!-- Filter out folders starting with an underscore -->
+        <xsl:variable name="unfiltered" as="xs:string*">
+            <xsl:for-each select="collection(iri-to-uri(concat($baseDirUrl, '?select=', '*.xml;recurse=yes')))//f:TestScript">
+                <!-- One would assume that working with file uri's we have a stable 'base part' with scheme,
+                     slashes, etc. so we can strip that from the file uri and be left with the relative path.
+                     But nonono, that would be simple. So base-uri() returns (at this time and place at least) a
+                     file uri with a single slash instead of three slashes. Our replace strategy now has to account
+                     for any number of forward slashes following the 'file:' part.
+                -->
+                <xsl:variable name="relative" select="replace(base-uri(.), concat('file:/+', $path), '')"/>
+                <xsl:choose>
+                    <xsl:when test="not($loadscriptFolders) and not(starts-with($relative, '/_'))">
+                        <!-- Filter out folders starting with an underscore in 'normal' mode -->
                         <xsl:value-of select="replace($relative, '/(.*)/.*?\.xml', '$1')"/>
-                    </xsl:if>
-                </xsl:for-each>
-            </xsl:variable>
-            <xsl:copy-of select="distinct-values($unfiltered)"/>
+                    </xsl:when>
+                    <xsl:when test="$loadscriptFolders and starts-with($relative, '/_LoadResources')">
+                        <!-- Only include folders that are explicitly called _LoadResources when looking for loadscript
+                             folders. -->
+                        <xsl:value-of select="replace($relative, '/(.*)/.*?\.xml', '$1')"/>
+                    </xsl:when>
+                </xsl:choose>
+            </xsl:for-each>
         </xsl:variable>
         
-        <xsl:for-each select="$relFolderPaths">
-            <xsl:call-template name="generatePropertiesFile">
-                <xsl:with-param name="relFolderPath" select="."/>
-            </xsl:call-template>
-        </xsl:for-each>
-    </xsl:template>
+        <xsl:copy-of select="distinct-values($unfiltered)"/>
+    </xsl:function>
     
+    <!-- Generate a property file for the specified folder.
+         - relFolderPath: the relative path to the folder.
+         - loadscriptFolder: boolean to indicate if this is a loadscript folder, to which not all property's apply.
+    -->
     <xsl:template name="generatePropertiesFile">
         <xsl:param name="relFolderPath" as="xs:string" required="yes"/>
+        <xsl:param name="loadscriptFolder" as="xs:boolean" required="yes"/>
 
         <!-- Create an XML representation of the desired JSON structure, which can be written as JSON using xml-to-json. --> 
         <xsl:variable name="properties">
@@ -124,134 +151,136 @@
                     <xsl:message terminate="yes">No FHIR version has been supplied</xsl:message>
                 </xsl:if>
                 
-                <xsl:variable name="roleList" select="for $role in tokenize($roles, ',') return fn:normalize-space($role)"/>
-                <!--
-                    Get all the subfolders between the ouput root and the output file, and fish out the folder that
-                    specifies the role (which may have an additional target appended, so it's a match on the start of
-                    the folder name).
-                    First element is discarded because it is empty ($relFolderPath always starts with a '/')
-                -->
-                <xsl:variable name="roleFolder" as="map(*)">
-                    <xsl:map>
-                        <xsl:for-each select="tokenize($relFolderPath, '/')">
-                            <xsl:variable name="subfolder" select="."/>
-                            <xsl:for-each select="$roleList">
-                                <xsl:variable name="role" select="."/>
-                                <xsl:if test="starts-with($subfolder, $role)">
-                                    <xsl:map-entry key="'role'" select="$role"/>
-                                    <xsl:map-entry key="'target'" select="substring-after($subfolder, concat(., '-'))"/>
-                                    <xsl:map-entry key="'folder'" select="$subfolder"/>
-                                </xsl:if>
+                <xsl:if test="not($loadscriptFolder)">
+                    <xsl:variable name="roleList" select="for $role in tokenize($roles, ',') return fn:normalize-space($role)"/>
+                    <!--
+                        Get all the subfolders between the ouput root and the output file, and fish out the folder that
+                        specifies the role (which may have an additional target appended, so it's a match on the start of
+                        the folder name).
+                        First element is discarded because it is empty ($relFolderPath always starts with a '/')
+                    -->
+                    <xsl:variable name="roleFolder" as="map(*)">
+                        <xsl:map>
+                            <xsl:for-each select="tokenize($relFolderPath, '/')">
+                                <xsl:variable name="subfolder" select="."/>
+                                <xsl:for-each select="$roleList">
+                                    <xsl:variable name="role" select="."/>
+                                    <xsl:if test="starts-with($subfolder, $role)">
+                                        <xsl:map-entry key="'role'" select="$role"/>
+                                        <xsl:map-entry key="'target'" select="substring-after($subfolder, concat(., '-'))"/>
+                                        <xsl:map-entry key="'folder'" select="$subfolder"/>
+                                    </xsl:if>
+                                </xsl:for-each>
                             </xsl:for-each>
-                        </xsl:for-each>
-                    </xsl:map>
-                </xsl:variable>
-                <xsl:if test="not(map:contains($roleFolder, 'role'))">
-                    <xsl:message terminate="yes" select="concat('No folder dedicated to a role could be found in path ''', $relFolderPath, '''. Known role names are: ', string-join($roleList, ', '))"/>
-                </xsl:if>
-                <xsl:variable name="subfolders" as="xs:string*">
-                    <xsl:for-each select="tokenize($relFolderPath, '/')">
-                        <xsl:if test="string-length(normalize-space(.)) &gt; 0 and not(starts-with(., $roleFolder('role')))">
-                            <xsl:value-of select="."/>
-                        </xsl:if>
-                    </xsl:for-each>
-                </xsl:variable>
-                
-                <map key="role">
-                    <string key="name">
-                        <xsl:value-of select="$roleFolder('role')"/>
-                    </string>
-                    <xsl:if test="contains($roleDescriptions, concat($roleFolder('role'), '='))">
-                        <!--
-                            The $targetRoles string is formatted as a single string with role=description
-                            pairs, separated by comma's. The descriptions are literaly what's in the ant properties
-                            file, no escaping, and so it might contain comma's and we can't just split on comma's.
-                            So the surest way to fish out the description is to use a regex where we search for
-                            'our role=' up until the start of the next pair (or the end of the string). The
-                            start of the next pair always begins by a comma, followed by a set of non-whitespace
-                            characters, followed by an = sign, so that's our clue.
-                            -->
-                        <xsl:variable name="pattern" select="concat('.*', $roleFolder('role'), '=(.*?)($|,\S+=.*)')"/>
-                        <xsl:variable name="description" select="replace($roleDescriptions, $pattern, '$1')"/>
-                        <string key="description">
-                            <xsl:value-of select="$description"/>
-                        </string>
+                        </xsl:map>
+                    </xsl:variable>
+                    <xsl:if test="not(map:contains($roleFolder, 'role'))">
+                        <xsl:message terminate="yes" select="concat('No folder dedicated to a role could be found in path ''', $relFolderPath, '''. Known role names are: ', string-join($roleList, ', '))"/>
                     </xsl:if>
-                </map>
-
-                <xsl:if test="$subfolders[1]">
-                    <string key="category">
-                        <xsl:value-of select="$subfolders[1]"/>
-                    </string>
-                </xsl:if>
-                <xsl:if test="$subfolders[2]">
-                    <string key="subcategory">
-                        <xsl:value-of select="$subfolders[2]"/>
-                    </string>
-                </xsl:if>
-                <xsl:if test="count($subfolders) &gt; 2">
-                    <xsl:message terminate="yes" select="concat('Folders nested too deep: ', $relFolderPath)"/>
-                </xsl:if>
-                <xsl:if test="$roleFolder('target')">
-                    <map key="variant">
+                    <xsl:variable name="subfolders" as="xs:string*">
+                        <xsl:for-each select="tokenize($relFolderPath, '/')">
+                            <xsl:if test="string-length(normalize-space(.)) &gt; 0 and not(starts-with(., $roleFolder('role')))">
+                                <xsl:value-of select="."/>
+                            </xsl:if>
+                        </xsl:for-each>
+                    </xsl:variable>
+                
+                    <map key="role">
                         <string key="name">
-                            <xsl:value-of select="$roleFolder('target')"/>
+                            <xsl:value-of select="$roleFolder('role')"/>
                         </string>
-                        <xsl:if test="contains($targetDescriptions, $roleFolder('folder'))">
+                        <xsl:if test="contains($roleDescriptions, concat($roleFolder('role'), '='))">
                             <!--
-                                The $targetDescriptions string is formatted as a single string with target=description
+                                The $targetRoles string is formatted as a single string with role=description
                                 pairs, separated by comma's. The descriptions are literaly what's in the ant properties
                                 file, no escaping, and so it might contain comma's and we can't just split on comma's.
                                 So the surest way to fish out the description is to use a regex where we search for
-                                'our target=' up until the start of the next pair (or the end of the string). The
-                                start of the next pair always begins by a comma and the role, so that's our clue.
-                            -->
-                            <xsl:variable name="pattern" select="concat('.*', $roleFolder('folder'), '=(.*?)($|,', $roleFolder('role'), ').*')"/>
-                            <xsl:variable name="description" select="replace($targetDescriptions, $pattern, '$1')"/>
+                                'our role=' up until the start of the next pair (or the end of the string). The
+                                start of the next pair always begins by a comma, followed by a set of non-whitespace
+                                characters, followed by an = sign, so that's our clue.
+                                -->
+                            <xsl:variable name="pattern" select="concat('.*', $roleFolder('role'), '=(.*?)($|,\S+=.*)')"/>
+                            <xsl:variable name="description" select="replace($roleDescriptions, $pattern, '$1')"/>
                             <string key="description">
                                 <xsl:value-of select="$description"/>
                             </string>
                         </xsl:if>
                     </map>
-                </xsl:if>
-                
-                <xsl:for-each select="for $target in tokenize($adminOnlyTargets, ',') return normalize-space($target)">
-                    <xsl:if test=". = $roleFolder('folder')">
-                        <boolean key="adminOnly">true</boolean>
+
+                    <xsl:if test="$subfolders[1]">
+                        <string key="category">
+                            <xsl:value-of select="$subfolders[1]"/>
+                        </string>
                     </xsl:if>
-                </xsl:for-each>
-                
-                <!-- Expand the packages/packageVersions parameters. -->
-                <xsl:variable name="packageList" select="for $package in tokenize($packages, ',') return normalize-space($package)"/>
-                <xsl:if test="count($packageList) != 0">
-                    <array key="packages">
-                        <xsl:for-each select="$packageList">
-                            <xsl:variable name="package" select="."/>
-                            
-                            <!-- The packageVersions parameter is a string formatted as a comma separated list with
-                         'package=version' entries. We use a simple regex approach to extact the version for the
-                         specified canonical. -->
-                            <xsl:variable name="version">
-                                <xsl:for-each select="tokenize($packageVersions, ',')">
-                                    <xsl:variable name="parts" select="tokenize(., '=')"/>
-                                    <xsl:if test="$parts[1] = $package">
-                                        <xsl:value-of select="$parts[2]"/>
-                                    </xsl:if>
-                                </xsl:for-each>
-                            </xsl:variable>
-                            <xsl:if test="string-length($version) = 0">
-                                <xsl:message terminate="yes" select="concat('No version has been defined for package ', $package)"/>
+                    <xsl:if test="$subfolders[2]">
+                        <string key="subcategory">
+                            <xsl:value-of select="$subfolders[2]"/>
+                        </string>
+                    </xsl:if>
+                    <xsl:if test="count($subfolders) &gt; 2">
+                        <xsl:message terminate="yes" select="concat('Folders nested too deep: ', $relFolderPath)"/>
+                    </xsl:if>
+                    <xsl:if test="$roleFolder('target')">
+                        <map key="variant">
+                            <string key="name">
+                                <xsl:value-of select="$roleFolder('target')"/>
+                            </string>
+                            <xsl:if test="contains($targetDescriptions, $roleFolder('folder'))">
+                                <!--
+                                    The $targetDescriptions string is formatted as a single string with target=description
+                                    pairs, separated by comma's. The descriptions are literaly what's in the ant properties
+                                    file, no escaping, and so it might contain comma's and we can't just split on comma's.
+                                    So the surest way to fish out the description is to use a regex where we search for
+                                    'our target=' up until the start of the next pair (or the end of the string). The
+                                    start of the next pair always begins by a comma and the role, so that's our clue.
+                                -->
+                                <xsl:variable name="pattern" select="concat('.*', $roleFolder('folder'), '=(.*?)($|,', $roleFolder('role'), ').*')"/>
+                                <xsl:variable name="description" select="replace($targetDescriptions, $pattern, '$1')"/>
+                                <string key="description">
+                                    <xsl:value-of select="$description"/>
+                                </string>
                             </xsl:if>
-                            <map>
-                                <string key="package">
-                                    <xsl:value-of select="$package"/>
-                                </string>
-                                <string key="version">
-                                    <xsl:value-of select="$version"/>
-                                </string>
-                            </map>
-                        </xsl:for-each>                    
-                    </array>
+                        </map>
+                    </xsl:if>
+                    
+                    <xsl:for-each select="for $target in tokenize($adminOnlyTargets, ',') return normalize-space($target)">
+                        <xsl:if test=". = $roleFolder('folder')">
+                            <boolean key="adminOnly">true</boolean>
+                        </xsl:if>
+                    </xsl:for-each>
+                    
+                    <!-- Expand the packages/packageVersions parameters. -->
+                    <xsl:variable name="packageList" select="for $package in tokenize($packages, ',') return normalize-space($package)"/>
+                    <xsl:if test="count($packageList) != 0">
+                        <array key="packages">
+                            <xsl:for-each select="$packageList">
+                                <xsl:variable name="package" select="."/>
+                                
+                                <!-- The packageVersions parameter is a string formatted as a comma separated list with
+                             'package=version' entries. We use a simple regex approach to extact the version for the
+                             specified canonical. -->
+                                <xsl:variable name="version">
+                                    <xsl:for-each select="tokenize($packageVersions, ',')">
+                                        <xsl:variable name="parts" select="tokenize(., '=')"/>
+                                        <xsl:if test="$parts[1] = $package">
+                                            <xsl:value-of select="$parts[2]"/>
+                                        </xsl:if>
+                                    </xsl:for-each>
+                                </xsl:variable>
+                                <xsl:if test="string-length($version) = 0">
+                                    <xsl:message terminate="yes" select="concat('No version has been defined for package ', $package)"/>
+                                </xsl:if>
+                                <map>
+                                    <string key="package">
+                                        <xsl:value-of select="$package"/>
+                                    </string>
+                                    <string key="version">
+                                        <xsl:value-of select="$version"/>
+                                    </string>
+                                </map>
+                            </xsl:for-each>                    
+                        </array>
+                    </xsl:if>
                 </xsl:if>
                 
                 <!-- Expand the server/defaultServers parameters. -->
