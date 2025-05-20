@@ -126,7 +126,26 @@
             </filterchain>
         </loadresource>
     </target>
-        
+    
+    <!-- Default to empty string -->
+    <property name="server" value=""/>
+    
+    <!-- Same approach as above to create the 'roleDescriptions' input parameter for the XSLT conversion; a
+             single string containing a comma-separated list of '[target]=[description]' pairs. -->
+    <pathconvert property="servers.default.raw" pathsep=",">
+        <propertyset>
+            <propertyref prefix="server."/>
+            <mapper type="regexp" from="server\.(.*)"
+                to="\1=${server.\1}"/>
+        </propertyset>
+    </pathconvert>
+    <loadresource property="servers.default">
+        <propertyresource name="servers.default.raw"/>
+        <filterchain>
+            <expandproperties/>
+        </filterchain>
+    </loadresource>
+    
     <target name="build" depends="retrieve-dependencies, prepare-parameters">
         <echo message="Generating ConformanceLab properties files"/>
         <!-- Switched to <java> because the <xslt> ant task doesn't support (an equivalent of) the -it flag -->
@@ -145,6 +164,8 @@
             <arg value="adminOnlyTargets=${targets.adminOnly}"/>
             <arg value="packages=${packages}"/>
             <arg value="packageVersions=${packages.versions}"/>
+            <arg value="server=${server}"/>
+            <arg value="defaultServers=${servers.default}"/>
         </java>
     </target>
 </project>

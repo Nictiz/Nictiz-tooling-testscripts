@@ -48,6 +48,13 @@
     <!-- A list matching packages to their versions. This list is formatted as a single comma-separated string with
          "package=version" entries. --> 
     <xsl:param name="packageVersions" as="xs:string"/>
+    
+    <!-- The "server" according to the Conformancelab spec. -->
+    <xsl:param name="server" as="xs:string"/>
+    
+    <!-- A list of default servers per FHIR version/usecase combination. This list if formatted as a comma-separated
+         string with "usecase.fhirVersion=server" entries. -->
+    <xsl:param name="defaultServers" as="xs:string"/>
 
     <xsl:template name="generatePropertiesFiles">
         <!--
@@ -246,6 +253,36 @@
                         </xsl:for-each>                    
                     </array>
                 </xsl:if>
+                
+                <!-- Expand the server/defaultServers parameters. -->
+                <xsl:variable name="resolvedServer" as="xs:string*">
+                    <xsl:choose>
+                        <xsl:when test="string-length(normalize-space($server)) &gt; 0">
+                            <xsl:value-of select="$server"/>
+                        </xsl:when>
+                        <xsl:otherwise>
+                            <xsl:for-each select="tokenize($defaultServers, ',')">
+                                <xsl:variable name="key" select="concat($usecase, '.', $fhirVersion)"/>
+                                <xsl:if test="starts-with(., $key)">
+                                    <xsl:value-of select="tokenize(., '=')[2]"/>
+                                </xsl:if>
+                            </xsl:for-each>
+                        </xsl:otherwise>
+                    </xsl:choose>
+                </xsl:variable>
+                <xsl:choose>
+                    <xsl:when test="count($resolvedServer) = 1">
+                        <string key="server">
+                            <xsl:value-of select="$resolvedServer"/>
+                        </string>
+                    </xsl:when>
+                    <xsl:when test="count($resolvedServer) = 0">
+                        <xsl:message terminate="yes">Can't figure out which server to use</xsl:message>
+                    </xsl:when>
+                    <xsl:otherwise>
+                        <xsl:message terminate="yes" select="concat('Problem resolving server for ', $fhirVersion, ' and ', $usecase)"/>
+                    </xsl:otherwise>
+                </xsl:choose>
             </map>
         </xsl:variable>
         <xsl:result-document href="{concat($baseDirUrl, '/', $relFolderPath, '/properties.json')}" method="text" indent="no">
