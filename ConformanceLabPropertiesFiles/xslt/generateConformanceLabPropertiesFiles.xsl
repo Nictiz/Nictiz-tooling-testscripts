@@ -252,7 +252,7 @@
                     <!-- Expand the packages/packageVersions parameters. -->
                     <xsl:variable name="packageList" select="for $package in tokenize($packages, ',') return normalize-space($package)"/>
                     <xsl:if test="count($packageList) != 0">
-                        <array key="packages">
+                        <array key="fhirPackage">
                             <xsl:for-each select="$packageList">
                                 <xsl:variable name="package" select="."/>
                                 
