@@ -133,6 +133,9 @@
                     <xsl:value-of select="$goal"/>
                 </string>
                 
+                <xsl:if test="string-length(normalize-space($fhirVersion)) = 0">
+                    <xsl:message terminate="yes">No FHIR version has been supplied</xsl:message>
+                </xsl:if>
                 <xsl:if test="not(upper-case($fhirVersion) = ('DSTU1', 'DSTU2', 'STU3', 'R4', 'R4B', 'R5'))">
                     <xsl:message terminate="yes" select="concat('Unrecognized FHIR version: ', $fhirVersion)"/>
                 </xsl:if>
@@ -146,10 +149,6 @@
                 <string key="usecase">
                     <xsl:value-of select="$usecase"/>
                 </string>
-                
-                <xsl:if test="string-length(normalize-space($fhirVersion)) = 0">
-                    <xsl:message terminate="yes">No FHIR version has been supplied</xsl:message>
-                </xsl:if>
                 
                 <xsl:if test="not($loadscriptFolder)">
                     <xsl:variable name="roleList" select="for $role in tokenize($roles, ',') return fn:normalize-space($role)"/>
@@ -271,7 +270,7 @@
                                     <xsl:message terminate="yes" select="concat('No version has been defined for package ', $package)"/>
                                 </xsl:if>
                                 <map>
-                                    <string key="package">
+                                    <string key="name">
                                         <xsl:value-of select="$package"/>
                                     </string>
                                     <string key="version">
@@ -285,33 +284,28 @@
                 
                 <!-- Expand the server/defaultServers parameters. -->
                 <xsl:variable name="resolvedServer" as="xs:string*">
+                    <xsl:variable name="serverMap" select="map:merge(for $entry in tokenize($defaultServers, ',') return let $pair := tokenize($entry, '=') return map:entry($pair[1], $pair[2]))"/>
                     <xsl:choose>
                         <xsl:when test="string-length(normalize-space($server)) &gt; 0">
+                            <!-- server explicitly set -->
                             <xsl:value-of select="$server"/>
                         </xsl:when>
+                        <xsl:when test="map:contains($serverMap, concat($usecase, '.', $fhirVersion))">
+                            <!-- default server based on use case and FHIR version -->
+                            <xsl:value-of select="map:get($serverMap, concat($usecase, '.', $fhirVersion))"/>
+                        </xsl:when>
+                        <xsl:when test="map:contains($serverMap, concat('#default', '.', $fhirVersion))">
+                            <!-- default server for the FHIR version, ignoring the use case -->
+                            <xsl:value-of select="map:get($serverMap, concat('#default', '.', $fhirVersion))"/>
+                        </xsl:when>
                         <xsl:otherwise>
-                            <xsl:for-each select="tokenize($defaultServers, ',')">
-                                <xsl:variable name="key" select="concat($usecase, '.', $fhirVersion)"/>
-                                <xsl:if test="starts-with(., $key)">
-                                    <xsl:value-of select="tokenize(., '=')[2]"/>
-                                </xsl:if>
-                            </xsl:for-each>
+                            <xsl:message terminate="yes">Can't figure out which server to use</xsl:message>
                         </xsl:otherwise>
                     </xsl:choose>
                 </xsl:variable>
-                <xsl:choose>
-                    <xsl:when test="count($resolvedServer) = 1">
-                        <string key="server">
-                            <xsl:value-of select="$resolvedServer"/>
-                        </string>
-                    </xsl:when>
-                    <xsl:when test="count($resolvedServer) = 0">
-                        <xsl:message terminate="yes">Can't figure out which server to use</xsl:message>
-                    </xsl:when>
-                    <xsl:otherwise>
-                        <xsl:message terminate="yes" select="concat('Problem resolving server for ', $fhirVersion, ' and ', $usecase)"/>
-                    </xsl:otherwise>
-                </xsl:choose>
+                <string key="serverAlias">
+                    <xsl:value-of select="$resolvedServer"/>
+                </string>
             </map>
         </xsl:variable>
         <xsl:result-document href="{concat($baseDirUrl, '/', $relFolderPath, '/properties.json')}" method="text" indent="no">
