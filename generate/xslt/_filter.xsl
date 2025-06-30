@@ -40,17 +40,8 @@
         </xsl:variable>
                 
         <xsl:copy>
-            <xsl:apply-templates select="f:id" mode="#current"/>
-            <xsl:if test="f:meta/f:profile/@value">
-                <xsl:message>Overriding meta.profile to Aegis TestScript profile</xsl:message>
-            </xsl:if>
-            <meta>
-                <xsl:apply-templates select="f:meta/f:versionId | f:meta/f:lastUpdated" mode="#current"/>
-                <profile value="http://touchstone.aegis.net/touchstone/fhir/testing/StructureDefinition/testscript"/>
-                <xsl:apply-templates select="f:meta/f:security | f:meta/f:tag" mode="#current"/>
-            </meta>
-            <!-- Apply all templates that can exist between f:meta and f:url -->
-            <xsl:apply-templates select="f:implicitRules | f:language | f:text | f:contained" mode="#current"/>
+            <!-- Apply all templates that can exist before f:url -->
+            <xsl:apply-templates select="f:id | f:meta | f:implicitRules | f:language | f:text | f:contained" mode="#current"/>
             
             <xsl:for-each-group select="$rules" group-by="f:extension[@url = 'ruleId']/f:valueId/@value">
                 <xsl:for-each select="subsequence(current-group(), 2)">
