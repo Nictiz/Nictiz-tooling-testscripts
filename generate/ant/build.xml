@@ -27,8 +27,6 @@
 
     Additionally, the following optional parameters may be used:
     - outputLevel: the verbosity level of the script output
-    - packages: a comma-separated list of package dependencies to add to the TestScripts
-    - package.*: per package, the version that should be used
 
     # Project dirs
     
