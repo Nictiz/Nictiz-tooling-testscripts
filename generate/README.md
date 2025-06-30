@@ -2,7 +2,15 @@
 
 A tool to write FHIR TestScript instances that are more readable, better maintainable and can leverage reusable building blocks.
 
-The approach is to use a custom dialect to enhance the FHIR TestScript syntax with a custom dialect, which is transformed using XSL to a regular FHIR TestScript. The custom dialect may be mixed with normal FHIR TestScript syntax at will. The transformation also takes care of adding the boilerplate stuff: url, date, publisher, contact, origin and destination.
+The approach is to use a custom dialect to enhance the FHIR TestScript syntax with a custom dialect, which is transformed using XSL to a regular FHIR TestScript. The custom dialect may be mixed with normal FHIR TestScript syntax at will.
+
+The transformation also takes care of adding the boilerplate stuff like url, date, publisher, contact, origin and destination.
+
+Note that the script is specifically aimed at use within Nictiz:
+
+* Publisher etc. is set to Nictiz.
+* The TestScript is in R5 format for use at the Conformancelab test platform.
+* Extensions needed for the Conformancelab test platform are added. 
 
 ## Custom dialect
 
@@ -347,7 +355,7 @@ To aid with this setup, a `.requestId` or `.responseId` is always added to the `
 
 The tooling will by default add one `origin` and one `destination`, both with `index` set to 1. The ConformanceLab extension to define if the origin/destination is the system under test is added and populated based on the scenario.
 
-If needed, this behavior can be overrules with the following tags:
+If needed, this behavior can be overruled with the following tags:
 
 * `<nts:origin index="..." isSUT="[true|false]"/>`
 * `<nts:destination index="..." isSUT="[true|false]"/>`
@@ -387,10 +395,6 @@ The TouchStone assert-stopTestOnFail extension is added to each assert with a de
     ...
 </assert>
 ```
-
-### ConformanceLab specific features
-
-A requirement of ConformanceLab is that TestScripts explicitly state all packages and their version numbers for profile validation, using a custom extension. This is supported by setting the `packages` and `package.*` build property's, which can be applied to a whole folder or more, which is more convenient than manipulating individual TestScripts. See the section on build script parameters for more information.
 
 ## Running the transformation
 
@@ -447,8 +451,6 @@ The following optional parameters may be used:
   Note: if there are subfolders in the folder on which an additional target is defined, each variant of the input folder will contain the full set of subfolders (but with slightly different content, of course).  
 - `targets`: This parameter contains the default target '#default', to which the targets defined in `targets.additional` are added. Used when building the default target is unwanted.
 - `version.addition`: a string that will be added verbatim to the value in the `TestScript.version` from the input file. If this element is absent, it will be populated with this value.
-- `packages`: a comma-separated list of packages that should be added as a dependency in TestScripts aimed at ConformanceLab.
-- `package.*`: for each package specified in the `packages` parameter, a package version should be defined. E.g. if `packages` is set to `nictiz.fhir.nl.stu3.zib2017`, a parameter called `package.nictiz.fhir.nl.stu3.zib2017` should be defined with the version that needs to be used.
 - `convert.to.json.file`: the path of a writable file where all referenced JSON fixtures are collected that don't exists, but for which an XML counterpart exists. This file can be used for the 'convertXmlToJson' script in this repo. If this parameter is not set, this situation will be treated like any other missing fixture and the build will fail.
 
 ### Building multiple projects
@@ -469,6 +471,13 @@ It can be found at `schematron/NictizTestScript.sch` relative to this README.
 Because of the verbosity of the ANT build, the logging level is set to 1 (warning) and Saxon is set to not try to recover. When more verbose output is wanted, the logging level can be changed by setting the `-DoutputLevel=` parameter on the ANT build.
 
 ## Changelog
+
+### 3.0.0
+- Major release aimed at working on the Conformancelab test platform by Interoplab:
+  - TestScripts are now in FHIR R5
+  - The necessary extensions for Conformancelab are added
+  - `nts:numOrigins` and `nts:numDestinations` has been deprecated in favor an explicit the `nts:origin` and `nts:destination` notation.
+  - A script has been added to generate Conformancelab properties files.
 
 ### 2.8.0
 - Major internal rewrite to migrate functionality from ANT to XSLT, which is more powerful and maintainable. The functionality should be the same.
