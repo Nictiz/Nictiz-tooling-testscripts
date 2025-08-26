@@ -205,7 +205,7 @@
                                         <system value="http://terminology.hl7.org/CodeSystem/testscript-operation-codes"/>
                                         <code value="updateCreate"/>
                                     </type>
-                                    <description value="Load resource {$resourceType} from fixture {$fixtureId}"/>
+                                    <description value="PUT {$resourceType}/{$fixtureId}"/>
                                     <resource value="{$resourceType}"/>
                                     <accept value="xml"/>
                                     <contentType value="xml"/>
