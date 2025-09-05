@@ -472,6 +472,9 @@ Because of the verbosity of the ANT build, the logging level is set to 1 (warnin
 
 ## Changelog
 
+### 3.1.0
+- Add operation description to LoadScripts
+
 ### 3.0.0
 - Major release aimed at working on the Conformancelab test platform by Interoplab:
   - TestScripts are now in FHIR R5
