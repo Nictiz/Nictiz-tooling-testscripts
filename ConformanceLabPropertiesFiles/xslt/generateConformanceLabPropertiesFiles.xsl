@@ -123,10 +123,12 @@
     <xsl:template name="generatePropertiesFile">
         <xsl:param name="relFolderPath" as="xs:string" required="yes"/>
         <xsl:param name="loadscriptFolder" as="xs:boolean" required="yes"/>
+        
+        <!-- Strip known targets from $relFolderPath. Kind of hacky but let's make it work -->
+        <xsl:param name="relFolderPathEdit" select="replace($relFolderPath, '(-Nictiz-intern)|(-MedMij)', '')"/>
 
         <!-- Check if src-properties.json exists in this folder. If so, the value of each property set in this file will overrule the generated value in the output properties.json -->
-        <xsl:variable name="srcPropertiesPath" select="concat($inputDirUrl, '/', $relFolderPath, '/src-properties.json')"/>
-        <xsl:variable name="srcPropertiesExists" select="unparsed-text-available($srcPropertiesPath)"/>
+        <xsl:variable name="srcPropertiesPath" select="concat($inputDirUrl, '/', $relFolderPathEdit, '/src-properties.json')"/>
         <xsl:variable name="srcProperties" select="if (unparsed-text-available($srcPropertiesPath)) then parse-json(unparsed-text($srcPropertiesPath)) else ()"/>
         
         <!-- Here we declare all properties, taking into account potential overrules from srcProperties -->
@@ -135,7 +137,7 @@
         <xsl:variable name="theInformationStandard" select="($srcProperties?informationStandard,$informationStandard)[1]"/>
         <xsl:variable name="theUsecase" select="($srcProperties?usecase,$usecase)[1]"/>
         
-        <!-- For roles, we do something slightly different. Unfortunately, the 'native' way of defining 'targets/variants' isn't supported yet. This means that if and override is defined for role.name, the only way to add a variant/adminOnly is to also add an override for these properties. -->
+        <!-- For roles, we do something slightly different -->
         <xsl:variable name="srcPropertiesRoleName" select="$srcProperties?role?name"/>
         <xsl:variable name="srcPropertiesRoleDescription" select="$srcProperties?role?description"/>
         <xsl:variable name="srcPropertiesVariantName" select="$srcProperties?variant?name"/>
@@ -221,22 +223,25 @@
                                     </string>
                                 </xsl:if>
                             </map>
-                            
-                            <xsl:if test="not(empty($srcPropertiesVariantName))">
-                                <map key="variant">
-                                    <string key="name">
-                                        <xsl:value-of select="$srcPropertiesVariantName"/>
+
+                            <xsl:variable name="target" select="replace($relFolderPath, concat($relFolderPathEdit,'-'), '')"/>
+                            <xsl:variable name="folder" select="tokenize($relFolderPath, '/')[last()]"/>
+                            <map key="variant">
+                                <string key="name">
+                                    <xsl:value-of select="($srcPropertiesVariantName,$target)[1]"/>
+                                </string>
+                                <xsl:if test="not(empty($srcPropertiesVariantDescription))">
+                                    <string key="description">
+                                        <xsl:value-of select="$srcPropertiesVariantDescription"/>
                                     </string>
-                                    <xsl:if test="not(empty($srcPropertiesVariantDescription))">
-                                        <string key="description">
-                                            <xsl:value-of select="$srcPropertiesVariantDescription"/>
-                                        </string>
-                                    </xsl:if>
-                                </map>
-                            </xsl:if>
-                            <xsl:if test="$srcProperties?adminOnly = 'true'">
-                                <boolean key="adminOnly">true</boolean>
-                            </xsl:if>
+                                </xsl:if>
+                            </map>
+                            
+                            <xsl:for-each select="for $target in tokenize($adminOnlyTargets, ',') return normalize-space($target)">
+                                <xsl:if test=". = $folder or $srcProperties?adminOnly = 'true'">
+                                    <boolean key="adminOnly">true</boolean>
+                                </xsl:if>
+                            </xsl:for-each>
                         </xsl:when>
                         <xsl:otherwise>
                             <map key="role">
