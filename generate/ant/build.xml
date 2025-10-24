@@ -387,6 +387,21 @@
             </if>
         </sequential>
     </macrodef>
+    
+    <macrodef name="target-properties" description="Copy Conformancelab properties from src to output if available. If target is not '#default', add the target to the variant property">
+        <attribute name="target" default="#default" description="The name of the target to build; choose '#default' to build the default target."/>
+
+        <sequential>
+            <java classname="net.sf.saxon.Transform" classpath="${Saxon-HE.jar}" logError="true">
+                <classpath location="${Saxon-HE.jar}"/>
+                <arg value="-it:createPropertiesInTargetFolder" />
+                <arg value="-xsl:${xslt.dir}/targetProperties.xsl" />
+                <arg value="inputDir=${input.dir.abs}"/>
+                <arg value="outputDir=${output.dir.abs}"/>
+                <arg value="target.dir=@{target}"/>
+            </java>
+        </sequential>
+    </macrodef>
 
     <target name="clean-build-dir">
         <sequential>
@@ -442,6 +457,9 @@
                                 target="@{target.dir}"
                                 references.file="${references.file}"/>
                             <collect-references references.file="${references.file}"/>
+                            
+                            <!-- If a Conformancelab properties-file with overrules is present in the target.dir, copy it to the output dir and, if applicable, add the target to the variant property -->
+                            <target-properties target="@{target.dir}"/>
                         </sequential>
                     </for>
 
