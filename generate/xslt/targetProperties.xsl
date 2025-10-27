@@ -108,9 +108,11 @@
                                 else map:put($base, 'variant', $variantMap)
                     "/>
                 
-                <xsl:result-document href="{concat($properties.path, '/properties.json')}" method="json">
-                    <xsl:sequence select="$srcPropertiesModified"/>
-                </xsl:result-document>
+                <xsl:if test="not($target = '#default' and not(unparsed-text-available($srcPropertiesPath)))">
+                    <xsl:result-document href="{concat($properties.path, '/properties.json')}" method="json">
+                        <xsl:sequence select="$srcPropertiesModified"/>
+                    </xsl:result-document>
+                </xsl:if>
                 
                 <!-- Check if . contains a properties.json file -->
                 <!-- If so AND target is #default, copy -->
