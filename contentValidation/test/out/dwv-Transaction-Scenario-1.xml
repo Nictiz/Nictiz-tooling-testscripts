@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<StructureDefinition xmlns="http://hl7.org/fhir">
+    <id value="dwv-Transaction-Scenario-1"/>
+    <url value="http://nictiz.nl/fhir/StructureDefinition/Test/dwv-Transaction-Scenario-1"/>
+    <name value="dwvTransactionScenario1"/>
+    <title value="dwv Transaction Scenario 1"/>
+    <status value="draft"/>
+    <experimental value="true"/>
+    <description value="Constrained profile for qualification purposes. Not suited for implementation."/>
+    <fhirVersion value="4.0.1"/>
+    <kind value="resource"/>
+    <abstract value="false"/>
+    <type value="Bundle"/>
+    <baseDefinition value="http://hl7.org/fhir/StructureDefinition/Bundle"/>
+    <derivation value="constraint"/>
+    <differential>
+        <element id="Bundle.type">
+            <path value="Bundle.type"/>
+            <fixedCode value="transaction"/>
+        </element>
+        <element id="Bundle.entry">
+            <path value="Bundle.entry"/>
+            <slicing>
+                <discriminator>
+                    <type value="profile"/>
+                    <path value="resource"/>
+                </discriminator>
+                <rules value="open"/>
+            </slicing>
+        </element>
+        <element id="Bundle.entry:communication">
+            <path value="Bundle.entry"/>
+            <sliceName value="communication"/>
+            <min value="1"/>
+            <max value="1"/>
+        </element>
+        <element id="Bundle.entry:communication.resource">
+            <path value="Bundle.entry.resource"/>
+            <min value="1"/>
+            <type>
+                <code value="Resource"/>
+                <profile value="http://nictiz.nl/fhir/StructureDefinition/dwv-PatientCorrectionsCommunication"/>
+            </type>
+        </element>
+        <element id="Bundle.entry:communication.resource.identifier.system">
+            <path value="Bundle.entry.resource.identifier.system"/>
+            <min value="1"/>
+        </element>
+        <element id="Bundle.entry:communication.resource.identifier.value">
+            <path value="Bundle.entry.resource.identifier.value"/>
+            <min value="1"/>
+        </element>
+        <element id="Bundle.entry:communication.resource.category">
+            <path value="Bundle.entry.resource.category"/>
+            <min value="1"/>
+        </element>
+        <element id="Bundle.entry:communication.resource.category.coding">
+            <path value="Bundle.entry.resource.category.coding"/>
+            <slicing>
+                <discriminator>
+                    <type value="value"/>
+                    <path value="code"/>
+                </discriminator>
+                <discriminator>
+                    <type value="value"/>
+                    <path value="system"/>
+                </discriminator>
+                <rules value="open"/>
+            </slicing>
+            <min value="1"/>
+        </element>
+        <element id="Bundle.entry:communication.resource.category.coding:requiredCoding">
+            <path value="Bundle.entry.resource.category.coding"/>
+            <sliceName value="requiredCoding"/>
+            <min value="1"/>
+            <max value="1"/>
+        </element>
+        <element id="Bundle.entry:communication.resource.category.coding:requiredCoding.system">
+            <path value="Bundle.entry.resource.category.coding.system"/>
+            <min value="1"/>
+            <fixedUri value="https://hl7.org/fhir/uv/fhir-patient-correction/CodeSystem/PatientCorrectionCommunicationTypes"/>
+        </element>
+        <element id="Bundle.entry:communication.resource.category.coding:requiredCoding.code">
+            <path value="Bundle.entry.resource.category.coding.code"/>
+            <min value="1"/>
+            <fixedCode value="medRecCxReq"/>
+        </element>
+        <element id="Bundle.entry:communication.resource.category.coding:requiredCoding.display">
+            <path value="Bundle.entry.resource.category.coding.display"/>
+            <min value="1"/>
+        </element>
+        <element id="Bundle.entry:communication.resource.subject">
+            <path value="Bundle.entry.resource.subject"/>
+            <type>
+                <code value="Reference"/>
+                <targetProfile value="http://nictiz.nl/fhir/StructureDefinition/nl-core-Patient"/>
+            </type>
+        </element>
+        <element id="Bundle.entry:communication.resource.subject.reference">
+            <path value="Bundle.entry.resource.subject.reference"/>
+            <min value="1"/>
+        </element>
+        <element id="Bundle.entry:communication.resource.subject.type">
+            <path value="Bundle.entry.resource.subject.type"/>
+            <min value="1"/>
+            <fixedUri value="Patient"/>
+        </element>
+        <element id="Bundle.entry:communication.resource.subject.display">
+            <path value="Bundle.entry.resource.subject.display"/>
+            <min value="1"/>
+        </element>
+        <element id="Bundle.entry:communication.resource.topic.text">
+            <path value="Bundle.entry.resource.topic.text"/>
+            <fixedString value="Telefoonnummer wijzigen"/>
+        </element>
+        <element id="Bundle.entry:communication.resource.recipient:healthcareProvider">
+            <path value="Bundle.entry.resource.recipient"/>
+            <sliceName value="healthcareProvider"/>
+        </element>
+        <element id="Bundle.entry:communication.resource.recipient:healthcareProvider.reference">
+            <path value="Bundle.entry.resource.recipient.reference"/>
+            <min value="1"/>
+        </element>
+        <element id="Bundle.entry:communication.resource.recipient:healthcareProvider.type">
+            <path value="Bundle.entry.resource.recipient.type"/>
+            <min value="1"/>
+            <fixedUri value="Organization"/>
+        </element>
+        <element id="Bundle.entry:communication.resource.recipient:healthcareProvider.display">
+            <path value="Bundle.entry.resource.recipient.display"/>
+            <min value="1"/>
+        </element>
+        <element id="Bundle.entry:communication.resource.sender">
+            <path value="Bundle.entry.resource.sender"/>
+            <type>
+                <code value="Reference"/>
+                <targetProfile value="http://nictiz.nl/fhir/StructureDefinition/nl-core-Patient"/>
+            </type>
+        </element>
+        <element id="Bundle.entry:communication.resource.sender.reference">
+            <path value="Bundle.entry.resource.sender.reference"/>
+            <min value="1"/>
+        </element>
+        <element id="Bundle.entry:communication.resource.sender.type">
+            <path value="Bundle.entry.resource.sender.type"/>
+            <min value="1"/>
+            <fixedUri value="Patient"/>
+        </element>
+        <element id="Bundle.entry:communication.resource.sender.display">
+            <path value="Bundle.entry.resource.sender.display"/>
+            <min value="1"/>
+        </element>
+        <element id="Bundle.entry:communication.resource.payload.content[x]">
+            <path value="Bundle.entry.resource.payload.content[x]"/>
+            <min value="1"/>
+            <fixedString value="Ik heb in mijn dossier gezien dat mijn telefoonnummer niet klopt. Dit wil ik graag gewijzigd hebben. Mijn telefoonnummer is 06-12345678."/>
+        </element>
+    </differential>
+</StructureDefinition>
