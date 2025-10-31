@@ -55,14 +55,14 @@
         <xsl:variable name="targetLevel" select="fn:string-length($target.dir) - fn:string-length(fn:translate($target.dir, '/', '')) + 1"/>
         <xsl:variable name="rootLevel" select="fn:string-length($nts.reldir.root) - fn:string-length(fn:translate($nts.reldir.root, '/', ''))"/>
         
-        <xsl:value-of select="map{
+        <xsl:sequence select="map{
                 'reldir': $nts.reldir,
                 'reldir.root': $nts.reldir.root,
                 'reldir.leaf': $nts.reldir.leaf,
                 'target': $target,
                 'targetLevel': $targetLevel,
                 'rootLevel': $rootLevel
-              }"/>"/>
+              }"/>
     </xsl:template>
     
 </xsl:stylesheet>

@@ -30,9 +30,8 @@
         <xsl:variable name="ntsFolders" select="distinct-values(uri-collection(concat('file:///', $inputDir, '?select=*.xml;recurse=yes')) ! resolve-uri('.', .)[not(contains(., '/_'))]) ! string()"/>
         
         <xsl:for-each select="$ntsFolders">
-            
             <!-- Get all properties of this folder that are to be used later -->
-            <xsl:variable name="nts.file.dir.properties">
+            <xsl:variable name="nts.file.dir.properties" as="map(*)">
                 <xsl:call-template name="ntsDirProperties">
                     <xsl:with-param name="ntsDir" select="."/>
                 </xsl:call-template>
@@ -42,16 +41,20 @@
                  - target is #default OR
                  - if target contains reldir (for example, target is 'XIS-Server-Nictiz-intern' while reldir is 'XIS-Server')
                  Otherwise we do nothing, because targets only have to output files affected by it. -->
-            <xsl:variable name="target" select="$nts.file.dir.properties('target')"/>
-            <xsl:if test="$target = '#default' or (fn:contains(fn:concat('/',$target.dir), $nts.file.dir.properties('reldir.root')) and $nts.file.dir.properties('targetlevel') = $nts.file.dir.properties('rootLevel'))">
-                <!-- END DUPLICATION FROM generateTestScriptFolder -->
-                
+            <xsl:variable name="target" select="$nts.file.dir.properties?target"/>
+            
+            <xsl:if test="$target = '#default' or (fn:contains(fn:concat('/',$target.dir), $nts.file.dir.properties?reldir.root) and xs:integer($nts.file.dir.properties?targetLevel) = xs:integer($nts.file.dir.properties?rootLevel))">
                 <xsl:variable name="srcPropertiesPath" select="concat(., 'src-properties.json')"/>
                 <xsl:variable name="srcProperties" select="if (unparsed-text-available($srcPropertiesPath)) then json-doc($srcPropertiesPath) else ()"/>
                 
                 <xsl:variable name="variantMap"
                     select="map{'name': $target}"/>
                 
+                <!-- Check if . contains a properties.json file -->
+                <!-- If so AND target is #default, copy -->
+                <!-- If so AND target is not #default, copy and add variant -->
+                <!-- If not and target is #default, do nothing -->
+                <!-- If not and target is not #default, create file and add variant -->
                 <xsl:variable name="srcPropertiesModified" as="map(*)"
                     select="
                         let $base := ($srcProperties, map{})[1]
@@ -63,25 +66,20 @@
                                 else map:put($base, 'variant', $variantMap)
                     "/>
                 
-                <!-- Check if . contains a properties.json file -->
-                <!-- If so AND target is #default, copy -->
-                <!-- If so AND target is not #default, copy and add variant -->
-                <!-- If not and target is #default, do nothing -->
-                <!-- If not and target is not #default, create file and add variant -->
                 <xsl:variable name="properties.path">
                     <xsl:value-of select="concat('file:///', translate($outputDir, '\', '/'))"/>
                     <xsl:choose>
-                        <xsl:when test="not($target.dir = '#default')">
-                            <xsl:value-of select="fn:concat('/', $target.dir, $nts.file.dir.properties('reldir.leaf'))"/>
+                        <xsl:when test="$target != '#default'">
+                            <xsl:value-of select="fn:concat('/', $target.dir, $nts.file.dir.properties?reldir.leaf)"/>
                         </xsl:when>
                         <xsl:otherwise>
-                            <xsl:value-of select="$nts.file.dir.properties('nts.reldir')"/>
+                            <xsl:value-of select="$nts.file.dir.properties?reldir"/>
                         </xsl:otherwise>
                     </xsl:choose>
                     <xsl:value-of select="'/'"/>
                 </xsl:variable>
                 
-                <xsl:if test="not($target = '#default' and not(unparsed-text-available($srcPropertiesPath)))">
+                <xsl:if test="$target != '#default' or unparsed-text-available($srcPropertiesPath)">
                     <xsl:result-document href="{concat($properties.path, '/properties.json')}" method="json">
                         <xsl:sequence select="$srcPropertiesModified"/>
                     </xsl:result-document>
