@@ -10,7 +10,7 @@ Note that the script is specifically aimed at use within Nictiz:
 
 * Publisher etc. is set to Nictiz.
 * The TestScript is in R5 format for use at the Conformancelab test platform.
-* Extensions needed for the Conformancelab test platform are added. 
+* Extensions needed for the Conformancelab test platform are added.
 
 ## Custom dialect
 
@@ -85,30 +85,30 @@ In the corresponding component, the variable can be used with the XSL syntax for
 
 #### Default values
 
-In a component, a default value for a variable can be added using the `nts:parameter` element. This way, a component can be included without specifying a parameter value, while the parameter value can be overridden by specifying an `nts:with-parameter` element while including. 
+In a component, a default value for a variable can be added using the `nts:parameter` element. This way, a component can be included without specifying a parameter value, while the parameter value can be overridden by specifying an `nts:with-parameter` element while including.
 
 Compare the following two examples (the first wil result in a value of 'foo' for `{$param1}`, the second will result in a value of 'bar' for `{$param1}`):
 
 ```xml
 <nts:include value="..">
     <nts:with-parameter name="param1" value="foo">
-</nts:include>    
+</nts:include>
 <nts:component ...>
-    <nts:parameter name="param1" value="bar"/>    
+    <nts:parameter name="param1" value="bar"/>
     <variable>
         <name value="foo"/>
         <defaultValue value="{$param1}"/>
     </variable>
 </nts:component>
 
-<nts:include value=".."/> 
+<nts:include value=".."/>
 <nts:component ...>
-    <nts:parameter name="param1" value="bar"/>    
+    <nts:parameter name="param1" value="bar"/>
     <variable>
         <name value="foo"/>
         <defaultValue value="{$param1}"/>
     </variable>
-</nts:component>    
+</nts:component>
 ```
 
 Parameters passed to a component are globally available in the entire chain of recursive includes from there on. So if you pass parameter `foo` when including component 1, and this component subsequently includes component 2, `foo` is available to both components. It is also possible to expand parameters when recursively including the next component (i.e. a component that gets passed `param` may use `<nts:with-parameter name="param2" value="{$param1}">` when including other components).
@@ -122,7 +122,7 @@ It is possible to activate or suppress elements in included files based on the p
 ```xml
 <nts:component ...>
     <description nts:ifset="description" value="{$description}"/>
-    <description nts:ifnotset="description" value="Test to serve {$resource} resources."/>    
+    <description nts:ifnotset="description" value="Test to serve {$resource} resources."/>
 </nts:component>
 ```
 
@@ -131,7 +131,7 @@ If the `description` parameter is omitted when including this component, the lat
 ### Defining fixtures, profiles and rules
 
 Fixtures, profiles and rules all have te be declared in a TestScript before they can be used in a test. Custom elements have been made that are a bit more concise than their FHIR equivalents.
-  
+
 Fixtures and rules may be declared using:
 
 ```xml
@@ -182,7 +182,7 @@ In this use case, references in the included fixtures are checked and rewritten 
 
 #### Using rules
 
-Once a rule is declared, it may be used in an `<assert>` using the same tag with only the `id` attribute set. Optional parameters to the rule are passed as attributes or using the `<nts:with-parameter>` tag, similar to how it is done with `<nts:include/>`: 
+Once a rule is declared, it may be used in an `<assert>` using the same tag with only the `id` attribute set. Optional parameters to the rule are passed as attributes or using the `<nts:with-parameter>` tag, similar to how it is done with `<nts:include/>`:
 
 ```xml
 <nts:rule id=".."
@@ -195,7 +195,7 @@ is equivalent to:
 ```xml
 <nts:rule id="..">
   <nts:with-parameter name="param1" value="value1"/>
-  <nts:with-parameter name="param2" value="value2"/>  
+  <nts:with-parameter name="param2" value="value2"/>
 </nts:rule>
 ```
 
@@ -207,7 +207,7 @@ It is also possible implicitly declare the rule when it is used by adding the `h
     param1="value1"
     param2="value2" />
   ..
-</assert>  
+</assert>
 ```
 
 Lastly, it is possible to use [rule outputs](https://touchstone.aegis.net/touchstone/userguide/html/testscript-authoring/rule-authoring/rule-outputs.html). This is done using a nested `<nts:output name="...">` tag. Optionally, the `type` and `contentType` attributes may be used in this element (see the Touchstone documentation for more information). Conveniently, the magic parameter `$_FORMAT` also works in the `contentType` attribute.
@@ -247,13 +247,13 @@ This file should be passed as the `tokens.json` parameter to the build script. T
 <nts:authToken patientResourceId="[resource.id of Patient resource]" {id="[patient-token-id]"}/>
 ```
 
-This sets an NTS parameter with the specified `id`, which can then be used throughout the NTS file. `id` is usually omitted, in which case it defaults to "patient-token-id". 
+This sets an NTS parameter with the specified `id`, which can then be used throughout the NTS file. `id` is usually omitted, in which case it defaults to "patient-token-id".
 
-For example, if you included a token with id "patient-token-id", you can use it to define the Authorization header with: 
+For example, if you included a token with id "patient-token-id", you can use it to define the Authorization header with:
 ```xml
 <requestHeader>
   <field value="Authorization"/>
-  <value value="{$patient-token}"/>  
+  <value value="{$patient-token}"/>
 </requestHeader>
 ```
 
@@ -289,7 +289,7 @@ Just as with the `<nts:fixture>` tag, `href` is considered to be relative to a p
 
 *Please note*: fixtures are usually needed for one scenario of the two scenarios. Usually (for scenarios where the client retrieves data from the server), they are needed for TestScripts aimed at testing client systems. The test simulator mimics the server in this case and needs the fixtures to serve to the client, while the corresponding TestScript for the server does not need fixtures as the FHIR data is produced by the server. For content asserts, this situation is reversed: it is the TestScript for the server where content asserts are needed. It is logical to use the same fixture directly in the client TestScript and for the content asserts in the server TestScript, but one should be aware of this dual use and make sure that the content of these fixtures is suitable for both.
 
-When the request or response body to check contains a Bundle instead of a single resource (e.g. in case of a search), the fixture needs to be matched to one of these resources within the Bundle. This cannot be done automatically, the tooling has to be told what to look for. This can be done in two ways. 
+When the request or response body to check contains a Bundle instead of a single resource (e.g. in case of a search), the fixture needs to be matched to one of these resources within the Bundle. This cannot be done automatically, the tooling has to be told what to look for. This can be done in two ways.
 
 The easiest is to use one or more _discriminators_. These are simple FHIRPath expressions that contain just a selector for a unique property, and they are wrapped by the tooling in the expression `Bundle.resource.ofType( [resource type of fixture] ).where( [discriminator] )` to extract the proper resource. A discriminator can be set using either the `discriminator` attribute or one or more embedded `<nts:discriminator>` tags (multiple discriminators are combined using a logical AND), e.g.
 
@@ -361,7 +361,7 @@ If needed, this behavior can be overruled with the following tags:
 * `<nts:destination index="..." isSUT="[true|false]"/>`
 
 When these tags are used, no defaults are generated.
- 
+
 *Please note*: in version 2 of the tooling, the `nts:numOrigins` and `nts:numDestination` attributes on the `TestScript` root could be used. These have been deprecated, as these would not allow to specify which origin/destination is the system under test.
 
 ### Building different variants
@@ -373,7 +373,7 @@ For example, take the following snippet:
 ```xml
 <assert>
    ...
-</assert>   
+</assert>
 <assert nts:in-targets="with-setup test">
    ...
 </assert>
@@ -385,7 +385,7 @@ For example, take the following snippet:
 This specifies that:
 * The first `assert` will be included in all targets.
 * The second `assert` will be included in the targets 'with-setup' and 'test', but will not show up in the default build.
-* The third `assert` will be included only in the default build (and thus not in 'with-setup' or 'test'). This construction can thus be used to _exclude_ elements from specific targets. 
+* The third `assert` will be included only in the default build (and thus not in 'with-setup' or 'test'). This construction can thus be used to _exclude_ elements from specific targets.
 
 ### TouchStone stopTestOnFail extension
 The TouchStone assert-stopTestOnFail extension is added to each assert with a default value of 'false' (e.g. the test continues running after a failed assertion). If you would like to override this value, add attribute `@nts:stopTestOnFail="true"` to `<assert>`.
@@ -409,10 +409,10 @@ There is an [Apache ANT](http://ant.apache.org/) based build file available (`an
 <project basedir="." name="generateTestScriptsForProject">
 
     <include file="path/to/this/build.xml" as="base"/>
-    
+
     <target name="build" depends="base.build">
         ...
-    </target>        
+    </target>
 </project>
 ```
 
@@ -424,7 +424,7 @@ For the project build file, a particular folder structure is expected:
   - build.properties : A file where parameters to the build script may be set (see below).
   - InputFolder1/    : One or more dirs containg NTS files. WARNING: all folder names starting with an underscore are ignored, while all other folders are included!
   - /_components/    : The components specific for that project - may be overridden using the components.dir parameter
-  - /_reference/     : The fixtures and rules for that project. This folder is copied verbatim to the output folder. 
+  - /_reference/     : The fixtures and rules for that project. This folder is copied verbatim to the output folder.
 ```
 
 ### Build script parameters
@@ -448,7 +448,7 @@ The following optional parameters may be used:
   targets.additional=Cert-with-setup
   ```
   The TestScript resources can use the `nts:in-targets` to define which element should be included in a target (see above). Multiple extra targets may be separated using comma's.
-  Note: if there are subfolders in the folder on which an additional target is defined, each variant of the input folder will contain the full set of subfolders (but with slightly different content, of course).  
+  Note: if there are subfolders in the folder on which an additional target is defined, each variant of the input folder will contain the full set of subfolders (but with slightly different content, of course).
 - `targets`: This parameter contains the default target '#default', to which the targets defined in `targets.additional` are added. Used when building the default target is unwanted.
 - `version.addition`: a string that will be added verbatim to the value in the `TestScript.version` from the input file. If this element is absent, it will be populated with this value.
 - `convert.to.json.file`: the path of a writable file where all referenced JSON fixtures are collected that don't exists, but for which an XML counterpart exists. This file can be used for the 'convertXmlToJson' script in this repo. If this parameter is not set, this situation will be treated like any other missing fixture and the build will fail.
@@ -472,8 +472,14 @@ Because of the verbosity of the ANT build, the logging level is set to 1 (warnin
 
 ## Changelog
 
+### 3.3.0
+- Each NTS source folder can now contain a `src-properties.json` file which can contain overrides for the default Conformancelab `properties.json` file that is generated
+
 ### 3.2.0
-- Each input folder can now contain a Conformancelab `src-properties.json` file which contains property overrules be outputted. This tool now adds the `target` (or `variant`) name to this file if applicable and copies it to the output folder as `properties.json`.
+- Add TestScript.title to be more compliant with the FHIR TestScript resource R5
+
+### 3.1.0
+- Add description to loadscripts to see the loaded fixture in UI Conformancelab
 
 ### 3.0.0
 - Major release aimed at working on the Conformancelab test platform by Interoplab:
@@ -550,7 +556,7 @@ Because of the verbosity of the ANT build, the logging level is set to 1 (warnin
 - Don't strip out unknown input elements in the NTS source file
 
 ### 1.4.0
-- Add the option to build different variants of a folder that include/exclude parts in the output (HIT-15). 
+- Add the option to build different variants of a folder that include/exclude parts in the output (HIT-15).
 
 ### 1.3.0
 - Remove the assumptions on folder structure and instead use explicit parameters to define input dir, output dir, common components dir and lib dir (HIT-12).
@@ -570,7 +576,7 @@ Because of the verbosity of the ANT build, the logging level is set to 1 (warnin
 - Fixed a bug where an attribute in a non nts-namespace (for example `@xsi:*`) caused the process to crash.
 
 ### 1.1.3
-- Fixed a bug where the `-Dtestscripttools.localdir` property did not work as expected. 
+- Fixed a bug where the `-Dtestscripttools.localdir` property did not work as expected.
 
 ### 1.1.2
 - Enabled `<nts:parameter>` within `<nts:component>` to be given an empty value.
@@ -579,7 +585,7 @@ Because of the verbosity of the ANT build, the logging level is set to 1 (warnin
 - MM-1116 - Removed FHIR version from canonical.
 
 ### 1.1.0
-- Restructuring and improving ANT build - enabling derived scripts, improving workflow. 
+- Restructuring and improving ANT build - enabling derived scripts, improving workflow.
 
 ### 1.0.0
 - First working version to build TestScripts from the NTS-format using ANT.

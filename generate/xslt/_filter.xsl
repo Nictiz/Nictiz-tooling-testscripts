@@ -212,8 +212,8 @@
         </xsl:attribute>
     </xsl:template>
     
-    <!--Add the target and/or the format for requests to the TestScript name, if specified -->
-    <xsl:template match="f:TestScript/f:name/@value" mode="filter">
+    <!--Add the target and/or the format for requests to the TestScript name and/or title, if specified -->
+    <xsl:template match="f:TestScript/f:*[self::f:name or self::f:title]/@value" mode="filter">
         <xsl:param name="target" tunnel="yes"/>
         <xsl:param name="scenario" tunnel="yes"/>
         <xsl:param name="expectedResponseFormat" tunnel="yes"/>
