@@ -57,12 +57,6 @@
              file:///. For unix style paths that start with a slash, only the part after the slash is taken. -->
             <mapper type="regexp" from="\/?(.*)" to="file:///\1"/>
         </pathconvert>
-        <pathconvert property="input.dir.url" targetos="unix">
-            <path location="${input.dir.abs}"/>
-            <!-- Output needs 3 slashes, i.e. file:///. For win style paths that start with a drive letter, simply prepend
-             file:///. For unix style paths that start with a slash, only the part after the slash is taken. -->
-            <mapper type="regexp" from="\/?(.*)" to="file:///\1"/>
-        </pathconvert>
         
         <!-- Check required data -->
         <fail unless="goal"
@@ -172,7 +166,6 @@
             <arg value="packageVersions=${packages.versions}"/>
             <arg value="server=${server}"/>
             <arg value="defaultServers=${servers.default}"/>
-            <arg value="inputDirUrl=${input.dir.url}"/>
         </java>
     </target>
 </project>

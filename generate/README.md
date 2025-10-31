@@ -472,6 +472,9 @@ Because of the verbosity of the ANT build, the logging level is set to 1 (warnin
 
 ## Changelog
 
+### 3.2.0
+- Each input folder can now contain a Conformancelab `src-properties.json` file which contains property overrules be outputted. This tool now adds the `target` (or `variant`) name to this file if applicable and copies it to the output folder as `properties.json`.
+
 ### 3.0.0
 - Major release aimed at working on the Conformancelab test platform by Interoplab:
   - TestScripts are now in FHIR R5

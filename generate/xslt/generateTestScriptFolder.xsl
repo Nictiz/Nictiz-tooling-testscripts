@@ -1,4 +1,4 @@
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="2.0"
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3.0"
     xmlns="http://hl7.org/fhir"
     xmlns:f="http://hl7.org/fhir"
     xmlns:xs="http://www.w3.org/2001/XMLSchema"
@@ -30,6 +30,7 @@
     <xsl:param name="fhirVersion"/>
     
     <xsl:include href="generateTestScript.xsl"/>
+    <xsl:include href="_ntsFolders.xsl"/>
     
     <xsl:template match="/" name="buildFilesInTargetFolder">
         <xsl:for-each select="collection(concat('file:///', $inputDir, '?select=*.xml;recurse=yes'))">
@@ -37,35 +38,20 @@
             <xsl:if test="not(contains(base-uri(), '/_'))">
                 <!-- Get the relative directory of the input file within the base directory -->
                 <xsl:variable name="nts.file.dir" select="nts:_substring-before-last(base-uri(), '/')"/>
-                <xsl:variable name="nts.file.reldir" select="fn:substring-after($nts.file.dir, translate($inputDir, '\', '/'))"/>
                 
-                <!-- Now extract the 'root' dir of the relative path, where additional targets may be defined, and any
-                     subpaths following it. The 'root' is the largest combination of dir and subdirs that are defined
-                     in targets.additional -->
-                <xsl:variable name="nts.file.reldir.root">
-                    
-                    <xsl:for-each select="fn:tokenize($nts.file.reldir, '/')">
-                        <!-- Get relative path up to and including subdir.-->
-                        <xsl:variable name="root.candidate">
-                            <xsl:analyze-string select="$nts.file.reldir" regex="(/.*/{.})">
-                                <xsl:matching-substring>
-                                    <xsl:value-of select="fn:regex-group(1)"/>
-                                </xsl:matching-substring>
-                            </xsl:analyze-string>
-                        </xsl:variable>
-                        <xsl:if test="not(. = '') and fn:contains(fn:concat('/',$target.dir), $root.candidate)">
-                            <xsl:value-of select="concat('/',.)"/>
-                        </xsl:if>
-                    </xsl:for-each>
+                <!-- Get all properties of this folder that are to be used later -->
+                <xsl:variable name="nts.file.dir.properties" as="map(*)">
+                    <xsl:call-template name="ntsDirProperties">
+                        <xsl:with-param name="ntsDir" select="$nts.file.dir"/>
+                    </xsl:call-template>
                 </xsl:variable>
-                <xsl:variable name="nts.file.reldir.leaf" select="fn:substring-after($nts.file.reldir, $nts.file.reldir.root)"/>
                 
                 <!-- Get the raw file name without suffix -->
                 <xsl:variable name="nts.file.basename" select="substring-before(tokenize(base-uri(), '/')[last()], '.xml')"/>
                 
                 <!-- Calculate the relative path to the reference dir from the NTS file -->
                 <xsl:variable name="referenceBase">
-                    <xsl:variable name="dirLevel" select="fn:string-length($nts.file.reldir) - fn:string-length(fn:translate($nts.file.reldir, '/', ''))" as="xs:integer"/>
+                    <xsl:variable name="dirLevel" select="fn:string-length($nts.file.dir.properties('reldir')) - fn:string-length(fn:translate($nts.file.dir.properties('reldir'), '/', ''))" as="xs:integer"/>
                     <xsl:for-each select="0 to $dirLevel">
                         <xsl:if test=". gt 0">
                             <xsl:value-of select="'..'"/>
@@ -84,37 +70,21 @@
                     <xsl:value-of select="concat('file:///', translate($outputDir, '\', '/'))"/>
                     <xsl:choose>
                         <xsl:when test="not($target.dir = '#default')">
-                            <xsl:value-of select="fn:concat('/', $target.dir, $nts.file.reldir.leaf)"/>
+                            <xsl:value-of select="fn:concat('/', $target.dir, $nts.file.dir.properties('reldir.leaf'))"/>
                         </xsl:when>
                         <xsl:otherwise>
-                            <xsl:value-of select="$nts.file.reldir"/>
+                            <xsl:value-of select="$nts.file.dir.properties('reldir')"/>
                         </xsl:otherwise>
                     </xsl:choose>
                     <xsl:value-of select="'/'"/>
                 </xsl:variable>
                 
-                <xsl:variable name="target">
-                    <xsl:choose>
-                        <xsl:when test="$target.dir = '#default'">
-                            <xsl:value-of select="$target.dir"/>
-                        </xsl:when>
-                        <xsl:otherwise>
-                            <!-- Extract the actual target name used in @nts:only-in from 'target.dir'.
-                                For example: 'XIS-Server-Nictiz-intern' to 'Nictiz-intern' or 
-                                'MedicationData/Send-Nictiz-intern' to 'Nictiz-intern' -->
-                            <xsl:value-of select="fn:substring-after(fn:concat('/', $target.dir), fn:concat($nts.file.reldir.root, '-'))"/>
-                        </xsl:otherwise>
-                    </xsl:choose>
-                </xsl:variable>
-
                 <!-- Generate output if:
-                    - target is #default OR
-                    - if target contains reldir (for example, target is 'XIS-Server-Nictiz-intern' while reldir is 'XIS-Server')
+                     - target is #default OR
+                     - if target contains reldir (for example, target is 'XIS-Server-Nictiz-intern' while reldir is 'XIS-Server')
                      Otherwise we do nothing, because targets only have to output files affected by it. -->
-                <xsl:variable name="targetLevel" select="fn:string-length($target.dir) - fn:string-length(fn:translate($target.dir, '/', '')) + 1"/>
-                <xsl:variable name="rootLevel" select="fn:string-length($nts.file.reldir.root) - fn:string-length(fn:translate($nts.file.reldir.root, '/', ''))"/>
-                
-                <xsl:if test="$target = '#default' or (fn:contains(fn:concat('/',$target.dir), $nts.file.reldir.root) and $targetLevel = $rootLevel)">
+                <xsl:variable name="target" select="$nts.file.dir.properties('target')"/>
+                <xsl:if test="$target = '#default' or (fn:contains(fn:concat('/',$target.dir), $nts.file.dir.properties('reldir.root')) and $nts.file.dir.properties('targetLevel') = $nts.file.dir.properties('rootLevel'))">
                     <xsl:choose>
                         <xsl:when test="$ntsScenario = 'server'">
                             <!-- XIS scripts are generated in both XML and JSON flavor -->
