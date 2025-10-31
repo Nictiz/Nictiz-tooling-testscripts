@@ -61,3 +61,10 @@ However, for each package canonical, a version must be provided as well. This is
 Conformancelab needs to know which test server to use. This can be set directly using the ANT property `server`, which should be set to the _name_ of the server defined in the Conformancelab platform. However, it is more convenient to define default servers per usecase and FHIR version. This can by setting an ANT property called server.`_usecase_`.`_fhirVersion_.
 
 [^1]: This is actually a lie. Property files are based on the _output_ folder structure, not the NTS _input_, so if there are additional targets, the subfolder name doesn't match what's in `roles`, so the tooling compares just the start of the folder name. But hey, it's complex enough as it is.
+
+## Overrides
+If the property values generated as described above need to be overridden, a file named `src-properties.json` can be placed in the NTS source directory. This file is copied to the output directory and renamed to `properties.json` during the 'generate' phase of the build.
+
+If present, the contents of this file will be used to override the default, generated property values. This mainly allows for more control over `variant`s without relying on folder names, but also allows to, for example, set a custom `category` or `subcategory` name not based on folder names.
+
+Overriding the `fhirPackage` nd `serverAlias` properties is not supported.

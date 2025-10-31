@@ -49,7 +49,7 @@
         <!-- Convert the base dir parameter to a file:// url, and get a list of all directory's and subdirectory's
              within it --> 
         <fail unless="testset.dir"
-            message="The 'testset.dir' property for generating ConfmanceLab properties files is missing."/>
+            message="The 'testset.dir' property for generating ConformanceLab properties files is missing."/>
         <property name="testset.dir.abs" location="${testset.dir}"/>
         <pathconvert property="testset.dir.url" targetos="unix">
             <path location="${testset.dir.abs}"/>
