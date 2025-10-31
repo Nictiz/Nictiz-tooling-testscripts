@@ -27,7 +27,7 @@
     <xsl:include href="_ntsFolders.xsl"/>
     
     <xsl:template match="/" name="createPropertiesInTargetFolder">
-        <xsl:variable name="ntsFolders" select="distinct-values(uri-collection(concat('file:///', $inputDir, '?select=*.xml;recurse=yes')) ! resolve-uri('.', .)[not(contains(., '/_'))]) ! string()"/>
+        <xsl:variable name="ntsFolders" select="distinct-values(uri-collection(concat('file:///', translate($inputDir, '\', '/'), '?select=*.xml;recurse=yes')) ! resolve-uri('.', .)[not(contains(., '/_'))]) ! string()"/>
         
         <xsl:for-each select="$ntsFolders">
             <!-- Get all properties of this folder that are to be used later -->

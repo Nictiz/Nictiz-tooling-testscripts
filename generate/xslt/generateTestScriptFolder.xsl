@@ -33,7 +33,7 @@
     <xsl:include href="_ntsFolders.xsl"/>
     
     <xsl:template match="/" name="buildFilesInTargetFolder">
-        <xsl:for-each select="collection(concat('file:///', $inputDir, '?select=*.xml;recurse=yes'))">
+        <xsl:for-each select="collection(concat('file:///', translate($inputDir, '\', '/'), '?select=*.xml;recurse=yes'))">
             <!-- Exclude everything in a folder that starts with '_'. Can we do this in the collection query above? -->
             <xsl:if test="not(contains(base-uri(), '/_'))">
                 <!-- Get the relative directory of the input file within the base directory -->
