@@ -1,21 +1,21 @@
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3.0"
-                xmlns="http://hl7.org/fhir"
-                xmlns:f="http://hl7.org/fhir"
-                xmlns:xs="http://www.w3.org/2001/XMLSchema"
-                xmlns:fn="http://www.w3.org/2005/xpath-functions"
-                xmlns:array="http://www.w3.org/2005/xpath-functions/array"
-                xmlns:map="http://www.w3.org/2005/xpath-functions/map"
-                xmlns:nts="http://nictiz.nl/xsl/testscript"
-                exclude-result-prefixes="#all">
+    xmlns="http://hl7.org/fhir"
+    xmlns:f="http://hl7.org/fhir"
+    xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:fn="http://www.w3.org/2005/xpath-functions"
+    xmlns:array="http://www.w3.org/2005/xpath-functions/array"
+    xmlns:map="http://www.w3.org/2005/xpath-functions/map"
+    xmlns:nts="http://nictiz.nl/xsl/testscript"
+    exclude-result-prefixes="#all">
     <xsl:output method="xml" indent="yes"/>
     <xsl:strip-space elements="*"/>
     
     <!--
-         This file contains the machinery to write a ConformanceLab properties file.
+        This file contains the machinery to write a ConformanceLab properties file.
     -->
-    
+
     <xsl:param name="baseDirUrl"/>
-    
+
     <xsl:param name="fhirVersion" as="xs:string"/>
     
     <!-- The "goal" according to the Conformancelab spec. -->
@@ -41,7 +41,7 @@
     
     <!-- A comma separated list of targets that are considered "admin only". -->
     <xsl:param name="adminOnlyTargets"/>
-    
+
     <!-- A list of packages, formatted as a single comma-separated string. --> 
     <xsl:param name="packages"/>
     
@@ -55,7 +55,7 @@
     <!-- A list of default servers per FHIR version/usecase combination. This list if formatted as a comma-separated
          string with "usecase.fhirVersion=server" entries. -->
     <xsl:param name="defaultServers" as="xs:string"/>
-    
+
     <xsl:template name="generatePropertiesFiles">
         <xsl:for-each select="nts:findFolders(fn:false())">
             <xsl:call-template name="generatePropertiesFile">
@@ -63,7 +63,7 @@
                 <xsl:with-param name="loadscriptFolder" select="fn:false()"/>
             </xsl:call-template>
         </xsl:for-each>
-        
+
         <xsl:for-each select="nts:findFolders(fn:true())">
             <xsl:call-template name="generatePropertiesFile">
                 <xsl:with-param name="relFolderPath" select="."/>
@@ -79,14 +79,14 @@
         <xsl:param name="loadscriptFolders" as="xs:boolean"/>
         
         <!--
-             We need to place property files in all folders containing files, but not in the folders in between or in
-             empty folders (and excluding everything starting with an underscore). Getting only the folders with files
-             is not trivial in XSLT (or in ANT) unfortunately.
-             The approach is to loop over all TestScript content in folders and nested folders using collection(),
-             extract the uri of the TestScript using base-uri(), and than extract the relative path beneath baseDirUrl
-             from that. Once we have the collection, we can de-duplicate it.
-             The assumption is that at least, by working with file uri's, we can assume that the path separator is
-             always a backslash, so we don't need to worry about *that*.
+            We need to place property files in all folders containing files, but not in the folders in between or in
+            empty folders (and excluding everything starting with an underscore). Getting only the folders with files
+            is not trivial in XSLT (or in ANT) unfortunately.
+            The approach is to loop over all TestScript content in folders and nested folders using collection(),
+            extract the uri of the TestScript using base-uri(), and than extract the relative path beneath baseDirUrl
+            from that. Once we have the collection, we can de-duplicate it.
+            The assumption is that at least, by working with file uri's, we can assume that the path separator is
+            always a backslash, so we don't need to worry about *that*.
         -->
         <xsl:variable name="path" select="replace($baseDirUrl, 'file:/*', '')"/>
         <xsl:variable name="unfiltered" as="xs:string*">
@@ -123,16 +123,9 @@
         <xsl:param name="relFolderPath" as="xs:string" required="yes"/>
         <xsl:param name="loadscriptFolder" as="xs:boolean" required="yes"/>
         
-        <!-- Check if properties.json exists in this folder. If so, the value of each property set in this file will overrule the generated value in the output properties.json -->
+        <!-- Check if properties.json already exists in this folder. If so, the value of each property set in this file will overrule the generated value in the output properties.json -->
         <xsl:variable name="srcPropertiesPath" select="concat($baseDirUrl, '/', $relFolderPath, '/properties.json')"/>
         <xsl:variable name="srcProperties" select="if (unparsed-text-available($srcPropertiesPath)) then parse-json(unparsed-text($srcPropertiesPath)) else ()"/>
-        
-        <xsl:if test="not(unparsed-text-available($srcPropertiesPath))">
-            <xsl:message select="concat('Did not find properties overrule ''', $srcPropertiesPath, ' for folder ', $relFolderPath)"/>
-        </xsl:if>
-        <xsl:if test="unparsed-text-available($srcPropertiesPath)">
-            <xsl:message select="concat('Found properties overrule ''', $srcPropertiesPath, ' for folder ', $relFolderPath)"/>
-        </xsl:if>
         
         <!-- Here we declare all properties, taking into account potential overrules from srcProperties -->
         <xsl:variable name="theGoal" select="($srcProperties?goal,$goal)[1]"/>
@@ -221,6 +214,7 @@
                                 <string key="name">
                                     <xsl:value-of select="$srcPropertiesRoleName"/>
                                 </string>
+                                <!-- If there is a role.name override, we also expect role.description to be overridden to prevent al kinds of unwanted scenarios -->
                                 <xsl:if test="not(empty($srcPropertiesRoleDescription))">
                                     <string key="description">
                                         <xsl:value-of select="$srcPropertiesRoleDescription"/>
