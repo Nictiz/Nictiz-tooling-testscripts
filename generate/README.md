@@ -472,6 +472,9 @@ Because of the verbosity of the ANT build, the logging level is set to 1 (warnin
 
 ## Changelog
 
+### 3.3.0
+- Each NTS source folder can now contain a `src-properties.json` file which can contain overrides for the default Conformancelab `properties.json` file that is generated
+
 ### 3.2.0
 - Add TestScript.title to be more compliant with the FHIR TestScript resource R5
 
