@@ -87,6 +87,22 @@
     </xsl:template>
     
     <xd:doc>
+        <xd:desc>3a. /title</xd:desc>
+    </xd:doc>
+    <xsl:template match="/f:TestScript/f:title/@value">
+        <xsl:choose>
+            <xsl:when test="matches(.,'(xml|XML)')">
+                <xsl:attribute name="value">
+                    <xsl:value-of select="replace(.,'(xml|XML)','JSON')"/>
+                </xsl:attribute>
+            </xsl:when>
+            <xsl:otherwise>
+                <xsl:copy/>
+            </xsl:otherwise>
+        </xsl:choose>
+    </xsl:template>
+    
+    <xd:doc>
         <xd:desc>4. /description</xd:desc>
     </xd:doc>
     <xsl:template match="/f:TestScript/f:description/@value">
