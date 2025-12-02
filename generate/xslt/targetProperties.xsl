@@ -27,6 +27,24 @@
     
     <!-- The "usecase" according to the Conformancelab spec. -->
     <xsl:param name="usecase" as="xs:string"/>
+    
+    <!-- A list matching targets to their descriptions. This list is formatted as a single comma-separated string with
+         "target=description" entries. The targets are the full folder names, and the descriptions may contain 
+         unescaped comma's. -->
+    <xsl:param name="targetDescriptions"/>
+    
+    <!-- All targets part of this build -->
+    <xsl:param name="targets"/>
+    
+    <!-- A comma separated list of targets that are considered "admin only". -->
+    <xsl:param name="adminOnlyTargets"/>
+    
+    <!-- A list of packages, formatted as a single comma-separated string. --> 
+    <xsl:param name="packages"/>
+    
+    <!-- A list matching packages to their versions. This list is formatted as a single comma-separated string with
+         "package=version" entries. --> 
+    <xsl:param name="packageVersions" as="xs:string"/>
         
     <!-- An NTS input file can nominate elements to only be included in specific named targets using the nts:only-in
          attribute. The "target.dir" parameter (which defaults to '#default' if no other target is specified) contains
@@ -34,6 +52,9 @@
          For example: 'XIS-Server-Nictiz-intern' or 'MedicationData/Send-Nictiz-intern'. The actual target name used in
          an NTS-file is extracted from this. -->
     <xsl:param name="target.dir" select="'#default'"/>
+    
+    <!-- The "serverAlias" according to the Conformancelab spec. -->
+    <xsl:param name="serverAlias" as="xs:string"/>
     
     <xsl:include href="_ntsFolders.xsl"/>
     
@@ -102,7 +123,7 @@
                         <string key="informationStandard">
                             <xsl:variable name="srcInformationStandard" select="$srcProperties?informationStandard"/>
                             <xsl:choose>
-                                <xsl:when test="$srcInformationStandard = '${$informationStandard}'">
+                                <xsl:when test="$srcInformationStandard = '${informationStandard}'">
                                     <xsl:value-of select="$informationStandard"/>
                                 </xsl:when>
                                 <xsl:when test="not(empty($srcInformationStandard))">
@@ -144,6 +165,53 @@
                             </xsl:if>
                         </map>
                         
+                        <!-- Possible scenarios:
+                        - Target is #default and $srcPropertiesVariantName is empty - do nothing
+                        - Target is not #default and $srcPropertiesVariantName is empty - add target as variant
+                        -->
+                        <xsl:if test="not($target = '#default')">
+                            <!--
+                                 The $targetDescriptions string is formatted as a single string with target=description
+                                 pairs, separated by comma's. The descriptions are literaly what's in the ant properties
+                                 file, no escaping, and so it might contain comma's and we can't just split on comma's.
+                                 So the surest way to fish out the description is to use a regex where we search for
+                                 'our target=' up until the start of the next pair (or the end of the string). The
+                                 start of the next pair always begins by a comma and one of the other targets, so that's our clue.
+                            -->
+                            <xsl:variable name="pattern" select="concat('.*', $target.dir, '=(.*?)($|,(', replace($targets,',','|'), '))')"/>
+                            <xsl:variable name="description">
+                                <xsl:analyze-string select="$targetDescriptions" regex="{$pattern}">
+                                    <xsl:matching-substring>
+                                        <xsl:value-of select="regex-group(1)"/>
+                                    </xsl:matching-substring>
+                                </xsl:analyze-string>
+                            </xsl:variable>
+                            <map key="variant">
+                                <string key="name">
+                                    <xsl:value-of select="$target"/>
+                                </string>
+                                <xsl:if test="string-length($description) gt 0">
+                                    <string key="description">
+                                        <xsl:value-of select="$description"/>
+                                    </string>
+                                </xsl:if>
+                            </map>
+                        </xsl:if>
+                        
+                        <xsl:variable name="srcPropertiesAdminOnly" select="$srcProperties?adminOnly"/>
+                        <xsl:choose>
+                            <xsl:when test="$srcPropertiesAdminOnly = true()">
+                                <boolean key="adminOnly">true</boolean>
+                            </xsl:when>
+                            <xsl:otherwise>
+                                <xsl:for-each select="for $adminOnlyTarget in tokenize($adminOnlyTargets, ',') return normalize-space($adminOnlyTarget)">
+                                    <xsl:if test=". = $target.dir">
+                                        <boolean key="adminOnly">true</boolean>
+                                    </xsl:if>
+                                </xsl:for-each>
+                            </xsl:otherwise>
+                        </xsl:choose>
+                        
                         <xsl:variable name="theCategory" select="$srcProperties?category"/>
                         <xsl:if test="not(empty($theCategory))">
                             <string key="category">
@@ -156,6 +224,42 @@
                                 <xsl:value-of select="$theSubcategory"/>
                             </string>
                         </xsl:if>
+                        
+                        <xsl:variable name="packageList" select="for $package in tokenize($packages, ',') return normalize-space($package)"/>
+                        <xsl:if test="count($packageList) != 0">
+                            <array key="fhirPackage">
+                                <xsl:for-each select="$packageList">
+                                    <xsl:variable name="package" select="."/>
+                                    
+                                    <!-- The packageVersions parameter is a string formatted as a comma separated list with
+                                         'package=version' entries. We use a simple regex approach to extact the version for the
+                                         specified canonical. -->
+                                    <xsl:variable name="version">
+                                        <xsl:for-each select="tokenize($packageVersions, ',')">
+                                            <xsl:variable name="parts" select="tokenize(., '=')"/>
+                                            <xsl:if test="$parts[1] = $package">
+                                                <xsl:value-of select="$parts[2]"/>
+                                            </xsl:if>
+                                        </xsl:for-each>
+                                    </xsl:variable>
+                                    <xsl:if test="string-length($version) = 0">
+                                        <xsl:message terminate="yes" select="concat('No version has been defined for package ', $package)"/>
+                                    </xsl:if>
+                                    <map>
+                                        <string key="name">
+                                            <xsl:value-of select="$package"/>
+                                        </string>
+                                        <string key="version">
+                                            <xsl:value-of select="$version"/>
+                                        </string>
+                                    </map>
+                                </xsl:for-each>                    
+                            </array>
+                        </xsl:if>
+                        
+                        <string key="serverAlias">
+                            <xsl:value-of select="$serverAlias"/>
+                        </string>
                     </map>
                 </xsl:variable>
                 
@@ -197,6 +301,9 @@
                 </string>
                 <string key="usecase">
                     <xsl:value-of select="$usecase"/>
+                </string>
+                <string key="serverAlias">
+                    <xsl:value-of select="$serverAlias"/>
                 </string>
             </map>
         </xsl:variable>

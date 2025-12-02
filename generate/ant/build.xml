@@ -236,8 +236,48 @@
                   message="The 'informationStandard' property is missing. It must be set in 'build.properties' in order to build a Conformancelab configuration file."/>
             <fail unless="usecase"
                   message="The 'usecase' property is missing. It must be set in 'build.properties' in order to build a Conformancelab configuration file."/>
-            <!-- serverAlias? -->
+            <fail unless="serverAlias"
+                  message="The 'serverAlias' property is missing. It must be set in 'build.properties' in order to build a Conformancelab configuration file."/>
         </sequential>
+        
+        <!-- Prepare some properties for generating CL-properties-files -->
+        
+        <!-- Somewhat involved approach to create the 'targetDescriptions' input parameter for the XSLT conversion; a
+             single string containing a comma-separated list of '[target]=[description]' pairs. -->
+        <pathconvert property="target.descriptions.raw" pathsep=",">
+            <propertyset>
+                <propertyref prefix="target.description."/>
+                <mapper type="regexp" from="target\.description\.(.*)"
+                        to="\1=${target.description.\1}"/>
+            </propertyset>
+        </pathconvert>
+        <loadresource property="target.descriptions">
+            <propertyresource name="target.descriptions.raw"/>
+            <filterchain>
+                <expandproperties/>
+            </filterchain>
+        </loadresource>
+        
+        <!-- Default to empty string -->
+        <property name="targets.adminOnly" value=""/>
+        
+        <!-- Default to empty string -->
+        <property name="packages" value=""/>
+        
+        <!-- Same approach as above to create the 'packages' input parameter for the XSLT conversion; a single string
+             containing '[canonical]=[version]' pairs, separated by commas. -->
+        <pathconvert property="packages.versions.raw" pathsep=",">
+            <propertyset>
+                <propertyref prefix="package."/>
+                <mapper type="regexp" from="package\.(.*)" to="\1=${package.\1}"/>
+            </propertyset>
+        </pathconvert>
+        <loadresource property="packages.versions">
+            <propertyresource name="packages.versions.raw"/>
+            <filterchain>
+                <expandproperties/>
+            </filterchain>
+        </loadresource>
     </target>
 
     <macrodef name="transform-NTS-folder" description="Custom task to perform the transformation of a folder with NTS files">
@@ -401,11 +441,11 @@
     <macrodef name="properties" description="Copy Conformancelab properties from src to output. If target is not '#default', add the target to the variant property">
         <attribute name="target" default="#default" description="The name of the target to build; choose '#default' to build the default target."/>
         <attribute name="template" default="createPropertiesInTargetFolder" description="Name of the XSLT template used to build the properties file"/>
-
+        
         <sequential>
             <java classname="net.sf.saxon.Transform" classpath="${Saxon-HE.jar}" logError="true">
                 <classpath location="${Saxon-HE.jar}"/>
-                <arg value="-it:${template}" />
+                <arg value="-it:@{template}" />
                 <arg value="-xsl:${xslt.dir}/targetProperties.xsl" />
                 <arg value="inputDir=${input.dir.abs}"/>
                 <arg value="outputDir=${output.dir.abs}"/>
@@ -414,10 +454,12 @@
                 <arg value="fhirVersion=${fhir.version}"/>
                 <arg value="informationStandard=${informationStandard}"/>
                 <arg value="usecase=${usecase}"/>
+                <arg value="targetDescriptions=${target.descriptions}"/>
                 <arg value="adminOnlyTargets=${targets.adminOnly}"/>
                 <arg value="packages=${packages}"/>
                 <arg value="packageVersions=${packages.versions}"/>
                 <arg value="serverAlias=${serverAlias}"/>
+                <arg value="targets=${targets}"/>
             </java>
         </sequential>
     </macrodef> 
