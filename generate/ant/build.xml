@@ -227,6 +227,16 @@
                 </then>
             </if>
 
+            <!-- Check Conformancelab properties -->
+            <fail unless="goal"
+                  message="The 'goal' property is missing. It must be set in 'build.properties' in order to build a ConformanceLab configuration file."/>
+            <fail unless="fhir.version"
+                  message="The 'fhir.version' property is missing. It must be set in 'build.properties' inorder to build a Conformancelab configuration file."/>
+            <fail unless="informationStandard"
+                  message="The 'informationStandard' property is missing. It must be set in 'build.properties' in order to build a Conformancelab configuration file."/>
+            <fail unless="usecase"
+                  message="The 'usecase' property is missing. It must be set in 'build.properties' in order to build a Conformancelab configuration file."/>
+            <!-- serverAlias? -->
         </sequential>
     </target>
 
@@ -387,6 +397,30 @@
             </if>
         </sequential>
     </macrodef>
+    
+    <macrodef name="properties" description="Copy Conformancelab properties from src to output. If target is not '#default', add the target to the variant property">
+        <attribute name="target" default="#default" description="The name of the target to build; choose '#default' to build the default target."/>
+        <attribute name="template" default="createPropertiesInTargetFolder" description="Name of the XSLT template used to build the properties file"/>
+
+        <sequential>
+            <java classname="net.sf.saxon.Transform" classpath="${Saxon-HE.jar}" logError="true">
+                <classpath location="${Saxon-HE.jar}"/>
+                <arg value="-it:${template}" />
+                <arg value="-xsl:${xslt.dir}/targetProperties.xsl" />
+                <arg value="inputDir=${input.dir.abs}"/>
+                <arg value="outputDir=${output.dir.abs}"/>
+                <arg value="target.dir=@{target}"/>
+                <arg value="goal=${goal}"/>
+                <arg value="fhirVersion=${fhir.version}"/>
+                <arg value="informationStandard=${informationStandard}"/>
+                <arg value="usecase=${usecase}"/>
+                <arg value="adminOnlyTargets=${targets.adminOnly}"/>
+                <arg value="packages=${packages}"/>
+                <arg value="packageVersions=${packages.versions}"/>
+                <arg value="serverAlias=${serverAlias}"/>
+            </java>
+        </sequential>
+    </macrodef> 
 
     <target name="clean-build-dir">
         <sequential>
@@ -442,6 +476,9 @@
                                 target="@{target.dir}"
                                 references.file="${references.file}"/>
                             <collect-references references.file="${references.file}"/>
+                            
+                            <!-- Check if a Conformancelab src-properties-file is present in the target.dir, copy it to the output dir and, if applicable, add the target to the variant property -->
+                            <properties target="@{target.dir}"/>
                         </sequential>
                     </for>
 
@@ -449,6 +486,7 @@
                     <echo message="Processing fixtures and rules"/>
                     <process-references references.file="${references.file}"/>
                     <generate-loadresources/>
+                    <properties template="createLoadResourcesProperties"/>
                 </sequential>
             </then>
             <else>
