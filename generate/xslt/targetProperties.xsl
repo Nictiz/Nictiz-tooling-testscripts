@@ -287,35 +287,37 @@
     </xsl:template>
     
     <xsl:template match="/" name="createLoadResourcesProperties">
-        <!-- Create an XML representation of the desired JSON structure, which can be written as JSON using xml-to-json. --> 
-        <xsl:variable name="properties">
-            <map xmlns="http://www.w3.org/2005/xpath-functions">
-                <string key="goal">
-                    <xsl:value-of select="$goal"/>
-                </string>
-                <string key="fhirVersion">
-                    <xsl:value-of select="upper-case($fhirVersion)"/>
-                </string>
-                <string key="informationStandard">
-                    <xsl:value-of select="$informationStandard"/>
-                </string>
-                <string key="usecase">
-                    <xsl:value-of select="$usecase"/>
-                </string>
-                <string key="serverAlias">
-                    <xsl:value-of select="$serverAlias"/>
-                </string>
-            </map>
-        </xsl:variable>
-
-        <xsl:variable name="properties.path">
-            <xsl:value-of select="concat('file:///', translate($outputDir, '\', '/'),'/_LoadResources')"/>
-        </xsl:variable>
-        
-        <xsl:result-document href="{concat($properties.path, '/properties.json')}" method="text" indent="no">
-            <xsl:value-of select="xml-to-json($properties, map {'indent': true()})"/>
-        </xsl:result-document>
-
+        <!-- Only generate properties file if a loadresources file actually exists. Bit hacky maybe, but it works because of conventions -->
+        <xsl:if test="unparsed-text-available(concat('file:///', translate($outputDir, '\', '/'),'/_LoadResources/load-resources-purgecreateupdate-xml.xml'))">
+            <!-- Create an XML representation of the desired JSON structure, which can be written as JSON using xml-to-json. --> 
+            <xsl:variable name="properties">
+                <map xmlns="http://www.w3.org/2005/xpath-functions">
+                    <string key="goal">
+                        <xsl:value-of select="$goal"/>
+                    </string>
+                    <string key="fhirVersion">
+                        <xsl:value-of select="upper-case($fhirVersion)"/>
+                    </string>
+                    <string key="informationStandard">
+                        <xsl:value-of select="$informationStandard"/>
+                    </string>
+                    <string key="usecase">
+                        <xsl:value-of select="$usecase"/>
+                    </string>
+                    <string key="serverAlias">
+                        <xsl:value-of select="$serverAlias"/>
+                    </string>
+                </map>
+            </xsl:variable>
+            
+            <xsl:variable name="properties.path">
+                <xsl:value-of select="concat('file:///', translate($outputDir, '\', '/'),'/_LoadResources')"/>
+            </xsl:variable>
+            
+            <xsl:result-document href="{concat($properties.path, '/properties.json')}" method="text" indent="no">
+                <xsl:value-of select="xml-to-json($properties, map {'indent': true()})"/>
+            </xsl:result-document>
+        </xsl:if>
     </xsl:template>
     
 </xsl:stylesheet>
