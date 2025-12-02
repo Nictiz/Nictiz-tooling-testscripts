@@ -24,6 +24,7 @@
                 <echo message="---------------"/>
                 <ant antfile="${testscripttools.dir}/ant/build.xml" dir="${basedir}" inheritAll="false">
                     <property file="@{input.dir}/build.properties"/>
+                    <property file="${package.version.file}"/>
                     <property name="lib.dir" value="${lib.dir}"/>
                     <property name="commoncomponents.dir" value="${commoncomponents.dir}"/>
                     <property name="version.addition" value="${version.addition}"/>
