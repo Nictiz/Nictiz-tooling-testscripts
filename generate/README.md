@@ -472,7 +472,7 @@ Because of the verbosity of the ANT build, the logging level is set to 1 (warnin
 
 ## Conformancelab properties
 
-On the Conformancelab test platform, a property file in JSON format should be added to TestScript folders with data about these scripts. As part of this build process, these files are derived from several ANT build properties and a file called `src-properties.json`. This file is expected in each NTS source directory. This file is processed and leads to a file called `properties.json` in the output directory and renamed to `properties.json`. 
+For the Conformancelab test platform, a property file in JSON format should be added to TestScript folders with data about these script sets. As part of this build process, these files are derived from several ANT build properties and a file called `src-properties.json`. This file is expected in each NTS source directory. This file is processed and leads to a file called `properties.json` in the output directory. 
 
 A distinction can be made between regular TestScript-set properties and the properties for a loadresources script
 
@@ -508,7 +508,7 @@ A distinction can be made between regular TestScript-set properties and the prop
 | `usecase`               | ANT property `usecase`                                       | x         |       |
 | `serverAlias`           | ANT property `serverAlias`                                   | x         |       |
 
-## Properties to set directly
+## Properties to set in build.properties
 As can be seen above, the following properties must be set in the `build.properties` files directly:
 
 * `fhir.version`
@@ -541,6 +541,8 @@ However, for each package canonical, a version must be provided as well. This is
 Conformancelab needs to know which test server to use. This can be set directly using the ANT property `serverAlias`, which should be set to the _name_ of the server defined in the Conformancelab platform.
 
 ## Changelog
+### 4.0.0
+- \<een mooie omschrijving van de wijzigingen\> 
 
 ### 3.2.0
 - Add TestScript.title to be more compliant with the FHIR TestScript resource R5
