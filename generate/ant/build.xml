@@ -226,20 +226,10 @@
                     <fail message="Please set 'lib.dir' to a place where build dependency's may be stored."/>
                 </then>
             </if>
-
-            <!-- Check Conformancelab properties -->
-            <fail unless="goal"
-                  message="The 'goal' property is missing. It must be set in 'build.properties' in order to build a ConformanceLab configuration file."/>
-            <fail unless="fhir.version"
-                  message="The 'fhir.version' property is missing. It must be set in 'build.properties' inorder to build a Conformancelab configuration file."/>
-            <fail unless="informationStandard"
-                  message="The 'informationStandard' property is missing. It must be set in 'build.properties' in order to build a Conformancelab configuration file."/>
-            <fail unless="usecase"
-                  message="The 'usecase' property is missing. It must be set in 'build.properties' in order to build a Conformancelab configuration file."/>
-            <fail unless="serverAlias"
-                  message="The 'serverAlias' property is missing. It must be set in 'build.properties' in order to build a Conformancelab configuration file."/>
         </sequential>
-        
+    </target>
+    
+    <target name="prepare-conformancelab-input">       
         <!-- Prepare some properties for generating CL-properties-files -->
         
         <!-- Somewhat involved approach to create the 'targetDescriptions' input parameter for the XSLT conversion; a
@@ -438,7 +428,7 @@
         </sequential>
     </macrodef>
     
-    <macrodef name="properties" description="Copy Conformancelab properties from src to output. If target is not '#default', add the target to the variant property">
+    <macrodef name="conformancelab-properties" description="Copy Conformancelab properties from src to output. If target is not '#default', add the target to the variant property">
         <attribute name="target" default="#default" description="The name of the target to build; choose '#default' to build the default target."/>
         <attribute name="template" default="createPropertiesInTargetFolder" description="Name of the XSLT template used to build the properties file"/>
         
@@ -446,7 +436,7 @@
             <java classname="net.sf.saxon.Transform" classpath="${Saxon-HE.jar}" logError="true">
                 <classpath location="${Saxon-HE.jar}"/>
                 <arg value="-it:@{template}" />
-                <arg value="-xsl:${xslt.dir}/targetProperties.xsl" />
+                <arg value="-xsl:${xslt.dir}/conformancelabProperties.xsl" />
                 <arg value="inputDir=${input.dir.abs}"/>
                 <arg value="outputDir=${output.dir.abs}"/>
                 <arg value="target.dir=@{target}"/>
@@ -471,7 +461,7 @@
         </sequential>
     </target>
 
-    <target name="build" depends="set-logging, load, check-input, clean-build-dir">
+    <target name="build" depends="set-logging, load, check-input, prepare-conformancelab-input, clean-build-dir">
         <property name="reference.dir" location="${input.dir.abs}/${reference.subdir}"/>
 
         <!-- Set default loadresources.exclude to nothing -->
@@ -520,7 +510,7 @@
                             <collect-references references.file="${references.file}"/>
                             
                             <!-- Check if a Conformancelab src-properties-file is present in the target.dir, copy it to the output dir and, if applicable, add the target to the variant property -->
-                            <properties target="@{target.dir}"/>
+                            <conformancelab-properties target="@{target.dir}"/>
                         </sequential>
                     </for>
 
@@ -528,7 +518,8 @@
                     <echo message="Processing fixtures and rules"/>
                     <process-references references.file="${references.file}"/>
                     <generate-loadresources/>
-                    <properties template="createLoadResourcesProperties"/>
+                    <!-- Create Conformancelab properties from ANT properties for LoadResources script-->
+                    <conformancelab-properties template="createLoadResourcesProperties"/>
                 </sequential>
             </then>
             <else>

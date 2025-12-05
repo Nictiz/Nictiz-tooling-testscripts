@@ -87,72 +87,55 @@
                 <xsl:variable name="properties">
                     <map xmlns="http://www.w3.org/2005/xpath-functions">
                         <string key="goal">
-                            <xsl:variable name="srcGoal" select="$srcProperties?goal"/>
-                            <xsl:choose>
-                                <xsl:when test="$srcGoal = '${goal}'">
-                                    <xsl:value-of select="$goal"/>
-                                </xsl:when>
-                                <xsl:when test="not(empty($srcGoal))">
-                                    <xsl:value-of select="$srcGoal"/>
-                                </xsl:when>
-                                <xsl:otherwise>
-                                    <xsl:value-of select="$goal"/>
-                                </xsl:otherwise>
-                            </xsl:choose>
+                            <xsl:call-template name="getPropertyValue">
+                                <xsl:with-param name="antProperty" select="'goal'"/>
+                                <xsl:with-param name="antValue" select="$goal"/>
+                                <xsl:with-param name="srcProperty" select="'goal'"/>
+                                <xsl:with-param name="srcProperties" select="$srcProperties"/>
+                                <xsl:with-param name="nts.file.dir.properties" select="$nts.file.dir.properties"/>
+                            </xsl:call-template>
                         </string>
-                        
+
                         <!-- Does not check the fhirVersion in src-properties -->
                         <xsl:if test="not(upper-case($fhirVersion) = ('DSTU1', 'DSTU2', 'STU3', 'R4', 'R4B', 'R5'))">
                             <xsl:message terminate="yes" select="concat('Unrecognized FHIR version: ', $fhirVersion)"/>
                         </xsl:if>
                         <string key="fhirVersion">
-                            <xsl:variable name="srcFhirVersion" select="$srcProperties?fhirVersion"/>
-                            <xsl:choose>
-                                <xsl:when test="$srcFhirVersion = '${fhir.version}'">
-                                    <xsl:value-of select="upper-case($fhirVersion)"/>
-                                </xsl:when>
-                                <xsl:when test="not(empty($srcFhirVersion))">
-                                    <xsl:value-of select="upper-case($srcFhirVersion)"/>
-                                </xsl:when>
-                                <xsl:otherwise>
-                                    <xsl:value-of select="upper-case($fhirVersion)"/>
-                                </xsl:otherwise>
-                            </xsl:choose>
+                            <xsl:variable name="theFhirVersion">
+                                <xsl:call-template name="getPropertyValue">
+                                    <xsl:with-param name="antProperty" select="'fhir.version'"/>
+                                    <xsl:with-param name="antValue" select="$fhirVersion"/>
+                                    <xsl:with-param name="srcProperty" select="'fhirVersion'"/>
+                                <xsl:with-param name="srcProperties" select="$srcProperties"/>
+                                <xsl:with-param name="nts.file.dir.properties" select="$nts.file.dir.properties"/>
+                                </xsl:call-template>
+                            </xsl:variable>
+                            <xsl:value-of select="upper-case($theFhirVersion)"/>
                         </string>
                         
                         <string key="informationStandard">
-                            <xsl:variable name="srcInformationStandard" select="$srcProperties?informationStandard"/>
-                            <xsl:choose>
-                                <xsl:when test="$srcInformationStandard = '${informationStandard}'">
-                                    <xsl:value-of select="$informationStandard"/>
-                                </xsl:when>
-                                <xsl:when test="not(empty($srcInformationStandard))">
-                                    <xsl:value-of select="$srcInformationStandard"/>
-                                </xsl:when>
-                                <xsl:otherwise>
-                                    <xsl:value-of select="$informationStandard"/>
-                                </xsl:otherwise>
-                            </xsl:choose>
+                            <xsl:call-template name="getPropertyValue">
+                                <xsl:with-param name="antProperty" select="'informationStandard'"/>
+                                <xsl:with-param name="antValue" select="$informationStandard"/>
+                                <xsl:with-param name="srcProperty" select="'informationStandard'"/>
+                                <xsl:with-param name="srcProperties" select="$srcProperties"/>
+                                <xsl:with-param name="nts.file.dir.properties" select="$nts.file.dir.properties"/>
+                            </xsl:call-template>
                         </string>
                         <string key="usecase">
-                            <xsl:variable name="srcUsecase" select="$srcProperties?usecase"/>
-                            <xsl:choose>
-                                <xsl:when test="$srcUsecase = '${usecase}'">
-                                    <xsl:value-of select="$usecase"/>
-                                </xsl:when>
-                                <xsl:when test="not(empty($srcUsecase))">
-                                    <xsl:value-of select="$srcUsecase"/>
-                                </xsl:when>
-                                <xsl:otherwise>
-                                    <xsl:value-of select="$usecase"/>
-                                </xsl:otherwise>
-                            </xsl:choose>
+                            <xsl:call-template name="getPropertyValue">
+                                <xsl:with-param name="antProperty" select="'usecase'"/>
+                                <xsl:with-param name="antValue" select="$usecase"/>
+                                <xsl:with-param name="srcProperty" select="'usecase'"/>
+                                <xsl:with-param name="srcProperties" select="$srcProperties"/>
+                                <xsl:with-param name="nts.file.dir.properties" select="$nts.file.dir.properties"/>
+                            </xsl:call-template>
                         </string>
                         
                         <xsl:variable name="srcPropertiesRoleName" select="$srcProperties?role?name"/>
                         <xsl:variable name="srcPropertiesRoleDescription" select="$srcProperties?role?description"/>
                         <xsl:if test="empty($srcPropertiesRoleName)">
-                            <xsl:message terminate="yes" select="concat('No role.name found in ''', $nts.file.dir.properties?reldir, '/src-properties.json''')"/>
+                            <xsl:message terminate="yes" select="concat('No ''role.name'' property found in ''', $nts.file.dir.properties?reldir, '/src-properties.json''')"/>
                         </xsl:if>
                         <map key="role">
                             <string key="name">
@@ -164,6 +147,19 @@
                                 </string>
                             </xsl:if>
                         </map>
+                        
+                        <xsl:variable name="theCategory" select="$srcProperties?category"/>
+                        <xsl:if test="not(empty($theCategory))">
+                            <string key="category">
+                                <xsl:value-of select="$theCategory"/>
+                            </string>
+                        </xsl:if>
+                        <xsl:variable name="theSubcategory" select="$srcProperties?subcategory"/>
+                        <xsl:if test="not(empty($theSubcategory))">
+                            <string key="subcategory">
+                                <xsl:value-of select="$theSubcategory"/>
+                            </string>
+                        </xsl:if>
                         
                         <!-- Possible scenarios:
                         - Target is #default and $srcPropertiesVariantName is empty - do nothing
@@ -212,19 +208,6 @@
                             </xsl:otherwise>
                         </xsl:choose>
                         
-                        <xsl:variable name="theCategory" select="$srcProperties?category"/>
-                        <xsl:if test="not(empty($theCategory))">
-                            <string key="category">
-                                <xsl:value-of select="$theCategory"/>
-                            </string>
-                        </xsl:if>
-                        <xsl:variable name="theSubcategory" select="$srcProperties?subcategory"/>
-                        <xsl:if test="not(empty($theSubcategory))">
-                            <string key="subcategory">
-                                <xsl:value-of select="$theSubcategory"/>
-                            </string>
-                        </xsl:if>
-                        
                         <xsl:variable name="packageList" select="for $package in tokenize($packages, ',') return normalize-space($package)"/>
                         <xsl:if test="count($packageList) != 0">
                             <array key="fhirPackage">
@@ -258,7 +241,13 @@
                         </xsl:if>
                         
                         <string key="serverAlias">
-                            <xsl:value-of select="$serverAlias"/>
+                            <xsl:call-template name="getPropertyValue">
+                                <xsl:with-param name="antProperty" select="'serverAlias'"/>
+                                <xsl:with-param name="antValue" select="$serverAlias"/>
+                                <xsl:with-param name="srcProperty" select="'serverAlias'"/>
+                                <xsl:with-param name="srcProperties" select="$srcProperties"/>
+                                <xsl:with-param name="nts.file.dir.properties" select="$nts.file.dir.properties"/>
+                            </xsl:call-template>
                         </string>
                     </map>
                 </xsl:variable>
@@ -287,6 +276,22 @@
     </xsl:template>
     
     <xsl:template match="/" name="createLoadResourcesProperties">
+        <xsl:if test="empty($goal) or $goal = '${goal}'">
+            <xsl:message terminate="yes" select="concat('No ''goal'' property found in ''', $inputDir, '/build.properties''')"/>
+        </xsl:if>
+        <xsl:if test="empty($fhirVersion) or $fhirVersion = '${fhir.version}'">
+            <xsl:message terminate="yes" select="concat('No ''fhir.version'' property found in ''', $inputDir, '/build.properties''')"/>
+        </xsl:if>
+        <xsl:if test="empty($informationStandard) or $informationStandard = '${informationStandard}'">
+            <xsl:message terminate="yes" select="concat('No ''informationStandard'' property found in ''', $inputDir, '/build.properties''')"/>
+        </xsl:if>
+        <xsl:if test="empty($usecase) or $usecase = '${usecase}'">
+            <xsl:message terminate="yes" select="concat('No ''usecase'' property found in ''', $inputDir, '/build.properties''')"/>
+        </xsl:if>
+        <xsl:if test="empty($serverAlias) or $serverAlias = '${serverAlias}'">
+            <xsl:message terminate="yes" select="concat('No ''serverAlias'' property found in ''', $inputDir, '/build.properties''')"/>
+        </xsl:if>
+
         <!-- Only generate properties file if a loadresources file actually exists. Bit hacky maybe, but it works because of conventions -->
         <xsl:if test="unparsed-text-available(concat('file:///', translate($outputDir, '\', '/'),'/_LoadResources/load-resources-purgecreateupdate-xml.xml'))">
             <!-- Create an XML representation of the desired JSON structure, which can be written as JSON using xml-to-json. --> 
@@ -318,6 +323,30 @@
                 <xsl:value-of select="xml-to-json($properties, map {'indent': true()})"/>
             </xsl:result-document>
         </xsl:if>
+    </xsl:template>
+    
+    <xsl:template name="getPropertyValue">
+        <xsl:param name="antProperty"/>
+        <xsl:param name="antValue"/>
+        <xsl:param name="srcProperty"/>
+        <xsl:param name="srcProperties"/>
+        <xsl:param name="nts.file.dir.properties"/>
+        
+        <xsl:variable name="srcValue" select="map:get($srcProperties, $srcProperty)"/>
+        <xsl:choose>
+            <xsl:when test="$srcValue = concat('${', $antProperty, '}')">
+                <xsl:value-of select="$antValue"/>
+            </xsl:when>
+            <xsl:when test="not(empty($srcValue))">
+                <xsl:value-of select="$srcValue"/>
+            </xsl:when>
+            <xsl:when test="empty($srcValue) and (empty($antValue) or $antValue = concat('${', $antProperty, '}'))">
+                <xsl:message terminate="yes" select="'No ''', $srcProperty ,''' property found in ''', $nts.file.dir.properties?reldir, 'src-properties.json'' and build.properties'"/>
+            </xsl:when>
+            <xsl:otherwise>
+                <xsl:value-of select="$antValue"/>
+            </xsl:otherwise>
+        </xsl:choose>
     </xsl:template>
     
 </xsl:stylesheet>
