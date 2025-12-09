@@ -542,7 +542,7 @@ Conformancelab needs to know which test server to use. This can be set directly 
 
 ## Changelog
 ### 4.0.0
-- \<een mooie omschrijving van de wijzigingen\> 
+- Conformancelab properties files are now based on input from both build properties and a file called `src-properties.json` in each input folder, moving away from using folder names as input.
 
 ### 3.2.0
 - Add TestScript.title to be more compliant with the FHIR TestScript resource R5
