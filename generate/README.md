@@ -470,7 +470,79 @@ It can be found at `schematron/NictizTestScript.sch` relative to this README.
 
 Because of the verbosity of the ANT build, the logging level is set to 1 (warning) and Saxon is set to not try to recover. When more verbose output is wanted, the logging level can be changed by setting the `-DoutputLevel=` parameter on the ANT build.
 
+## Conformancelab properties
+
+For the Conformancelab test platform, a property file in JSON format should be added to TestScript folders with data about these script sets. As part of this build process, these files are derived from several ANT build properties and a file called `src-properties.json`. This file is expected in each NTS source directory. This file is processed and leads to a file called `properties.json` in the output directory. 
+
+A distinction can be made between regular TestScript-set properties and the properties for a loadresources script
+
+### Regular TestScript properties
+
+| Conformancelab property | input                                                                         | required? | notes                                                                                           |
+| ----------------------- | ----------------------------------------------------------------------------- | --------- |------------------------------------------------------------------------------------------------ |
+| `fhirVersion`           | `src-properties.json`, path `$.fhirVersion`                                   | x         | Defaults to ANT property `fhir.version`                                                         |
+| `goal`                  | `src-properties.json`, path `$.goal`                                          | x         | Defaults to ANT property `goal`                                                                 |
+| `informationStandard`   | `src-properties.json`, path `$.informationStandard`                           | x         | Defaults to ANT property `informationStandard`                                                  |
+| `usecase`               | `src-properties.json`, path `$.usecase`                                       | x         | Defaults to ANT property `usecase`                                                              |
+| `category`              | `src-properties.json`, path `$.category`                                      |           |                                                                                                 |
+| `subcategory`           | `src-properties.json`, path `$.subcategory`                                   |           |                                                                                                 |
+| `role`                  |                                                                               | x         |                                                                                                 |
+| - `name`                | `src-properties.json`, path `$.role.name`                                     | x         |                                                                                                 |
+| - `description`         | `src-properties.json`, path `$.role.description`                              |           |                                                                                                 |
+| `variant`               |                                                                               |           |                                                                                                 |
+| - `name`                | Build _target_ in `targets.additional`                                        | (x)       |                                                                                                 |
+| - `description`         | ANT property `target.description`._target_                                    |           | e.g. `target.description.XIS-Server-Nictiz-only = For Nictiz only`                              |
+| `adminOnly`             | `src-properties.json`, path `$.adminOnly` OR ANT property `targets.adminOnly` |           | Use `targets.adminOnly = XIS-Server-Nictiz-only` to set `adminOnly` for this specific target    |
+| `fhirPackage`           |                                                                               |           |                                                                                                 |
+| - `name`                | ANT property `packages`                                                       |           | A comma separated list of package canonicals, which is converted to an array including versions |
+| - `version`             | ANT property `package.`_canonical_                                            |           | e.g. `package.nictiz.stu3.zib2017 = 2.2.3`                                                      |
+| `serverAlias`           | `src-properties.json`, path `$.serverAlias`                                   | x         | Defaults to ANT property `serverAlias`                                                          |
+
+### Loadresources properties
+
+| Conformancelab property | input                                                        | required? | notes |
+| ----------------------- | ------------------------------------------------------------ | --------- | ----- |
+| `fhirVersion`           | ANT property `fhir.version`                                  | x         |       |
+| `goal`                  | ANT property `goal`                                          | x         |       |
+| `informationStandard`   | ANT property `informationStandard`                           | x         |       |
+| `usecase`               | ANT property `usecase`                                       | x         |       |
+| `serverAlias`           | ANT property `serverAlias`                                   | x         |       |
+
+## Properties to set in build.properties
+As can be seen above, the following properties must be set in the `build.properties` files directly:
+
+* `fhir.version`
+* `informationStandard`
+* `usecase`
+* `packages`
+* `serverAlias`
+
+## Goal
+The `goal` parameter in the Conformancelab property file defines the goal the set of TestScripts is used for. At the time of writing, there are two goals: testing and certification, or "Test" and "Cert".
+
+## Role, category and subcategory
+Conformancelab needs to know who the scripts are for. This is defined by the `role` property. In NTS projects, the scripts for a certain role are organized using folders within the root folder, e.g. "XIS-Server", "Sending-System", etc. To provide a description for a role, the `role.description` property is used.
+
+Further categorization and/or subdivision in the Conformancelab UI can be added by using the `category` and `subcategory` properties.
+
+## Variants / additional targets
+"Variants" in Conformancelab parlance are what NTS calls "Additional targets". Additional targets are places in a separate NTS folder name suffixed `-[target]`. If this tool encounters a build target, it will set the `variant.name` parameter for the resulting property file(s).
+
+To provide a description, set the ANT property `target.description.`_target_.
+
+## Fhir packages
+For profile validation, Conformancelab needs to know which FHIR packages to use. This is done using the ANT property `packages`, which is a comma separated list of package canonicals.[^2]
+
+[^2]: The feature to configure the FHIR package per testset is still in development. The current workaround is for the supplier to upgrade the FHIR packages when needed.
+
+However, for each package canonical, a version must be provided as well. This is done per package, using an ANT property called `package.`_package canonical_ set to the version to use.
+
+## Server alias
+Conformancelab needs to know which test server to use. This can be set directly using the ANT property `serverAlias`, which should be set to the _name_ of the server defined in the Conformancelab platform.
+
 ## Changelog
+### 4.0.0
+- Conformancelab properties files are now based on input from both build properties and a file called `src-properties.json` in each input folder, moving away from using folder names as input.
 
 ### 3.2.0
 - Add TestScript.title to be more compliant with the FHIR TestScript resource R5
