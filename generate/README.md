@@ -244,10 +244,10 @@ The second one deals with the authorization header for defining the patient cont
 This file should be passed as the `tokens.json` parameter to the build script. The token can then be imported into a TestScript using:
 
 ```xml
-<nts:authToken patientResourceId="[resource.id of Patient resource]" {id="[patient-token-id]"}/>
+<nts:authToken patientResourceId="[resource.id of Patient resource]" {id="[patient-token-patientName]"}/>
 ```
 
-This sets an NTS parameter with the specified `id`, which can then be used throughout the NTS file. `id` is usually omitted, in which case it defaults to "patient-token-id".
+This sets an NTS parameter with the specified `id`, which can then be used throughout the NTS file. `id` is usually omitted, in which case it defaults to "patient-token-[resource.id of Patient resource]".
 
 For example, if you included a token with id "patient-token-id", you can use it to define the Authorization header with:
 ```xml
