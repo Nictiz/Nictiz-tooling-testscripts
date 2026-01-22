@@ -259,14 +259,6 @@ For example, if you included a token with id "patient-token-id", you can use it 
 
 The output depends on `nts:scenario`. For client scripts, the content of the access token will be hardcoded in the TestScript output. For server scripts, a TestScript variable will be defined that defaults to the access token, but which can be overruled by the tester. The NTS variable will be translated to this TestScript variable.
 
-There is actually a second (outdated) mechanism to import authorization tokens:
-
-```xml
-<nts:patientTokenFixture href="..">
-```
-
-The `href` attribute should point to a `Patient` instance containing the content of the authorization header as its `.id`, placed in the "_reference"-folder and with a file name ending in `-token.xml`. This will always result in definig the TestScript variable `patient-token-id`, for both client and server scripts.
-
 ### Scenario: server (xis) or client (phr)
 
 There may be differences for xis and phr scenarios in how a TestScript is transformed. The scenario must therefore be indicated using the following attribute on the `TestScript` root:
