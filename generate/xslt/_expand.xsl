@@ -83,11 +83,59 @@
         
         <xsl:if test="$scenario='server'">
             <variable>
-                <name value="{if (.[@id]) then ./@id else concat('patient-token-',@patientResourceId)}"/>
+                <name value="{if (.[@id]) then ./@id else 'patient-token-id'}"/>
                 <defaultValue value="{$authTokens[@id = ./@id]/@token}"/>
-                <description value="OAuth Token for patient '{if (.[@id]) then ./@id else @patientResourceId}'"/>
+                <description value="OAuth Token for current patient"/>
             </variable>
         </xsl:if>
+    </xsl:template>
+    
+    <!-- Expand an nts:patientTokenFixture element to create a variable called 'patient-token-id'. How this is handled
+         is different for server and client scripts:
+         - for a server script, it will be provided with a default value read from the fixture, which can be overridden
+           by the TestScript executor.
+         - for a client script, the fixture will be included as TestScript fixture and the variable will be read from
+           it using a FHIRPath experssion. --> 
+    <xsl:template match="nts:patientTokenFixture" mode="expand">
+        <xsl:param name="scenario" tunnel="yes"/>
+        <xsl:param name="basePath" tunnel="yes"/>
+        <xsl:param name="referenceBase" tunnel="yes"/>
+        
+        <xsl:variable name="href" as="xs:string">
+            <xsl:apply-templates select="@href" mode="expand"/>
+        </xsl:variable>
+                    
+        <xsl:choose>
+            <!-- Expand the nts:patientTokenFixture element for 'phr' type scripts -->
+            <xsl:when test="$scenario='client'">
+                <fixture id="patient-token-fixture">
+                    <autocreate value="false"/>
+                    <autodelete value="false"/>
+                    <resource>
+                        <reference value="{nts:constructFilePath($referenceBase, $href)}"/>
+                    </resource>
+                </fixture>
+                <variable>
+                    <name value="patient-token-id"/>
+                    <expression value="Patient.id"/>
+                    <sourceId value="patient-token-fixture"/>
+                </variable>
+            </xsl:when>
+            <!-- Expand the nts:patientTokenFixture element for 'xis' type scripts -->
+            <xsl:when test="$scenario='server'">
+                <xsl:variable name="patientTokenFixture">
+                    <xsl:copy-of select="document(string-join(($basePath,$referenceBase, $href), '/'),.)"/>
+                </xsl:variable>
+                <variable>
+                    <name value="patient-token-id"/>
+                    <defaultValue value="{$patientTokenFixture/f:Patient/f:id/@value}"/>
+                    <xsl:if test="not($patientTokenFixture/f:Patient/f:id/@value)">
+                        <xsl:comment>patientTokenFixture <xsl:value-of select="string-join(($referenceBase, $href), '/')"/> not available</xsl:comment>
+                    </xsl:if>
+                    <description value="OAuth Token for current patient"/>
+                </variable>
+            </xsl:when>
+        </xsl:choose>
     </xsl:template>
     
     <!-- Expand the nts:includeDateT element -->
