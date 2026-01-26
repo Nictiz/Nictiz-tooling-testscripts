@@ -11,7 +11,7 @@
             <sch:assert test="f:name[@value]">element 'name' with a value is required</sch:assert>
             <sch:assert test="f:description[@value]">element 'description' with a value is required</sch:assert>
             <sch:assert test="f:test">At least one 'test' element is required</sch:assert>
-            <sch:assert test="@nts:scenario = 'server' or @nts:scenario = 'client'">Set the scenario to either 'server' or 'client' using the nts:scenario attribute</sch:assert>
+            <sch:assert test="not(nts:patientTokenFixture) or @nts:scenario = 'server' or @nts:scenario = 'client'">Set the scenario to either 'server' or 'client' using the nts:scenario attribute</sch:assert>
             
             <!-- These FHIR TestScript elements are automatically added and shouldn't be included here -->
             <sch:report test="f:date" subject="f:date">Element 'date' not allowed; it will be created during transformation</sch:report>
@@ -34,6 +34,10 @@
     </sch:pattern>
     
     <sch:pattern>
+        <sch:rule context="nts:patientTokenFixture">
+            <sch:assert test="@href">'href' attribute required</sch:assert>
+            <sch:assert test="count(@*) = 1">Only the href attributes is allowed</sch:assert>
+        </sch:rule>
         <sch:rule context="nts:includeDateT">
             <sch:assert test=".[@value = 'yes' or @value = 'no']">'value' attribute required that's either 'yes' or 'no'</sch:assert>
             <sch:assert test="count(@*) = 1">Only the value attribute is allowed</sch:assert>
