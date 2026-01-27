@@ -202,10 +202,10 @@
                             <action>
                                 <operation>
                                     <type>
-                                        <system value="http://terminology.hl7.org/CodeSystem/testscript-operation-codes"/>
-                                        <code value="updateCreate"/>
+                                        <system value="http://hl7.org/fhir/restful-interaction"/>
+                                        <code value="update"/>
                                     </type>
-                                    <description value="PUT {$resourceType}/{$fixtureId}"/>
+                                    <description value="PUT {$resourceType}/{$resourceId}"/>
                                     <resource value="{$resourceType}"/>
                                     <accept value="xml"/>
                                     <contentType value="xml"/>
