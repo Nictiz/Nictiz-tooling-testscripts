@@ -90,6 +90,60 @@
         </xsl:if>
     </xsl:template>
     
+    <!-- Handle the magic parameter $_PATIENTTOKEN in requestHeader -->
+    <xsl:template match="f:requestHeader/f:value/@value[contains(., '{$_PATIENTTOKEN}')]" mode="expand">
+        <xsl:param name="scenario" tunnel="yes"/>
+        <xsl:param name="authTokens" tunnel="yes"/>
+        
+        <xsl:choose>
+            <xsl:when test="count($authTokens) gt 1">
+                <xsl:message terminate="yes" select="'Multiple ''nts:authToken'' elements found, cannot decide which patient id to use for ''{$_PATIENTTOKEN}'''"/>
+            </xsl:when>
+            <xsl:when test="$scenario='server'">
+                <xsl:attribute name="value">
+                    <xsl:value-of select="replace(., '\{\$_PATIENTTOKEN\}', concat('{\$', $authTokens/@id,'}'))"/>
+                </xsl:attribute>
+            </xsl:when>
+            <xsl:otherwise>
+                <xsl:attribute name="value">
+                    <xsl:value-of select="replace(., '\{\$_PATIENTTOKEN\}', $authTokens/@token)"/>
+                </xsl:attribute>
+            </xsl:otherwise>
+        </xsl:choose>
+    </xsl:template>
+    
+    <!-- Handle the magic parameter $_PATIENTTOKEN in assert value -->
+    <xsl:template match="f:assert/f:value/@value[contains(., '{$_PATIENTTOKEN}')]" mode="expand">
+        <xsl:param name="authTokens" tunnel="yes"/>
+        
+        <xsl:choose>
+            <xsl:when test="count($authTokens) gt 1">
+                <xsl:message terminate="yes" select="'Multiple ''nts:authToken'' elements found, cannot decide which patient id to use for ''{$_PATIENTTOKEN}'''"/>
+            </xsl:when>
+            <xsl:otherwise>
+                <xsl:attribute name="value">
+                    <xsl:value-of select="replace(., '\{\$_PATIENTTOKEN\}', $authTokens/@token)"/>
+                </xsl:attribute>
+            </xsl:otherwise>
+        </xsl:choose>
+    </xsl:template>
+    
+    <!-- Handle the magic parameter $_PATIENTTOKEN in assert description -->
+    <xsl:template match="f:assert/f:description/@value[contains(., '{$_PATIENTTOKEN}')]" mode="expand">
+        <xsl:param name="authTokens" tunnel="yes"/>
+        
+        <xsl:choose>
+            <xsl:when test="count($authTokens) gt 1">
+                <xsl:message terminate="yes" select="'Multiple ''nts:authToken'' elements found, cannot decide which patient id to use for ''{$_PATIENTTOKEN}'''"/>
+            </xsl:when>
+            <xsl:otherwise>
+                <xsl:attribute name="value">
+                    <xsl:value-of select="replace(., '\{\$_PATIENTTOKEN\}', $authTokens/@token)"/>
+                </xsl:attribute>
+            </xsl:otherwise>
+        </xsl:choose>
+    </xsl:template>
+
     <!-- Expand the nts:includeDateT element -->
     <xsl:template match="nts:includeDateT" mode="expand">
         <xsl:variable name="value" as="xs:string">

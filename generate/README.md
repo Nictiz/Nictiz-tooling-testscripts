@@ -249,11 +249,11 @@ This file should be passed as the `tokens.json` parameter to the build script. T
 
 This sets an NTS parameter with the specified `id`, which can then be used throughout the NTS file. `id` is usually omitted, in which case it defaults to "patient-token-[resource.id of Patient resource]".
 
-For example, if you included a token with id "patient-token-id", you can use it to define the Authorization header with:
+For example, if you included a token with id "patient-token-XXX-Helleman", you can use it to define the Authorization header with:
 ```xml
 <requestHeader>
   <field value="Authorization"/>
-  <value value="{$patient-token}"/>
+  <value value="{$patient-token-XXX-Helleman}"/>
 </requestHeader>
 ```
 
