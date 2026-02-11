@@ -1,0 +1,57 @@
+<project name="myapp" basedir=".." xmlns:ivy="antlib:org.apache.ivy.ant" default="compile">  
+    <property name="ivy.install.version" value="2.5.0-rc1" />
+    <property name="ivy.jar.file" value="${ant.library.dir}/ivy.jar" />
+    <property name="ivy.dep.file" value="ant/ivy.xml" />
+    
+    <property name="lib.dir" value="${basedir}/ant/lib"/>
+    <property name="java.dir" value="java" />
+    <property name="dependency.dir" value="${lib.dir}/ant-dependencies"/>
+    <property name="ivy.local.jar.file" value="${dependency.dir}/ivy.jar" />
+
+    <!-- IVY -->
+    
+    <target name="check-ivy">
+        <condition property="ivy.exists">
+            <or>
+                <available file="${ivy.jar.file}" type="file"/>
+                <available file="${ivy.local.jar.file}" type="file"/>
+            </or>
+        </condition>
+        <mkdir dir="${dependency.dir}"/>
+    </target>
+    
+    <target name="download-ivy" depends="check-ivy" unless="ivy.exists">
+        <echo message="Installing Ivy"/>
+        <get src="https://repo1.maven.org/maven2/org/apache/ivy/ivy/${ivy.install.version}/ivy-${ivy.install.version}.jar"
+            dest="${ivy.local.jar.file}" usetimestamp="true"/>
+    </target>
+    
+    <target name="install-ivy" depends="download-ivy" unless="ivy.exists, ivy.loaded">
+        <path id="ivy.lib.path">
+            <fileset dir="${dependency.dir}" includes="*.jar"/>
+        </path>
+        <taskdef resource="org/apache/ivy/ant/antlib.xml" uri="antlib:org.apache.ivy.ant" classpathref="ivy.lib.path"/>
+        <property name="ivy.loaded" value="true" />
+    </target>
+
+    <target name="retrieve" depends="check-ivy, install-ivy">
+        <ivy:settings file="ant/ivysettings.xml"/>
+        <ivy:retrieve/>
+        <ivy:artifactproperty name="[module].[artifact]" value="${dependency.dir}/[type]/[artifact]-[revision].[ext]" />
+        <ivy:artifactproperty name="[artifact].[type]" value="${dependency.dir}/[type]/[artifact]-[revision].[ext]" />
+    </target>
+    
+    <!-- Compile -->
+    <target name="compile" depends="retrieve">
+        <mkdir dir="build/classes"/>
+        <javac srcdir="java" destdir="build/classes" includeAntRuntime="false">
+            <classpath>
+                <pathelement path="${classpath}"/>
+                <fileset dir="lib">
+                    <include name="**/*.jar"/>
+                </fileset>
+            </classpath>
+        </javac>
+    </target>
+
+</project>
