@@ -83,7 +83,7 @@
         
         <xsl:if test="$scenario='server'">
             <variable>
-                <name value="{if (.[@id]) then ./@id else concat('patient-token-',@patientResourceId)}"/>
+                <name value="{if (.[@id]) then concat('patient-token-',@id) else concat('patient-token-',@patientResourceId)}"/>
                 <defaultValue value="{$authTokens[@id = ./@id]/@token}"/>
                 <description value="OAuth Token for patient '{if (.[@id]) then ./@id else @patientResourceId}'"/>
             </variable>

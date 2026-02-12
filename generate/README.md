@@ -244,12 +244,10 @@ The second one deals with the authorization header for defining the patient cont
 This file should be passed as the `tokens.json` parameter to the build script. The token can then be imported into a TestScript using:
 
 ```xml
-<nts:authToken patientResourceId="[resource.id of Patient resource]" {id="[patient-token-patientName]"}/>
+<nts:authToken patientResourceId="[resource.id of Patient resource]" {id="[patientName]"}/>
 ```
 
-This sets an NTS parameter with the specified `id`, which can then be used throughout the NTS file. `id` is usually omitted, in which case it defaults to "patient-token-[resource.id of Patient resource]".
-
-The output depends on `nts:scenario`. For client scripts, the content of the access token will be hardcoded in the TestScript output. For server scripts, a TestScript variable will be defined that defaults to the access token, but which can be overruled by the tester. The NTS variable will be translated to this TestScript variable. 
+The output depends on `nts:scenario`. For client scripts, the content of the access token will be hardcoded in the TestScript output. For server scripts, a TestScript variable will be defined, that defaults to the access token, but which can be overruled by the tester. The name of the TestScript variable is "patient-token-[`id`]". `id` is usually omitted, in which case it defaults to "patient-token-[resource.id of Patient resource]".
 
 The magic variable `{$_PATIENTTOKEN}` is available to refer to the token for the specified patient in `operation.requestHeader`, `assert.value` and `assert.description`. For client scripts, the magic variable will be replaced by the hardcoded token value. For server scripts, the magic variable will be replaced by the TestScript variable.
 

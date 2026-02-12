@@ -54,7 +54,7 @@
         </xsl:if>
         <xsl:variable name="authTokens" as="element(nts:authToken)*">
             <xsl:for-each select="//nts:authToken[@patientResourceId]">
-                <xsl:variable name="id" select="if (.[@id]) then ./@id else concat('patient-token-',@patientResourceId)"/>
+                <xsl:variable name="id" select="if (.[@id]) then concat('patient-token-',@id) else concat('patient-token-',@patientResourceId)"/>
                 <xsl:copy-of select="nts:resolveAuthToken(./@patientResourceId, $id, true())"/>
             </xsl:for-each>
         </xsl:variable>
