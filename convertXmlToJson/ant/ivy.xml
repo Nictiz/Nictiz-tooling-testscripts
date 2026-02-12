@@ -1,15 +1,15 @@
 <ivy-module version="2.0">
     <info organisation="nl.nictiz" module="convertToJson"/>
     <dependencies>
-        <dependency org="ca.uhn.hapi.fhir" name="hapi-fhir-base" rev="6.1.2">
+        <dependency org="ca.uhn.hapi.fhir" name="hapi-fhir-base" rev="6.10.5">
             <exclude org="com.helger"/>
         </dependency>
-        <dependency org="ca.uhn.hapi.fhir" name="hapi-fhir-structures-dstu3" rev="6.1.2">
+        <dependency org="ca.uhn.hapi.fhir" name="hapi-fhir-structures-dstu3" rev="6.10.5">
             <exclude org="com.helger"/>
         </dependency>
-        <dependency org="ca.uhn.hapi.fhir" name="hapi-fhir-structures-r4" rev="6.1.2">
+        <dependency org="ca.uhn.hapi.fhir" name="hapi-fhir-structures-r4" rev="6.10.5">
             <exclude org="com.helger"/>
         </dependency>
-        <dependency org="com.guicedee.services" name="sl4j" rev="1.0.13.5"/>
+        <dependency org="org.slf4j" name="slf4j-api" rev="2.0.17"/>
     </dependencies>
 </ivy-module>

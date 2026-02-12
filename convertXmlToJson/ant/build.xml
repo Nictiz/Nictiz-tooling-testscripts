@@ -88,9 +88,10 @@
     <target name="build" depends="retrieve, check-if-conversion-is-needed" if="should.convert">
         <sequential>
             <echo message="Converting XML fixtures to JSON"/>
-            <java sourcefile="${testscripttools.dir}/java/ConvertToJson.java" fork="true" outputProperty="result">
+            <java classname="ConvertToJson" fork="false" outputProperty="result">
                 <classpath>
                     <pathelement path="${classpath}"/>
+                    <pathelement path="${testscripttools.dir}/build/classes"/>
                     <fileset dir="lib">
                         <include name="**/*.jar"/>
                     </fileset>
