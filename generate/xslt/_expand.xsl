@@ -101,7 +101,7 @@
             </xsl:when>
             <xsl:when test="$scenario='server'">
                 <xsl:attribute name="value">
-                    <xsl:value-of select="replace(., '\{\$_PATIENTTOKEN\}', concat('{\$', $authTokens/@id,'}'))"/>
+                    <xsl:value-of select="replace(., '\{\$_PATIENTTOKEN\}', concat('\${', $authTokens/@id,'}'))"/>
                 </xsl:attribute>
             </xsl:when>
             <xsl:otherwise>
