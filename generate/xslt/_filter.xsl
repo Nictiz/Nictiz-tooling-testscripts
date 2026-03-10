@@ -242,7 +242,7 @@
         <xsl:copy>
             <xsl:apply-templates select="@*" mode="#current"/>
             <xsl:apply-templates select="f:*[local-name()=$pre-accept]" mode="#current"/>
-            <xsl:if test="$scenario='server' and not(f:accept) and $expectedResponseFormat != '' and @nts:addAccept != 'false'">
+            <xsl:if test="$scenario='server' and not(f:accept) and $expectedResponseFormat != '' and not(@nts:addAccept = 'false')">
                 <accept value="{lower-case($expectedResponseFormat)}"/>
             </xsl:if>
             <xsl:apply-templates select="f:*[local-name()=$pre-encodeRequestUrl]" mode="#current"/>

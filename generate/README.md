@@ -136,7 +136,7 @@ There may be differences for xis and phr scenarios in how a TestScript is transf
 nts:scenario="server|client"
 ```
 
-The [output of `<nts:authToken>`](#auth-token) differs based on the scenario.
+The [output of `<nts:authToken>`](#date-t-and-authorization-headers) differs based on the scenario.
 
 When the scenario is set to 'server':
 - Two different TestScripts are outputted from one input file: an xml and a json instance. An `<accept .../>` element with the corresponding format is added to each `<operation>` element. By running the two variant of a TestScript, a server can show conformance to [supporting both formats](https://informatiestandaarden.nictiz.nl/wiki/FHIR:V1.0_FHIR_IG_R4#Content_Types_and_encodings).
@@ -236,7 +236,7 @@ Lastly, it is possible to use [rule outputs](https://touchstone.aegis.net/touchs
 </assert>
 ```
 
-### Date T and authorization headers {#auth-token}
+### Date T and authorization headers
 
 There are special elements for two use cases that are common across Nictiz test scripts.
 
