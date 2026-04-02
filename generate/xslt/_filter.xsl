@@ -40,6 +40,10 @@
         </xsl:variable>
                 
         <xsl:copy>
+            <xsl:variable name="id" select="f:id/@value"/>
+            <xsl:if test="not(matches($id, '[A-Za-z0-9\-\.]{1,64}'))">
+                <xsl:message terminate="yes" select="concat('No valid TestScript.id ', $id, ' found')"/>
+            </xsl:if>
             <!-- Apply all templates that can exist before f:url -->
             <xsl:apply-templates select="f:id | f:meta | f:implicitRules | f:language | f:text | f:contained" mode="#current"/>
             
@@ -68,7 +72,30 @@
                     <xsl:copy-of select="f:version"/>                    
                 </xsl:when>
             </xsl:choose>
-            <xsl:apply-templates select="f:name | f:title" mode="#current"/>
+            <xsl:choose>
+                <xsl:when test="f:name">
+                    <xsl:apply-templates select="f:name" mode="#current"/>
+                </xsl:when>
+                <xsl:otherwise>
+                    <name>
+                        <xsl:variable name="joinedString">
+                            <xsl:value-of select="f:id/@value"/>
+                            <xsl:if test="not($target = '#default')">
+                                <xsl:text>-</xsl:text>
+                                <xsl:value-of select="$target"/>
+                            </xsl:if>
+                            <xsl:if test="$scenario='server' and not(ancestor::f:TestScript/f:test/f:action/f:operation/f:accept) and not(contains(lower-case(.),$expectedResponseFormat))">
+                                <xsl:text>-</xsl:text>
+                                <xsl:value-of select="lower-case($expectedResponseFormat)"/>
+                            </xsl:if>
+                        </xsl:variable>
+                        <xsl:variable name="transformedString" select="concat(upper-case(substring($joinedString, 1, 1)), replace(substring($joinedString, 2), '[-\.]', '_'))"/>
+
+                        <xsl:attribute name="value" select="$transformedString"/>
+                    </name>
+                </xsl:otherwise>
+            </xsl:choose>
+            <xsl:apply-templates select="f:title" mode="#current"/>
             <xsl:choose>
                 <xsl:when test="f:status">
                     <xsl:apply-templates select="f:status"/>
@@ -212,8 +239,29 @@
         </xsl:attribute>
     </xsl:template>
     
+    <!-- Add the target and/or the format for requests to the TestScript name, if specified, and transform it to match the regex pattern '^[A-Z]([A-Za-z0-9_]){1,254}$' from core constraint cnl-0 -->
+    <xsl:template match="f:TestScript/f:name/@value" mode="filter">
+        <xsl:param name="target" tunnel="yes"/>
+        <xsl:param name="scenario" tunnel="yes"/>
+        <xsl:param name="expectedResponseFormat" tunnel="yes"/>
+        <xsl:variable name="joinedString">
+            <xsl:value-of select="."/>
+            <xsl:if test="not($target = '#default')">
+                <xsl:text>-</xsl:text>
+                <xsl:value-of select="$target"/>
+            </xsl:if>
+            <xsl:if test="$scenario='server' and not(ancestor::f:TestScript/f:test/f:action/f:operation/f:accept) and not(contains(lower-case(.),$expectedResponseFormat))">
+                <xsl:text>-</xsl:text>
+                <xsl:value-of select="lower-case($expectedResponseFormat)"/>
+            </xsl:if>
+        </xsl:variable>
+        <xsl:variable name="transformedString" select="concat(upper-case(substring($joinedString, 1, 1)), replace(substring($joinedString, 2), '[^A-Za-z0-9_]', '_'))"/>
+
+        <xsl:attribute name="value" select="$transformedString"/>
+    </xsl:template>
+    
     <!--Add the target and/or the format for requests to the TestScript name and/or title, if specified -->
-    <xsl:template match="f:TestScript/f:*[self::f:name or self::f:title]/@value" mode="filter">
+    <xsl:template match="f:TestScript/f:title/@value" mode="filter">
         <xsl:param name="target" tunnel="yes"/>
         <xsl:param name="scenario" tunnel="yes"/>
         <xsl:param name="expectedResponseFormat" tunnel="yes"/>
