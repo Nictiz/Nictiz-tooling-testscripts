@@ -1098,7 +1098,7 @@
                     </xsl:if>
                     <xsl:text>.hasValue()</xsl:text>
                 </xsl:when>
-                <xsl:when test="$dataType = ('dateTime','date','instant')">
+                <xsl:when test="$dataType = ('dateTime','date','instant', 'time')">
                     <!-- For now we only check if date or dateTime exist -->
                     <xsl:text> </xsl:text>
                 </xsl:when>
