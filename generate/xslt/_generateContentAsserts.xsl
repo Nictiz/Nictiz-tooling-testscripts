@@ -189,6 +189,7 @@
                         </xsl:choose>
                     </xsl:with-param>
                     <xsl:with-param name="stopTestOnFail" select="true()"/>
+                    <xsl:with-param name="warningOnly" select="@warningOnly = 'true'"/>
                 </xsl:call-template>
                 
                 <!-- Add an explicit assert to check Resource.id in case of server response checks -->
@@ -210,6 +211,7 @@
                             </xsl:choose>
                         </xsl:with-param>
                         <xsl:with-param name="stopTestOnFail" select="true()"/>
+                        <xsl:with-param name="warningOnly" select="@warningOnly = 'true'"/>
                     </xsl:call-template>
                     
                     <!-- If the assert above passes, we know by definition that this variable will be evaluated. TestScripts will fail with an error if a variable cannot be evaluated, but to users it is not really clear what happens. The setup with the asserts above will prevent that hopefully. -->
@@ -258,6 +260,11 @@
                         </xsl:choose>
                     </xsl:with-param>
                     <xsl:with-param name="parentLabel" select="$resourceCount"/>
+                    <xsl:with-param name="warningOnly" as="xs:boolean?">
+                        <xsl:if test="@warningOnly">
+                            <xsl:value-of select="@warningOnly = 'true'"/>
+                        </xsl:if>
+                    </xsl:with-param>
                 </xsl:apply-templates>
             </test>
         </xsl:for-each>
@@ -604,6 +611,7 @@
         <xsl:param name="resourceIdExpression" tunnel="yes"/>
         <xsl:param name="parentLabel" required="yes"/>
         <xsl:param name="skipExtensions" select="false()"/>
+        <xsl:param name="warningOnly" as="xs:boolean?"/>
         
         <xsl:variable name="parentFhirPath" select="parent::*/@nts:fhirPath"/>
         <xsl:variable name="fhirPath" select="@nts:fhirPath"/>
@@ -671,6 +679,10 @@
                     <xsl:with-param name="label" select="$label"/>
                     <xsl:with-param name="warningOnly">
                         <xsl:choose>
+                            <xsl:when test="not(empty($warningOnly))">
+                                <!--<xsl:message>DEBUG: contentAssert warningOnly       - <xsl:value-of select="$warningOnly"/></xsl:message>-->
+                                <xsl:value-of select="$warningOnly"/>
+                            </xsl:when>
                             <!-- Impossible to determine if code-specification is required without accessing ConceptMaps, so putting them all on warningOnly for now -->
                             <xsl:when test="descendant-or-self::f:extension[@url = 'http://nictiz.nl/fhir/StructureDefinition/code-specification'] and $skipExtensions = false()">
                                 <xsl:value-of select="true()"/>
@@ -723,6 +735,7 @@
                             </xsl:choose>
                         </xsl:with-param>
                         <xsl:with-param name="label" select="concat($label,'-1')"/>
+                        <xsl:with-param name="warningOnly" select="$warningOnly = true()"/>
                     </xsl:call-template>
                 </xsl:if>
                 <xsl:if test="$skipExtensions = false() and ((not(@value) and count(f:*) gt 1) or @value and f:*)">
@@ -758,7 +771,7 @@
         <xsl:param name="description" required="yes"/>
         <xsl:param name="expression" required="yes"/>
         <xsl:param name="label"/>
-        <xsl:param name="warningOnly" select="false()"/>
+        <xsl:param name="warningOnly" select="false()" as="xs:boolean"/>
         <xsl:param name="stopTestOnFail" select="false()"/>
         
         <action>
