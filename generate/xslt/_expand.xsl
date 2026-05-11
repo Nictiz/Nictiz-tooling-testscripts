@@ -25,15 +25,6 @@
     <xsl:template match="nts:destination" mode="expand">
         <xsl:copy-of select="nts:addOriginOrDestination('destination', @index, ./@isSUT)"/>
     </xsl:template>
-
-    <!-- Expand a nts:request-mode element to a Conformancelab test-level request mode extension -->
-    <xsl:template match="f:test/nts:request-mode[@value]" mode="expand">
-        <extension url="http://fhir.interoplab.eu/fhir/StructureDefinition/Interoplab-CL-ext-test-request-mode">
-            <extension url="mode">
-                <valueCode value="{@value}"/>
-            </extension>
-        </extension>
-    </xsl:template>
     
     <!-- Expand a nts:profile element to a FHIR profile element -->
     <xsl:template match="nts:profile" mode="expand">
@@ -81,6 +72,15 @@
                 </xsl:attribute>
             </xsl:otherwise>
         </xsl:choose>
+    </xsl:template>
+
+    <!-- Expand a nts:request-mode element to a Conformancelab test-level request mode extension -->
+    <xsl:template match="f:test/nts:request-mode[@value]" mode="expand">
+        <extension url="http://fhir.interoplab.eu/fhir/StructureDefinition/Interoplab-CL-ext-test-request-mode">
+            <extension url="mode">
+                <valueCode value="{@value}"/>
+            </extension>
+        </extension>
     </xsl:template>
     
     <!-- Expand an nts:authToken element. For server scripts, this will result in a variable with a default value which
