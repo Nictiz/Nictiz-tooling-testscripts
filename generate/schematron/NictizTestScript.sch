@@ -34,6 +34,11 @@
     </sch:pattern>
     
     <sch:pattern>
+        <sch:rule context="nts:request-mode">
+            <sch:assert test="parent::f:test">Element can only be used in a "test" element.</sch:assert>
+            <sch:assert test="@value = ('default', 'extra-allowed', 'random-order')">Set value to either 'default', 'extra-allowed' or 'random-order'</sch:assert>
+            <sch:assert test="count(@*) = 1">Only the value attribute is allowed</sch:assert>
+        </sch:rule>
         <sch:rule context="nts:includeDateT">
             <sch:assert test=".[@value = 'yes' or @value = 'no']">'value' attribute required that's either 'yes' or 'no'</sch:assert>
             <sch:assert test="count(@*) = 1">Only the value attribute is allowed</sch:assert>

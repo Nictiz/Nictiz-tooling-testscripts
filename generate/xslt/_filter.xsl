@@ -209,6 +209,16 @@
     <!-- Silence all remaining nts: elements and attributes (that have been read but are not transformed) -->
     <xsl:template match="nts:*" mode="filter"/>
     <xsl:template match="@nts:*" mode="filter"/>
+
+    <!-- Keep test-level extensions before the regular TestScript.test children. -->
+    <xsl:template match="f:TestScript/f:test" mode="filter">
+        <xsl:copy>
+            <xsl:apply-templates select="@*" mode="#current"/>
+            <xsl:apply-templates select="f:extension | f:modifierExtension" mode="#current"/>
+            <xsl:apply-templates select="f:name | f:description" mode="#current"/>
+            <xsl:apply-templates select="node()[not(self::f:extension or self::f:modifierExtension or self::f:name or self::f:description)]" mode="#current"/>
+        </xsl:copy>
+    </xsl:template>
     
     <!-- Add the target and/or the format for requests to the TestScript id, if specified -->
     <xsl:template match="f:TestScript/f:id/@value" mode="filter">
