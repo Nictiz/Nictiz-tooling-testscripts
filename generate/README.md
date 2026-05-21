@@ -490,8 +490,8 @@ A distinction can be made between regular TestScript-set properties and the prop
 | - `name`                | `src-properties.json`, path `$.subcategory.name` or `$.subcategory` OR build _target_ |           | Build target is used when `targets.property` or `target.property.`_target_ is `subcategory`      |
 | - `description`         | `src-properties.json`, path `$.subcategory.description` or `$.subcategoryDescription` OR `target.description.`_target_ |           | Target description is used when the target is written to `subcategory`                           |
 | `role`                  |                                                                               | x         |                                                                                                 |
-| - `name`                | `src-properties.json`, path `$.role.name` OR build _target_                   | x         | Build target is used by default, or when `targets.property` or `target.property.`_target_ is `role` |
-| - `description`         | `src-properties.json`, path `$.role.description` OR `target.description.`_target_ |           | Target description is used when the target is written to `role`                                  |
+| - `name`                | `src-properties.json`, path `$.role.name`, optionally suffixed with build _target_ | x         | Build target is appended as `role.name - target` by default, or when `targets.property` or `target.property.`_target_ is `role` |
+| - `description`         | `src-properties.json`, path `$.role.description` OR `target.description.`_target_ |           | Target description is used when the target is written to `role`; otherwise the source role description is used |
 | `adminOnly`             | `src-properties.json`, path `$.adminOnly` OR ANT property `targets.adminOnly` |           | Use `targets.adminOnly = XIS-Server-Nictiz-only` to set `adminOnly` for this specific target    |
 | `fhirPackage`           |                                                                               |           |                                                                                                 |
 | - `name`                | ANT property `packages`                                                       |           | A comma separated list of package canonicals, which is converted to an array including versions |
@@ -526,7 +526,7 @@ Conformancelab needs to know who the scripts are for. This is defined by the `ro
 Further categorization and/or subdivision in the Conformancelab UI can be added by using the `category` and `subcategory` properties. These may be strings in `src-properties.json`, or objects with `name` and `description`.
 
 ## Additional targets in properties
-Additional targets are places in a separate NTS folder name suffixed `-[target]`. By default, if this tool encounters a build target, it will use the target as the `role.name` value for the resulting property file(s).
+Additional targets are places in a separate NTS folder name suffixed `-[target]`. By default, if this tool encounters a build target, it will append the target to the source `role.name` value for the resulting property file(s), separated by ` - `.
 
 To provide a description for the configured target property, set the ANT property `target.description.`_target_.
 

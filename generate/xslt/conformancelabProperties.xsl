@@ -187,11 +187,11 @@
                         
                         <xsl:variable name="srcPropertiesRoleName" select="$srcProperties?role?name"/>
                         <xsl:variable name="srcPropertiesRoleDescription" select="$srcProperties?role?description"/>
-                        <xsl:variable name="theRoleName" select="if ($targetPropertyForBuild = 'role') then $target else $srcPropertiesRoleName"/>
-                        <xsl:variable name="theRoleDescription" select="if ($targetPropertyForBuild = 'role') then $targetDescription else $srcPropertiesRoleDescription"/>
-                        <xsl:if test="empty($theRoleName)">
+                        <xsl:if test="empty($srcPropertiesRoleName)">
                             <xsl:message terminate="yes" select="concat('No ''role.name'' property found in ''', $nts.file.dir.properties?reldir, '/src-properties.json''')"/>
                         </xsl:if>
+                        <xsl:variable name="theRoleName" select="if ($targetPropertyForBuild = 'role') then concat($srcPropertiesRoleName, ' - ', $target) else $srcPropertiesRoleName"/>
+                        <xsl:variable name="theRoleDescription" select="if ($targetPropertyForBuild = 'role' and string-length($targetDescription) gt 0) then $targetDescription else $srcPropertiesRoleDescription"/>
                         <map key="role">
                             <string key="name">
                                 <xsl:value-of select="$theRoleName"/>
