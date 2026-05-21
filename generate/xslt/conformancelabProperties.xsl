@@ -35,6 +35,14 @@
     
     <!-- All targets part of this build -->
     <xsl:param name="targets"/>
+
+    <!-- The Conformancelab property additional targets are written to by default. Allowed values are
+         'category', 'subcategory', 'role' and 'none'. -->
+    <xsl:param name="targetProperty" select="'role'"/>
+
+    <!-- A list matching targets to Conformancelab properties. This list is formatted as a single comma-separated
+         string with "target=property" entries. It overrides targetProperty for specific targets. -->
+    <xsl:param name="targetProperties"/>
     
     <!-- A comma separated list of targets that are considered "admin only". -->
     <xsl:param name="adminOnlyTargets"/>
@@ -83,6 +91,51 @@
                 </xsl:if>
                 
                 <xsl:variable name="srcProperties" select="if (unparsed-text-available($srcPropertiesPath)) then json-doc($srcPropertiesPath) else ()"/>
+
+                <!--
+                    The $targetDescriptions string is formatted as a single string with target=description pairs,
+                    separated by comma's. The descriptions are literaly what's in the ant properties file, no escaping,
+                    and so it might contain comma's and we can't just split on comma's. So the surest way to fish out
+                    the description is to use a regex where we search for 'our target=' up until the start of the next
+                    pair (or the end of the string). The start of the next pair always begins by a comma and one of the
+                    other targets, so that's our clue.
+                -->
+                <xsl:variable name="targetDescription">
+                    <xsl:if test="not($target = '#default')">
+                        <xsl:variable name="pattern" select="concat('.*', $target.dir, '=(.*?)($|,(', replace($targets,',','|'), '))')"/>
+                        <xsl:analyze-string select="$targetDescriptions" regex="{$pattern}">
+                            <xsl:matching-substring>
+                                <xsl:value-of select="regex-group(1)"/>
+                            </xsl:matching-substring>
+                        </xsl:analyze-string>
+                    </xsl:if>
+                </xsl:variable>
+
+                <xsl:variable name="targetSpecificProperty" as="xs:string*">
+                    <xsl:for-each select="for $entry in tokenize($targetProperties, ',') return normalize-space($entry)">
+                        <xsl:if test="substring-before(., '=') = $target.dir">
+                            <xsl:sequence select="normalize-space(substring-after(., '='))"/>
+                        </xsl:if>
+                    </xsl:for-each>
+                </xsl:variable>
+
+                <xsl:variable name="targetPropertyForBuild" as="xs:string">
+                    <xsl:choose>
+                        <xsl:when test="$target = '#default'">
+                            <xsl:text>none</xsl:text>
+                        </xsl:when>
+                        <xsl:when test="exists($targetSpecificProperty[string-length(.) gt 0])">
+                            <xsl:value-of select="lower-case($targetSpecificProperty[string-length(.) gt 0][1])"/>
+                        </xsl:when>
+                        <xsl:otherwise>
+                            <xsl:value-of select="lower-case(normalize-space($targetProperty))"/>
+                        </xsl:otherwise>
+                    </xsl:choose>
+                </xsl:variable>
+
+                <xsl:if test="not($targetPropertyForBuild = ('category', 'subcategory', 'role', 'none'))">
+                    <xsl:message terminate="yes" select="concat('Unsupported Conformancelab target property ''', $targetPropertyForBuild, ''' for target ''', $target.dir, '''. Use one of: category, subcategory, role, none.')"/>
+                </xsl:if>
                 
                 <xsl:variable name="properties">
                     <map xmlns="http://www.w3.org/2005/xpath-functions">
@@ -134,61 +187,53 @@
                         
                         <xsl:variable name="srcPropertiesRoleName" select="$srcProperties?role?name"/>
                         <xsl:variable name="srcPropertiesRoleDescription" select="$srcProperties?role?description"/>
-                        <xsl:if test="empty($srcPropertiesRoleName)">
+                        <xsl:variable name="theRoleName" select="if ($targetPropertyForBuild = 'role') then $target else $srcPropertiesRoleName"/>
+                        <xsl:variable name="theRoleDescription" select="if ($targetPropertyForBuild = 'role') then $targetDescription else $srcPropertiesRoleDescription"/>
+                        <xsl:if test="empty($theRoleName)">
                             <xsl:message terminate="yes" select="concat('No ''role.name'' property found in ''', $nts.file.dir.properties?reldir, '/src-properties.json''')"/>
                         </xsl:if>
                         <map key="role">
                             <string key="name">
-                                <xsl:value-of select="$srcPropertiesRoleName"/>
+                                <xsl:value-of select="$theRoleName"/>
                             </string>
-                            <xsl:if test="not(empty($srcPropertiesRoleDescription))">
+                            <xsl:if test="string-length($theRoleDescription) gt 0">
                                 <string key="description">
-                                    <xsl:value-of select="$srcPropertiesRoleDescription"/>
+                                    <xsl:value-of select="$theRoleDescription"/>
                                 </string>
                             </xsl:if>
                         </map>
                         
-                        <xsl:variable name="theCategory" select="$srcProperties?category"/>
-                        <xsl:if test="not(empty($theCategory))">
-                            <string key="category">
-                                <xsl:value-of select="$theCategory"/>
-                            </string>
-                        </xsl:if>
-                        <xsl:variable name="theSubcategory" select="$srcProperties?subcategory"/>
-                        <xsl:if test="not(empty($theSubcategory))">
-                            <string key="subcategory">
-                                <xsl:value-of select="$theSubcategory"/>
-                            </string>
-                        </xsl:if>
-                        
-                        <!-- Possible scenarios:
-                        - Target is #default and $srcPropertiesVariantName is empty - do nothing
-                        - Target is not #default and $srcPropertiesVariantName is empty - add target as variant
-                        -->
-                        <xsl:if test="not($target = '#default')">
-                            <!--
-                                 The $targetDescriptions string is formatted as a single string with target=description
-                                 pairs, separated by comma's. The descriptions are literaly what's in the ant properties
-                                 file, no escaping, and so it might contain comma's and we can't just split on comma's.
-                                 So the surest way to fish out the description is to use a regex where we search for
-                                 'our target=' up until the start of the next pair (or the end of the string). The
-                                 start of the next pair always begins by a comma and one of the other targets, so that's our clue.
-                            -->
-                            <xsl:variable name="pattern" select="concat('.*', $target.dir, '=(.*?)($|,(', replace($targets,',','|'), '))')"/>
-                            <xsl:variable name="description">
-                                <xsl:analyze-string select="$targetDescriptions" regex="{$pattern}">
-                                    <xsl:matching-substring>
-                                        <xsl:value-of select="regex-group(1)"/>
-                                    </xsl:matching-substring>
-                                </xsl:analyze-string>
-                            </xsl:variable>
-                            <map key="variant">
+                        <xsl:variable name="srcPropertiesCategory" select="$srcProperties?category"/>
+                        <xsl:variable name="srcPropertiesCategoryName" select="if ($srcPropertiesCategory instance of map(*)) then $srcPropertiesCategory?name else $srcPropertiesCategory"/>
+                        <xsl:variable name="srcPropertiesCategoryDescription" select="if ($srcPropertiesCategory instance of map(*)) then $srcPropertiesCategory?description else $srcProperties?categoryDescription"/>
+                        <xsl:variable name="theCategoryName" select="if ($targetPropertyForBuild = 'category') then $target else $srcPropertiesCategoryName"/>
+                        <xsl:variable name="theCategoryDescription" select="if ($targetPropertyForBuild = 'category') then $targetDescription else $srcPropertiesCategoryDescription"/>
+                        <xsl:if test="not(empty($theCategoryName))">
+                            <map key="category">
                                 <string key="name">
-                                    <xsl:value-of select="$target"/>
+                                    <xsl:value-of select="$theCategoryName"/>
                                 </string>
-                                <xsl:if test="string-length($description) gt 0">
+                                <xsl:if test="string-length($theCategoryDescription) gt 0">
                                     <string key="description">
-                                        <xsl:value-of select="$description"/>
+                                        <xsl:value-of select="$theCategoryDescription"/>
+                                    </string>
+                                </xsl:if>
+                            </map>
+                        </xsl:if>
+
+                        <xsl:variable name="srcPropertiesSubcategory" select="$srcProperties?subcategory"/>
+                        <xsl:variable name="srcPropertiesSubcategoryName" select="if ($srcPropertiesSubcategory instance of map(*)) then $srcPropertiesSubcategory?name else $srcPropertiesSubcategory"/>
+                        <xsl:variable name="srcPropertiesSubcategoryDescription" select="if ($srcPropertiesSubcategory instance of map(*)) then $srcPropertiesSubcategory?description else $srcProperties?subcategoryDescription"/>
+                        <xsl:variable name="theSubcategoryName" select="if ($targetPropertyForBuild = 'subcategory') then $target else $srcPropertiesSubcategoryName"/>
+                        <xsl:variable name="theSubcategoryDescription" select="if ($targetPropertyForBuild = 'subcategory') then $targetDescription else $srcPropertiesSubcategoryDescription"/>
+                        <xsl:if test="not(empty($theSubcategoryName))">
+                            <map key="subcategory">
+                                <string key="name">
+                                    <xsl:value-of select="$theSubcategoryName"/>
+                                </string>
+                                <xsl:if test="string-length($theSubcategoryDescription) gt 0">
+                                    <string key="description">
+                                        <xsl:value-of select="$theSubcategoryDescription"/>
                                     </string>
                                 </xsl:if>
                             </map>

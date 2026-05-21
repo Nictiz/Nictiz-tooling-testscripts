@@ -247,6 +247,26 @@
                 <expandproperties/>
             </filterchain>
         </loadresource>
+        <property name="target.descriptions" value=""/>
+
+        <!-- Additional targets become roles by default. This can be overridden globally
+             with targets.property or per target with target.property.[target]. -->
+        <property name="targets.property" value="role"/>
+
+        <pathconvert property="target.properties.raw" pathsep=",">
+            <propertyset>
+                <propertyref prefix="target.property."/>
+                <mapper type="regexp" from="target\.property\.(.*)"
+                        to="\1=${target.property.\1}"/>
+            </propertyset>
+        </pathconvert>
+        <loadresource property="target.properties">
+            <propertyresource name="target.properties.raw"/>
+            <filterchain>
+                <expandproperties/>
+            </filterchain>
+        </loadresource>
+        <property name="target.properties" value=""/>
         
         <!-- Default to empty string -->
         <property name="targets.adminOnly" value=""/>
@@ -428,7 +448,7 @@
         </sequential>
     </macrodef>
     
-    <macrodef name="conformancelab-properties" description="Copy Conformancelab properties from src to output. If target is not '#default', add the target to the variant property">
+    <macrodef name="conformancelab-properties" description="Copy Conformancelab properties from src to output. If target is not '#default', add the target to the configured target property">
         <attribute name="target" default="#default" description="The name of the target to build; choose '#default' to build the default target."/>
         <attribute name="template" default="createPropertiesInTargetFolder" description="Name of the XSLT template used to build the properties file"/>
         
@@ -445,6 +465,8 @@
                 <arg value="informationStandard=${informationStandard}"/>
                 <arg value="usecase=${usecase}"/>
                 <arg value="targetDescriptions=${target.descriptions}"/>
+                <arg value="targetProperty=${targets.property}"/>
+                <arg value="targetProperties=${target.properties}"/>
                 <arg value="adminOnlyTargets=${targets.adminOnly}"/>
                 <arg value="packages=${packages}"/>
                 <arg value="packageVersions=${packages.versions}"/>
@@ -509,7 +531,7 @@
                                 references.file="${references.file}"/>
                             <collect-references references.file="${references.file}"/>
                             
-                            <!-- Check if a Conformancelab src-properties-file is present in the target.dir, copy it to the output dir and, if applicable, add the target to the variant property -->
+                            <!-- Check if a Conformancelab src-properties-file is present in the target.dir, copy it to the output dir and, if applicable, add the target to the configured target property -->
                             <conformancelab-properties target="@{target.dir}"/>
                         </sequential>
                     </for>

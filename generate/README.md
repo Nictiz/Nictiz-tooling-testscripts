@@ -447,6 +447,8 @@ The following optional parameters may be used:
   The TestScript resources can use the `nts:in-targets` to define which element should be included in a target (see above). Multiple extra targets may be separated using comma's.
   Note: if there are subfolders in the folder on which an additional target is defined, each variant of the input folder will contain the full set of subfolders (but with slightly different content, of course).
 - `targets`: This parameter contains the default target '#default', to which the targets defined in `targets.additional` are added. Used when building the default target is unwanted.
+- `targets.property`: The Conformancelab property additional targets are written to. Allowed values are `category`, `subcategory`, `role` and `none`. Defaults to `role`.
+- `target.property.<target>`: Override `targets.property` for a specific target. For example, `target.property.Cert-with-setup = category`.
 - `version.addition`: a string that will be added verbatim to the value in the `TestScript.version` from the input file. If this element is absent, it will be populated with this value.
 - `convert.to.json.file`: the path of a writable file where all referenced JSON fixtures are collected that don't exists, but for which an XML counterpart exists. This file can be used for the 'convertXmlToJson' script in this repo. If this parameter is not set, this situation will be treated like any other missing fixture and the build will fail.
 
@@ -481,14 +483,15 @@ A distinction can be made between regular TestScript-set properties and the prop
 | `goal`                  | `src-properties.json`, path `$.goal`                                          | x         | Defaults to ANT property `goal`                                                                 |
 | `informationStandard`   | `src-properties.json`, path `$.informationStandard`                           | x         | Defaults to ANT property `informationStandard`                                                  |
 | `usecase`               | `src-properties.json`, path `$.usecase`                                       | x         | Defaults to ANT property `usecase`                                                              |
-| `category`              | `src-properties.json`, path `$.category`                                      |           |                                                                                                 |
-| `subcategory`           | `src-properties.json`, path `$.subcategory`                                   |           |                                                                                                 |
+| `category`              |                                                                               |           |                                                                                                 |
+| - `name`                | `src-properties.json`, path `$.category.name` or `$.category` OR build _target_ |           | Build target is used when `targets.property` or `target.property.`_target_ is `category`         |
+| - `description`         | `src-properties.json`, path `$.category.description` or `$.categoryDescription` OR `target.description.`_target_ |           | Target description is used when the target is written to `category`                              |
+| `subcategory`           |                                                                               |           |                                                                                                 |
+| - `name`                | `src-properties.json`, path `$.subcategory.name` or `$.subcategory` OR build _target_ |           | Build target is used when `targets.property` or `target.property.`_target_ is `subcategory`      |
+| - `description`         | `src-properties.json`, path `$.subcategory.description` or `$.subcategoryDescription` OR `target.description.`_target_ |           | Target description is used when the target is written to `subcategory`                           |
 | `role`                  |                                                                               | x         |                                                                                                 |
-| - `name`                | `src-properties.json`, path `$.role.name`                                     | x         |                                                                                                 |
-| - `description`         | `src-properties.json`, path `$.role.description`                              |           |                                                                                                 |
-| `variant`               |                                                                               |           |                                                                                                 |
-| - `name`                | Build _target_ in `targets.additional`                                        | (x)       |                                                                                                 |
-| - `description`         | ANT property `target.description`._target_                                    |           | e.g. `target.description.XIS-Server-Nictiz-only = For Nictiz only`                              |
+| - `name`                | `src-properties.json`, path `$.role.name` OR build _target_                   | x         | Build target is used by default, or when `targets.property` or `target.property.`_target_ is `role` |
+| - `description`         | `src-properties.json`, path `$.role.description` OR `target.description.`_target_ |           | Target description is used when the target is written to `role`                                  |
 | `adminOnly`             | `src-properties.json`, path `$.adminOnly` OR ANT property `targets.adminOnly` |           | Use `targets.adminOnly = XIS-Server-Nictiz-only` to set `adminOnly` for this specific target    |
 | `fhirPackage`           |                                                                               |           |                                                                                                 |
 | - `name`                | ANT property `packages`                                                       |           | A comma separated list of package canonicals, which is converted to an array including versions |
@@ -520,12 +523,22 @@ The `goal` parameter in the Conformancelab property file defines the goal the se
 ## Role, category and subcategory
 Conformancelab needs to know who the scripts are for. This is defined by the `role` property. In NTS projects, the scripts for a certain role are organized using folders within the root folder, e.g. "XIS-Server", "Sending-System", etc. To provide a description for a role, the `role.description` property is used.
 
-Further categorization and/or subdivision in the Conformancelab UI can be added by using the `category` and `subcategory` properties.
+Further categorization and/or subdivision in the Conformancelab UI can be added by using the `category` and `subcategory` properties. These may be strings in `src-properties.json`, or objects with `name` and `description`.
 
-## Variants / additional targets
-"Variants" in Conformancelab parlance are what NTS calls "Additional targets". Additional targets are places in a separate NTS folder name suffixed `-[target]`. If this tool encounters a build target, it will set the `variant.name` parameter for the resulting property file(s).
+## Additional targets in properties
+Additional targets are places in a separate NTS folder name suffixed `-[target]`. By default, if this tool encounters a build target, it will use the target as the `role.name` value for the resulting property file(s).
 
-To provide a description, set the ANT property `target.description.`_target_.
+To provide a description for the configured target property, set the ANT property `target.description.`_target_.
+
+If additional targets should be exposed differently in Conformancelab, set `targets.property` to one of `category`, `subcategory`, `role` or `none`. Per-target overrides can be configured with `target.property.`_target_:
+
+```
+targets.property = role
+target.property.Cert-with-setup = category
+target.property.Cert-hidden = none
+```
+
+Use `role` only when the target really represents a different actor or system role. For UI grouping within the same role, prefer `category` or `subcategory`.
 
 ## Fhir packages
 For profile validation, Conformancelab needs to know which FHIR packages to use. This is done using the ANT property `packages`, which is a comma separated list of package canonicals.[^2]
