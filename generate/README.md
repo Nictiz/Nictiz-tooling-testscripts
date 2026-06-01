@@ -480,7 +480,7 @@ A distinction can be made between regular TestScript-set properties and the prop
 | `fhirVersion`           | `src-properties.json`, path `$.fhirVersion`                                   | x         | Defaults to ANT property `fhir.version`                                                         |
 | `goal`                  | `src-properties.json`, path `$.goal`                                          | x         | Defaults to ANT property `goal`                                                                 |
 | `informationStandard`   | `src-properties.json`, path `$.informationStandard`                           | x         | Defaults to ANT property `informationStandard`                                                  |
-| `usecase`               | `src-properties.json`, path `$.usecase`                                       | x         | Defaults to ANT property `usecase`                                                              |
+| `usecase`               | `src-properties.json`, path `$.usecase`                                       |           | Defaults to ANT property `usecase`                                                              |
 | `category`              | `src-properties.json`, path `$.category`                                      |           |                                                                                                 |
 | `subcategory`           | `src-properties.json`, path `$.subcategory`                                   |           |                                                                                                 |
 | `role`                  |                                                                               | x         |                                                                                                 |
@@ -502,7 +502,7 @@ A distinction can be made between regular TestScript-set properties and the prop
 | `fhirVersion`           | ANT property `fhir.version`                                  | x         |       |
 | `goal`                  | ANT property `goal`                                          | x         |       |
 | `informationStandard`   | ANT property `informationStandard`                           | x         |       |
-| `usecase`               | ANT property `usecase`                                       | x         |       |
+| `usecase`               | ANT property `usecase`                                       |           |       |
 | `serverAlias`           | ANT property `serverAlias`                                   | x         |       |
 
 ## Properties to set in build.properties
