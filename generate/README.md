@@ -510,7 +510,6 @@ As can be seen above, the following properties must be set in the `build.propert
 
 * `fhir.version`
 * `informationStandard`
-* `usecase`
 * `packages`
 * `serverAlias`
 
