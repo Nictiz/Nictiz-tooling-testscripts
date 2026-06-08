@@ -85,7 +85,7 @@
                             <use value="work"/>
                         </telecom>
                     </contact>
-                    <description value="Load test resources using the update (PUT) operation of the target FHIR server for use in testing. All resource ids are pre-defined. The target XIS FHIR server is expected to support resource create via the update (PUT) operation for client assigned ids. "/>
+                    <description value="Load test resources using the update (PUT) operation of the target FHIR server for use in testing. All resource ids are pre-defined. The target XIS FHIR server is expected to support resource create via the update (PUT) operation for client assigned ids."/>
                     <copyright value="© Nictiz 2020"/>
                     
                     <!-- Write out all fixture references -->
