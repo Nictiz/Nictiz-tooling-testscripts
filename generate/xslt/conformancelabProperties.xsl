@@ -123,7 +123,8 @@
                             </xsl:call-template>
                         </string>
                         <xsl:variable name="srcUsecase" select="map:get($srcProperties, 'usecase')"/>
-                            <xsl:if test="(not(empty($srcUsecase)) and not($srcUsecase = '${usecase}')) or (not(empty($usecase)) and not($usecase = '${usecase}'))">
+                        <xsl:variable name="hasUsecase" as="xs:boolean" select="(not(empty($srcUsecase)) and not($srcUsecase = '${usecase}')) or (not(empty($usecase)) and not($usecase = '${usecase}'))"/> 
+                            <xsl:if test="$hasUsecase">
                                 <string key="usecase">
                                     <xsl:call-template name="getPropertyValue">
                                         <xsl:with-param name="antProperty" select="'usecase'"/>
