@@ -77,9 +77,7 @@
     <!-- Expand a nts:request-mode element to a Conformancelab test-level request mode extension -->
     <xsl:template match="f:test/nts:request-mode[@value]" mode="expand">
         <extension url="http://fhir.interoplab.eu/fhir/StructureDefinition/Interoplab-CL-ext-test-request-mode">
-            <extension url="mode">
-                <valueCode value="{@value}"/>
-            </extension>
+            <valueCode value="{@value}"/>
         </extension>
     </xsl:template>
     
