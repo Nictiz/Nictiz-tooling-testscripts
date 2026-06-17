@@ -122,16 +122,19 @@
                                 <xsl:with-param name="nts.file.dir.properties" select="$nts.file.dir.properties"/>
                             </xsl:call-template>
                         </string>
-                        <string key="usecase">
-                            <xsl:call-template name="getPropertyValue">
-                                <xsl:with-param name="antProperty" select="'usecase'"/>
-                                <xsl:with-param name="antValue" select="$usecase"/>
-                                <xsl:with-param name="srcProperty" select="'usecase'"/>
-                                <xsl:with-param name="srcProperties" select="$srcProperties"/>
-                                <xsl:with-param name="nts.file.dir.properties" select="$nts.file.dir.properties"/>
-                            </xsl:call-template>
-                        </string>
-                        
+                        <xsl:variable name="srcUsecase" select="map:get($srcProperties, 'usecase')"/>
+                        <xsl:variable name="hasUsecase" as="xs:boolean" select="(not(empty($srcUsecase)) and not($srcUsecase = '${usecase}')) or (not(empty($usecase)) and not($usecase = '${usecase}'))"/> 
+                            <xsl:if test="$hasUsecase">
+                                <string key="usecase">
+                                    <xsl:call-template name="getPropertyValue">
+                                        <xsl:with-param name="antProperty" select="'usecase'"/>
+                                        <xsl:with-param name="antValue" select="$usecase"/>
+                                        <xsl:with-param name="srcProperty" select="'usecase'"/>
+                                        <xsl:with-param name="srcProperties" select="$srcProperties"/>
+                                        <xsl:with-param name="nts.file.dir.properties" select="$nts.file.dir.properties"/>
+                                    </xsl:call-template>
+                                </string>
+                            </xsl:if>
                         <xsl:variable name="srcPropertiesRoleName" select="$srcProperties?role?name"/>
                         <xsl:variable name="srcPropertiesRoleDescription" select="$srcProperties?role?description"/>
                         <xsl:if test="empty($srcPropertiesRoleName)">
@@ -285,9 +288,6 @@
         <xsl:if test="empty($informationStandard) or $informationStandard = '${informationStandard}'">
             <xsl:message terminate="yes" select="concat('No ''informationStandard'' property found in ''', $inputDir, '/build.properties''')"/>
         </xsl:if>
-        <xsl:if test="empty($usecase) or $usecase = '${usecase}'">
-            <xsl:message terminate="yes" select="concat('No ''usecase'' property found in ''', $inputDir, '/build.properties''')"/>
-        </xsl:if>
         <xsl:if test="empty($serverAlias) or $serverAlias = '${serverAlias}'">
             <xsl:message terminate="yes" select="concat('No ''serverAlias'' property found in ''', $inputDir, '/build.properties''')"/>
         </xsl:if>
@@ -306,9 +306,11 @@
                     <string key="informationStandard">
                         <xsl:value-of select="$informationStandard"/>
                     </string>
-                    <string key="usecase">
-                        <xsl:value-of select="$usecase"/>
-                    </string>
+                    <xsl:if test="not(empty($usecase)) and not($usecase = '${usecase}')">
+                        <string key="usecase">
+                            <xsl:value-of select="$usecase"/>
+                        </string>
+                    </xsl:if>
                     <string key="serverAlias">
                         <xsl:value-of select="$serverAlias"/>
                     </string>
