@@ -74,7 +74,7 @@
                 <TestScript xmlns="http://hl7.org/fhir">
                     <id value="resources-purgecreateupdate-xml"/>
                     <url value="http://nictiz.nl/fhir/TestScript/load-resources-purgecreateupdate-xml"/>
-                    <name value="Load Test Resources - Purge Create Update - XML"/>
+                    <name value="Load_Test_Resources_Purge_Create_Update_XML"/>
                     <status value="active"/>
                     <publisher value="Nictiz"/>
                     <contact>
@@ -85,7 +85,7 @@
                             <use value="work"/>
                         </telecom>
                     </contact>
-                    <description value="Load test resources using the update (PUT) operation of the target FHIR server for use in testing. All resource ids are pre-defined. The target XIS FHIR server is expected to support resource create via the update (PUT) operation for client assigned ids. "/>
+                    <description value="Load test resources using the update (PUT) operation of the target FHIR server for use in testing. All resource ids are pre-defined. The target XIS FHIR server is expected to support resource create via the update (PUT) operation for client assigned ids."/>
                     <copyright value="© Nictiz 2020"/>
                     
                     <!-- Write out all fixture references -->
@@ -180,6 +180,7 @@
                                         value="Confirm that the returned HTTP status is 200(OK) or 204(No Content)"/>
                                     <operator value="in"/>
                                     <responseCode value="200,204"/>
+                                    <stopTestOnFail value="false"/>
                                     <warningOnly value="false"/>
                                 </assert>
                             </action>
@@ -189,7 +190,7 @@
                     <!-- PUT all fixtures in test -->
                     <test id="Step1-LoadTestResourceCreate">
                         <name value="Step1-LoadTestResourceCreate"/>
-                        <description value="Load test resources using the update (PUT) operation of the target FHIR server for use in testing. All resource ids are pre-defined. The target XIS FHIR server is expected to support resource create via the update (PUT) operation for client assigned ids. "/>
+                        <description value="Load test resources using the update (PUT) operation of the target FHIR server for use in testing. All resource ids are pre-defined. The target XIS FHIR server is expected to support resource create via the update (PUT) operation for client assigned ids."/>
                         <xsl:for-each select="$fixtures">
                             <!-- Load Patient resources first to make sure WildFHIR indexes data in the right order to use patient.identifier searches. -->
                             <xsl:sort data-type="number" order="ascending" select="(number(local-name() = 'Patient') * 1) + (number(not(local-name() = 'Patient')) * 2)"/>
@@ -205,8 +206,8 @@
                                         <system value="http://hl7.org/fhir/restful-interaction"/>
                                         <code value="update"/>
                                     </type>
-                                    <description value="PUT {$resourceType}/{$resourceId}"/>
                                     <resource value="{$resourceType}"/>
+                                    <description value="PUT {$resourceType}/{$resourceId}"/>
                                     <accept value="xml"/>
                                     <contentType value="xml"/>
                                     <encodeRequestUrl value="true"/>
@@ -232,6 +233,7 @@
                                     <description value="Confirm that the returned HTTP status is 200(OK) or 201(Created)."/>
                                     <operator value="in"/>
                                     <responseCode value="200,201"/>
+                                    <stopTestOnFail value="false"/>
                                     <warningOnly value="false"/>
                                 </assert>
                             </action>
