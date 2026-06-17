@@ -28,11 +28,6 @@
     <!-- The "usecase" according to the Conformancelab spec. -->
     <xsl:param name="usecase" as="xs:string"/>
     
-    <!-- A list matching targets to their descriptions. This list is formatted as a single comma-separated string with
-         "target=description" entries. The targets are the full folder names, and the descriptions may contain 
-         unescaped comma's. -->
-    <xsl:param name="targetDescriptions"/>
-    
     <!-- All targets part of this build -->
     <xsl:param name="targets"/>
     
@@ -135,10 +130,20 @@
                                     </xsl:call-template>
                                 </string>
                             </xsl:if>
-                        <xsl:variable name="srcPropertiesRoleName" select="$srcProperties?role?name"/>
-                        <xsl:variable name="srcPropertiesRoleDescription" select="$srcProperties?role?description"/>
+                        <xsl:variable name="roleKey">
+                            <xsl:choose>
+                                <xsl:when test="$target != '#default'">
+                                    <xsl:value-of select="concat('role-',$target)"/>
+                                </xsl:when>
+                                <xsl:otherwise>
+                                    <xsl:text>role</xsl:text>
+                                </xsl:otherwise>
+                            </xsl:choose>
+                        </xsl:variable>
+                        <xsl:variable name="srcPropertiesRoleName" select="$srcProperties?($roleKey)?name"/>
+                        <xsl:variable name="srcPropertiesRoleDescription" select="$srcProperties?($roleKey)?description"/>
                         <xsl:if test="empty($srcPropertiesRoleName)">
-                            <xsl:message terminate="yes" select="concat('No ''role.name'' property found in ''', $nts.file.dir.properties?reldir, '/src-properties.json''')"/>
+                            <xsl:message terminate="yes" select="concat('No ''', $roleKey, '.name'' property found in ''', $nts.file.dir.properties?reldir, '/src-properties.json''')"/>
                         </xsl:if>
                         <map key="role">
                             <string key="name">
@@ -162,39 +167,6 @@
                             <string key="subcategory">
                                 <xsl:value-of select="$theSubcategory"/>
                             </string>
-                        </xsl:if>
-                        
-                        <!-- Possible scenarios:
-                        - Target is #default and $srcPropertiesVariantName is empty - do nothing
-                        - Target is not #default and $srcPropertiesVariantName is empty - add target as variant
-                        -->
-                        <xsl:if test="not($target = '#default')">
-                            <!--
-                                 The $targetDescriptions string is formatted as a single string with target=description
-                                 pairs, separated by comma's. The descriptions are literaly what's in the ant properties
-                                 file, no escaping, and so it might contain comma's and we can't just split on comma's.
-                                 So the surest way to fish out the description is to use a regex where we search for
-                                 'our target=' up until the start of the next pair (or the end of the string). The
-                                 start of the next pair always begins by a comma and one of the other targets, so that's our clue.
-                            -->
-                            <xsl:variable name="pattern" select="concat('.*', $target.dir, '=(.*?)($|,(', replace($targets,',','|'), '))')"/>
-                            <xsl:variable name="description">
-                                <xsl:analyze-string select="$targetDescriptions" regex="{$pattern}">
-                                    <xsl:matching-substring>
-                                        <xsl:value-of select="regex-group(1)"/>
-                                    </xsl:matching-substring>
-                                </xsl:analyze-string>
-                            </xsl:variable>
-                            <map key="variant">
-                                <string key="name">
-                                    <xsl:value-of select="$target"/>
-                                </string>
-                                <xsl:if test="string-length($description) gt 0">
-                                    <string key="description">
-                                        <xsl:value-of select="$description"/>
-                                    </string>
-                                </xsl:if>
-                            </map>
                         </xsl:if>
                         
                         <xsl:variable name="srcPropertiesAdminOnly" select="$srcProperties?adminOnly"/>

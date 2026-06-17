@@ -480,7 +480,7 @@ A distinction can be made between regular TestScript-set properties and the prop
 | `fhirVersion`           | `src-properties.json`, path `$.fhirVersion`                                   | x         | Defaults to ANT property `fhir.version`                                                         |
 | `goal`                  | `src-properties.json`, path `$.goal`                                          | x         | Defaults to ANT property `goal`                                                                 |
 | `informationStandard`   | `src-properties.json`, path `$.informationStandard`                           | x         | Defaults to ANT property `informationStandard`                                                  |
-| `usecase`               | `src-properties.json`, path `$.usecase`                                       |           | Defaults to ANT property `usecase`                                                              |
+| `usecase`               | `src-properties.json`, path `$.usecase`                                       | x         | Defaults to ANT property `usecase`                                                              |
 | `category`              | `src-properties.json`, path `$.category`                                      |           |                                                                                                 |
 | `subcategory`           | `src-properties.json`, path `$.subcategory`                                   |           |                                                                                                 |
 | `role`                  |                                                                               | x         |                                                                                                 |
@@ -519,12 +519,11 @@ The `goal` parameter in the Conformancelab property file defines the goal the se
 ## Role, category and subcategory
 Conformancelab needs to know who the scripts are for. This is defined by the `role` property. In NTS projects, the scripts for a certain role are organized using folders within the root folder, e.g. "XIS-Server", "Sending-System", etc. To provide a description for a role, the `role.description` property is used.
 
-Further categorization and/or subdivision in the Conformancelab UI can be added by using the `category` and `subcategory` properties.
-
-## Variants / additional targets
-"Variants" in Conformancelab parlance are what NTS calls "Additional targets". Additional targets are places in a separate NTS folder name suffixed `-[target]`. If this tool encounters a build target, it will set the `variant.name` parameter for the resulting property file(s).
+What NTS calls "Additional targets" are outputted as separate roles. Additional targets are placed in a separate NTS folder name suffixed `-[target]`. If this tool encounters a build target, it will look for `role-[target].name` and `role-[target].description in `src-properties` to determine how the additional target should be shown in Conformancelab.
 
 To provide a description, set the ANT property `target.description.`_target_.
+
+Further categorization and/or subdivision in the Conformancelab UI can be added by using the `category` and `subcategory` properties.
 
 ## Fhir packages
 For profile validation, Conformancelab needs to know which FHIR packages to use. This is done using the ANT property `packages`, which is a comma separated list of package canonicals.[^2]
