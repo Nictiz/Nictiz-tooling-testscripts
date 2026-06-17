@@ -1352,7 +1352,7 @@
                 <!-- In Attachment, there is hardly anything that we can reliably check for more than existance, so we do nothing here. -->
                 <xsl:text> </xsl:text>
             </xsl:when>
-            <xsl:when test="$dataType = ('dateTime','date','instant') or ($dataType = 'string' and $parentDataType = ('Coding','Quantity'))">
+            <xsl:when test="$dataType = ('dateTime','date','instant','time') or ($dataType = 'string' and $parentDataType = ('Coding','Quantity'))">
                 <!-- Nothing to be added, as we only check existance -->
                 <xsl:text> </xsl:text>
             </xsl:when>

@@ -475,22 +475,25 @@ A distinction can be made between regular TestScript-set properties and the prop
 
 ### Regular TestScript properties
 
-| Conformancelab property | input                                                                             | required? | notes                                                                                           |
-| ----------------------- | --------------------------------------------------------------------------------- | --------- |------------------------------------------------------------------------------------------------ |
-| `fhirVersion`           | `src-properties.json`, path `$.fhirVersion`                                       | x         | Defaults to ANT property `fhir.version`                                                         |
-| `goal`                  | `src-properties.json`, path `$.goal`                                              | x         | Defaults to ANT property `goal`                                                                 |
-| `informationStandard`   | `src-properties.json`, path `$.informationStandard`                               | x         | Defaults to ANT property `informationStandard`                                                  |
-| `usecase`               | `src-properties.json`, path `$.usecase`                                           | x         | Defaults to ANT property `usecase`                                                              |
-| `category`              | `src-properties.json`, path `$.category`                                          |           |                                                                                                 |
-| `subcategory`           | `src-properties.json`, path `$.subcategory`                                       |           |                                                                                                 |
-| `role`                  |                                                                                   | x         |                                                                                                 |
-| - `name`                | `src-properties.json`, path `$.role.name` or `$.role-[target].name`               | x         |                                                                                                 |
-| - `description`         | `src-properties.json`, path `$.role.description` or `$.role-[target].description` |           |                                                                                                 |
-| `adminOnly`             | `src-properties.json`, path `$.adminOnly` OR ANT property `targets.adminOnly`     |           | Use `targets.adminOnly = XIS-Server-Nictiz-only` to set `adminOnly` for this specific target    |
-| `fhirPackage`           |                                                                                   |           |                                                                                                 |
-| - `name`                | ANT property `packages`                                                           |           | A comma separated list of package canonicals, which is converted to an array including versions |
-| - `version`             | ANT property `package.`_canonical_                                                |           | e.g. `package.nictiz.stu3.zib2017 = 2.2.3`                                                      |
-| `serverAlias`           | `src-properties.json`, path `$.serverAlias`                                       | x         | Defaults to ANT property `serverAlias`                                                          |
+| Conformancelab property | input                                                                         | required? | notes                                                                                           |
+| ----------------------- | ----------------------------------------------------------------------------- | --------- |------------------------------------------------------------------------------------------------ |
+| `fhirVersion`           | `src-properties.json`, path `$.fhirVersion`                                   | x         | Defaults to ANT property `fhir.version`                                                         |
+| `goal`                  | `src-properties.json`, path `$.goal`                                          | x         | Defaults to ANT property `goal`                                                                 |
+| `informationStandard`   | `src-properties.json`, path `$.informationStandard`                           | x         | Defaults to ANT property `informationStandard`                                                  |
+| `usecase`               | `src-properties.json`, path `$.usecase`                                       | x         | Defaults to ANT property `usecase`                                                              |
+| `category`              | `src-properties.json`, path `$.category`                                      |           |                                                                                                 |
+| `subcategory`           | `src-properties.json`, path `$.subcategory`                                   |           |                                                                                                 |
+| `role`                  |                                                                               | x         |                                                                                                 |
+| - `name`                | `src-properties.json`, path `$.role.name`                                     | x         |                                                                                                 |
+| - `description`         | `src-properties.json`, path `$.role.description`                              |           |                                                                                                 |
+| `variant`               |                                                                               |           |                                                                                                 |
+| - `name`                | Build _target_ in `targets.additional`                                        | (x)       |                                                                                                 |
+| - `description`         | ANT property `target.description`._target_                                    |           | e.g. `target.description.XIS-Server-Nictiz-only = For Nictiz only`                              |
+| `adminOnly`             | `src-properties.json`, path `$.adminOnly` OR ANT property `targets.adminOnly` |           | Use `targets.adminOnly = XIS-Server-Nictiz-only` to set `adminOnly` for this specific target    |
+| `fhirPackage`           |                                                                               |           |                                                                                                 |
+| - `name`                | ANT property `packages`                                                       |           | A comma separated list of package canonicals, which is converted to an array including versions |
+| - `version`             | ANT property `package.`_canonical_                                            |           | e.g. `package.nictiz.stu3.zib2017 = 2.2.3`                                                      |
+| `serverAlias`           | `src-properties.json`, path `$.serverAlias`                                   | x         | Defaults to ANT property `serverAlias`                                                          |
 
 ### Loadresources properties
 
@@ -499,7 +502,7 @@ A distinction can be made between regular TestScript-set properties and the prop
 | `fhirVersion`           | ANT property `fhir.version`                                  | x         |       |
 | `goal`                  | ANT property `goal`                                          | x         |       |
 | `informationStandard`   | ANT property `informationStandard`                           | x         |       |
-| `usecase`               | ANT property `usecase`                                       | x         |       |
+| `usecase`               | ANT property `usecase`                                       |           |       |
 | `serverAlias`           | ANT property `serverAlias`                                   | x         |       |
 
 ## Properties to set in build.properties
@@ -507,7 +510,6 @@ As can be seen above, the following properties must be set in the `build.propert
 
 * `fhir.version`
 * `informationStandard`
-* `usecase`
 * `packages`
 * `serverAlias`
 
