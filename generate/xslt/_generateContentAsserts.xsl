@@ -47,6 +47,12 @@
         <!-- Construct the variables for the test -->
         <xsl:variable name="requestResponseId">
             <xsl:choose>
+                <xsl:when test="f:action/f:operation/f:requestId/@value">
+                    <xsl:value-of select="f:action/f:operation/f:requestId/@value"/>
+                </xsl:when>
+                <xsl:when test="f:action/f:operation/f:responseId/@value">
+                    <xsl:value-of select="f:action/f:operation/f:responseId/@value"/>
+                </xsl:when>
                 <xsl:when test="fn:string-length(@id) gt 0">
                     <xsl:value-of select="concat('fixture-',@id)"/>
                 </xsl:when>
@@ -54,7 +60,7 @@
                     <xsl:text>fixture-response</xsl:text>
                 </xsl:when>
                 <xsl:otherwise>
-                    <xsl:message>TOCHECK: <xsl:value-of select="parent::f:TestScript/f:id/@value"/>: responseId/responseId and test/@id not found, reverting to default.</xsl:message>
+                    <xsl:message>TOCHECK: <xsl:value-of select="parent::f:TestScript/f:id/@value"/>: requestId/responseId not found and no test/@id present for constructing such an id, so a generated request/response id is used.</xsl:message>
                     <xsl:value-of select="generate-id()"/>
                 </xsl:otherwise>
             </xsl:choose>
