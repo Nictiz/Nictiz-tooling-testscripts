@@ -845,11 +845,18 @@
                             <xsl:if test="not(@nts:max = '*')">
                                 <xsl:text>.where(</xsl:text>
                             </xsl:if>
-                            <xsl:if test="@value">
-                                <xsl:call-template name="_createExpressionSimple">
-                                    <xsl:with-param name="includeThis" select="true()"/>
-                                </xsl:call-template>
-                                <xsl:text> and </xsl:text>
+                            <xsl:variable name="valueExpression">
+                                <xsl:if test="@value">
+                                    <xsl:call-template name="_createExpressionSimple">
+                                        <xsl:with-param name="includeThis" select="true()"/>
+                                    </xsl:call-template>
+                                </xsl:if>
+                            </xsl:variable>
+                            <xsl:if test="string-length(normalize-space($valueExpression)) gt 0">
+                                <xsl:value-of select="$valueExpression"/>
+                                <xsl:if test="*">
+                                    <xsl:text> and </xsl:text>
+                                </xsl:if>
                             </xsl:if>
                             <xsl:for-each select="*">
                                 <xsl:call-template name="_createLocalExpression">
