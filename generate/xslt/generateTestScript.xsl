@@ -198,14 +198,15 @@
         <xsl:param name="index" as="xs:integer"/>
         <xsl:param name="isSUT" as="xs:boolean"/>
         
-        <xsl:element name="{if ($type='origin') then 'origin' else 'destination'}">
-            <extension url="http://fhir.interoplab.eu/fhir/StructureDefinition/Interoplab-CL-ext-SUT">
-                <valueBoolean value="{$isSUT}"/>
-            </extension>
+        <xsl:variable name="role" select="if ($type = 'origin') then 'origin' else 'destination'"/>
+        <xsl:variable name="endpoint" select="if ($type = 'origin') then 'Client' else 'Server'"/>
+        
+        <xsl:element name="{$role}">
             <index value="{$index}"/>
             <profile>
-                <system value="{concat('http://terminology.hl7.org/CodeSystem/testscript-profile-', $type, '-types')}"/>
-                <code value="{if ($type='origin') then 'FHIR-Client' else 'FHIR-Server'}"/>
+                <system value="{if ($isSUT) then concat('http://terminology.hl7.org/CodeSystem/testscript-profile-', $role, '-types')
+                    else concat('http://fhir.interoplab.eu/fhir/CodeSystem/Interoplab-CL-', $role, '-profile')}"/>
+                <code value="{concat(if ($isSUT) then 'FHIR-' else 'Conformancelab-', $endpoint)}"/>
             </profile>
         </xsl:element>
     </xsl:function>
