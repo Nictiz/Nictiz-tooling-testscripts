@@ -116,7 +116,7 @@
             <xsl:with-param name="fixtures" select="$withContentAsserts//f:fixture" tunnel="yes"/>
             <xsl:with-param name="profiles" select="$withContentAsserts//f:profile[not(ancestor::f:origin | ancestor::f:destination)]" tunnel="yes"/>
             <xsl:with-param name="variables" select="$withContentAsserts//f:variable" tunnel="yes"/>
-            <xsl:with-param name="rules" select="$withContentAsserts//f:extension[@url = 'http://touchstone.aegis.net/touchstone/fhir/testing/StructureDefinition/testscript-rule']" tunnel="yes"/>
+            <xsl:with-param name="rules" select="$withContentAsserts//f:extension[@url = 'http://fhir.interoplab.eu/fhir/StructureDefinition/Interoplab-CL-ext-rule']" tunnel="yes"/>
             <xsl:with-param name="scenario" select="$scenario" tunnel="yes"/>
             <xsl:with-param name="expectedResponseFormat" select="$expectedResponseFormat" tunnel="yes"/>
         </xsl:apply-templates>
