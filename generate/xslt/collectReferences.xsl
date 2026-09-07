@@ -41,7 +41,7 @@
         </xsl:variable>
 
         <xsl:variable name="rules" as="xs:string*">
-            <xsl:for-each select="$testScripts//f:extension[@url = 'http://touchstone.aegis.net/touchstone/fhir/testing/StructureDefinition/testscript-rule']">
+            <xsl:for-each select="$testScripts//f:extension[@url = 'http://fhir.interoplab.eu/fhir/StructureDefinition/Interoplab-CL-ext-rule']">
                 <xsl:value-of select="substring-after(f:extension[@url = 'path']/f:valueString/@value, $includesDirNormalized)"/>
             </xsl:for-each>
         </xsl:variable>

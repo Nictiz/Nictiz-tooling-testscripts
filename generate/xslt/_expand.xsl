@@ -139,7 +139,7 @@
     <xsl:template match="nts:rule[@id and @href]" mode="expand" priority="2">
         <xsl:param name="referenceBase" tunnel="yes"/>
         <!-- https://touchstone.aegis.net/touchstone/userguide/html/testscript-authoring/rule-authoring/basics.html -->
-        <extension url="http://touchstone.aegis.net/touchstone/fhir/testing/StructureDefinition/testscript-rule">
+        <extension url="http://fhir.interoplab.eu/fhir/StructureDefinition/Interoplab-CL-ext-rule">
             <extension url="ruleId">
                 <valueId value="{@id}"/>
             </extension>
@@ -157,7 +157,7 @@
     -->
     <xsl:template match="nts:rule[@id]" mode="expand">
         <xsl:variable name="expandedRule">
-            <extension url="http://touchstone.aegis.net/touchstone/fhir/testing/StructureDefinition/testscript-assert-rule">
+            <extension url="http://fhir.interoplab.eu/fhir/StructureDefinition/Interoplab-CL-ext-assert-rule">
                 <extension url="ruleId">
                     <valueId value="{@id}"/>
                 </extension>

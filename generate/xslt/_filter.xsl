@@ -58,7 +58,7 @@
                 </xsl:apply-templates>
             </xsl:for-each-group>
             
-            <xsl:apply-templates select="f:extension[not(@url = 'http://touchstone.aegis.net/touchstone/fhir/testing/StructureDefinition/testscript-rule')] | f:modifierExtension" mode="#current"/>
+            <xsl:apply-templates select="f:extension[not(@url = 'http://fhir.interoplab.eu/fhir/StructureDefinition/Interoplab-CL-ext-rule')] | f:modifierExtension" mode="#current"/>
             <xsl:if test="f:url/@value">
                 <xsl:message>Overriding url to conform to convention</xsl:message>
             </xsl:if>
@@ -196,7 +196,7 @@
             <xsl:next-match/>
         </xsl:if>
     </xsl:template>
-    <xsl:template match="f:TestScript//f:extension[@url = 'http://touchstone.aegis.net/touchstone/fhir/testing/StructureDefinition/testscript-rule']" mode="filter">
+    <xsl:template match="f:TestScript//f:extension[@url = 'http://fhir.interoplab.eu/fhir/StructureDefinition/Interoplab-CL-ext-rule']" mode="filter">
         <xsl:param name="doCopy" select="false()"/>
         <xsl:if test="$doCopy">
             <xsl:next-match/>
@@ -204,7 +204,7 @@
     </xsl:template>
     
     <!-- Silence rule use elements that have been produced in the wrong place as a side effect of the declaration element --> 
-    <xsl:template match="f:TestScript//f:extension[@url = 'http://touchstone.aegis.net/touchstone/fhir/testing/StructureDefinition/testscript-assert-rule'][not(parent::f:assert)]" mode="filter" />
+    <xsl:template match="f:TestScript//f:extension[@url = 'http://fhir.interoplab.eu/fhir/StructureDefinition/Interoplab-CL-ext-assert-rule'][not(parent::f:assert)]" mode="filter" />
     
     <!-- Silence all remaining nts: elements and attributes (that have been read but are not transformed) -->
     <xsl:template match="nts:*" mode="filter"/>
