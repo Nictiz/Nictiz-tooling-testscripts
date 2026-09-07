@@ -22,32 +22,47 @@ public class ConvertToJson {
             return "";
         }
 
-        // Collect and then replace all the datetime placeholders.
-        Pattern dtPlaceholderPattern = Pattern.compile("\\$\\{(CURRENT)?DATE.*?\\}");
+        // Collect and replace all date/datetime placeholders.
+        Pattern dtPlaceholderPattern = Pattern.compile("\\$\\{(CURRENT)?(DATETIME|DATE).*?\\}");
         Matcher dtPlaceholderMatcher = dtPlaceholderPattern.matcher(XML);
+
+        StringBuilder maskedXML = new StringBuilder();
+
         while (dtPlaceholderMatcher.find()) {
             dtPlaceholders.add(dtPlaceholderMatcher.group());
+
+            String mask = dtPlaceholderMatcher.group(2).equals("DATETIME")
+                    ? "0001-01-01T00:00:00Z"
+                    : "0001-01-01";
+
+            dtPlaceholderMatcher.appendReplacement(maskedXML, Matcher.quoteReplacement(mask));
         }
 
-        // Now replace all datetime placeholders with our known pattern.
-        XML = dtPlaceholderMatcher.replaceAll("0001-01-01");
-        return XML;
+        dtPlaceholderMatcher.appendTail(maskedXML);
+
+        return maskedXML.toString();
     }
 
     private static String unmaskJSON(String maskedJSON, List<String> dtPlaceholders) {
-        // And restore all placeholders
-        String unmaskedJSON = "";
-        Pattern dtMaskPattern = Pattern.compile("0001-01-01");
+        // Restore all placeholders in their original order.
+        Pattern dtMaskPattern = Pattern.compile("0001-01-01T00:00:00Z|0001-01-01");
         Matcher dtMaskMatcher = dtMaskPattern.matcher(maskedJSON);
-        int pos = 0;
+
+        StringBuilder unmaskedJSON = new StringBuilder();
         int placeholderNum = 0;
+
         while (dtMaskMatcher.find()) {
-            unmaskedJSON += maskedJSON.substring(pos, dtMaskMatcher.start()) + dtPlaceholders.get(placeholderNum);
-            pos = dtMaskMatcher.end();
-            placeholderNum += 1;
+            dtMaskMatcher.appendReplacement(
+                    unmaskedJSON,
+                    Matcher.quoteReplacement(dtPlaceholders.get(placeholderNum))
+            );
+
+            placeholderNum++;
         }
-        unmaskedJSON += maskedJSON.substring(pos);
-        return unmaskedJSON;
+
+        dtMaskMatcher.appendTail(unmaskedJSON);
+
+        return unmaskedJSON.toString();
     }
 
     public static void main(String[] args) {

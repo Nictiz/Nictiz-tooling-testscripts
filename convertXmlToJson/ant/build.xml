@@ -88,7 +88,7 @@
     <target name="build" depends="retrieve, check-if-conversion-is-needed" if="should.convert">
         <sequential>
             <echo message="Converting XML fixtures to JSON"/>
-            <java classname="ConvertToJson" fork="false" outputProperty="result">
+            <java classname="ConvertToJson" fork="false" outputProperty="result" failonerror="true">
                 <classpath>
                     <pathelement path="${classpath}"/>
                     <pathelement path="${testscripttools.dir}/build/classes"/>
@@ -99,7 +99,16 @@
                 <arg value="${fhir.version}"/>
                 <arg file="${convert.to.json.file}"/>
             </java>
-            <echo message="${result}"/>
+            <loadresource property="filtered.result">
+                <string value="${result}"/>
+                <filterchain>
+                    <linecontains negate="true">
+                        <contains value="ca.uhn.fhir.context.ModelScanner"/>
+                    </linecontains>
+                </filterchain>
+            </loadresource>
+            
+            <echo message="${filtered.result}"/>
         </sequential>
     </target>
 </project>
