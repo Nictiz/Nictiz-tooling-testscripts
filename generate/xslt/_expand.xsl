@@ -111,6 +111,19 @@
             </xsl:otherwise>
         </xsl:choose>
     </xsl:template>
+    
+    <!-- Expand an nts:clAuthExtension element -->
+    <xsl:template match="nts:clAuthExtension[@patientResourceId]" mode="expand">
+        <xsl:param name="authTokens" tunnel="yes"/>
+        <extension url="http://fhir.interoplab.eu/fhir/StructureDefinition/Interoplab-CL-ext-authentication">
+            <extension url="display">
+                <valueString value="{if (.[@id]) then ./@id else @patientResourceId}"/>
+            </extension>
+            <extension url="access-token">
+                <valueString value="{substring-after($authTokens[@id = ./@id]/@token, 'Bearer ')}"/>
+            </extension>
+        </extension>
+    </xsl:template>
 
     <!-- Expand the nts:includeDateT element -->
     <xsl:template match="nts:includeDateT" mode="expand">

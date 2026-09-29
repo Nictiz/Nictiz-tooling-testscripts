@@ -236,11 +236,9 @@ Lastly, it is possible to use [rule outputs](https://touchstone.aegis.net/touchs
 </assert>
 ```
 
-### Date T and authorization headers
+### Date T 
 
-There are special elements for two use cases that are common across Nictiz test scripts.
-
-The first one is to indicate that the "date T" variable should be defined for the TestScript:
+To indicate that the "date T" variable should be defined for the TestScript:
 
 ```xml
 <nts:includeDateT value="yes|no">
@@ -248,7 +246,10 @@ The first one is to indicate that the "date T" variable should be defined for th
 
 If this element is present, and `value` is absent or set to "yes", a variable for setting date T will be included in the TestScript.
 
-The second one deals with the authorization header for defining the patient context in the TestScript. The assumption here is that the (static) content of an `Authorization` header associated with a specific Patient resource `.id` is defined in a JSON file with the following syntax:
+### Authentication and authorization headers
+
+There are two elements that can be used for defining the patient context in the TestScript. The assumption here is that the (static) content of an `Authorization` header associated with a specific Patient resource `.id` is defined in a JSON file with the following syntax:
+
 ```json
 {
     "accessToken": "Bearer ...",
@@ -256,7 +257,13 @@ The second one deals with the authorization header for defining the patient cont
 }
 ```
 
-This file should be passed as the `tokens.json` parameter to the build script. The token can then be imported into a TestScript using:
+This file should be passed as the `tokens.json` parameter to the build script. 
+
+The token can then be imported into a TestScript in two ways:
+- `nts:authToken` processes the token in the TestScript output, either as a `variable` and 'Authorization' `requestHeader` using that variable (for server scripts) or as a hardcoded 'Authorization' `requestHeader` (for client scripts).
+- `nts:clAuthExtension` processes the token in the TestScript output as the Conformancelab Authentication extension, which is then used by Conformancelab to present Authentication options during Test setup.
+
+#### nts:authToken
 
 ```xml
 <nts:authToken patientResourceId="[resource.id of Patient resource]" {id="[patientName]"}/>
@@ -272,6 +279,25 @@ For example, if you included an `nts:authToken`, you can use `{$_PATIENTTOKEN}`,
   <field value="Authorization"/>
   <value value="{$_PATIENTTOKEN}"/>
 </requestHeader>
+```
+
+### nts:clAuthExtension
+
+```xml
+<nts:clAuthExtension patientResourceId="[resource.id of Patient resource]" {id="[patientName]"}/>
+```
+
+The output is the [CL-ext-authentication extension](https://fhir.interoplab.eu/ig/StructureDefinition-Interoplab-CL-ext-authentication.html). This complex extension contains both a `display` and `access-token` extension. `display` is used to identify authentication contexts across TestScripts and is used in the UI to show users which Patient has to be authenticated. `access-token` is required in client scripts and is used to send the token value to the client for every authentication method. For server scripts, `access-token` is optional, but if available it is used as a default value for some authentication methods.
+
+```xml
+<extension url="http://fhir.interoplab.eu/fhir/StructureDefinition/Interoplab-CL-ext-authentication">
+  <extension url="display">
+      <valueString value="[patientName or resource.id]"/>
+  </extension>
+  <extension url="access-token">
+      <valueString value="[token value without 'Bearer']"/>
+  </extension>
+</extension>
 ```
 
 ### Content asserts
@@ -494,6 +520,7 @@ A distinction can be made between regular TestScript-set properties and the prop
 | - `name`                | ANT property `packages`                                                       |           | A comma separated list of package canonicals, which is converted to an array including versions |
 | - `version`             | ANT property `package.`_canonical_                                            |           | e.g. `package.nictiz.stu3.zib2017 = 2.2.3`                                                      |
 | `serverAlias`           | `src-properties.json`, path `$.serverAlias`                                   | x         | Defaults to ANT property `serverAlias`                                                          |
+| `authenticationMethod`  | `src-properties.json`, path `$.authenticationMethod`                          |           |                                                                                                 |
 
 ### Loadresources properties
 
