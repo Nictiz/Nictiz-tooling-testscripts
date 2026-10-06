@@ -44,7 +44,7 @@
             <xsl:message terminate="yes" select="concat('Invalid value ''', $expectedResponseFormat, ''' for parameter ''expectedResponseFormat''; should be either ''xml'' or ''json''')"></xsl:message>
         </xsl:if>
 
-        <!-- Extract the authorization tokens specified using the nts:authToken element(s). These tokens can then be used within 
+        <!-- Extract the authorization tokens specified using the nts:authToken or nts:clAuthExtension element(s). These tokens can then be used within 
              the nts:authHeader element, referenced by their id. -->
         <xsl:if test="count(//nts:authToken[@patientResourceId]) &gt; 0 and not($tokensJsonFile)">
             <xsl:message terminate="yes">If you use the nts:authToken element, you need to pass in a file containing the tokens using the tokensJsonFile parameter.</xsl:message>
@@ -52,8 +52,14 @@
         <xsl:if test="count(//nts:authToken[not(@id)]) &gt; 1">
             <xsl:message terminate="yes">When using multiple nts:authToken elements, at most one may have the default id. All other instances must be uniquely identified with an id.</xsl:message>
         </xsl:if>
+        <xsl:if test="count(//nts:clAuthExtension) &gt; 0 and not($tokensJsonFile)">
+            <xsl:message terminate="yes">If you use the nts:clAuthExtension element, you need to pass in a file containing the tokens using the tokensJsonFile parameter.</xsl:message>
+        </xsl:if>
+        <xsl:if test="count(//nts:clAuthExtension) &gt; 1">
+            <xsl:message terminate="yes">You cannot use more then 1 nts:clAuthExtension per TestScript.</xsl:message>
+        </xsl:if>
         <xsl:variable name="authTokens" as="element(nts:authToken)*">
-            <xsl:for-each select="//nts:authToken[@patientResourceId]">
+            <xsl:for-each select="//nts:*[self::nts:authToken or self::nts:clAuthExtension]">
                 <xsl:variable name="id" select="if (.[@id]) then concat('patient-token-',@id) else concat('patient-token-',@patientResourceId)"/>
                 <xsl:copy-of select="nts:resolveAuthToken(./@patientResourceId, $id, true())"/>
             </xsl:for-each>

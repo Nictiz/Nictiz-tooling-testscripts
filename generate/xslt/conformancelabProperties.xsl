@@ -224,6 +224,17 @@
                                 <xsl:with-param name="nts.file.dir.properties" select="$nts.file.dir.properties"/>
                             </xsl:call-template>
                         </string>
+                        
+                        <xsl:variable name="theAuthenticationMethod" select="$srcProperties?authenticationMethod"/>
+                        <xsl:if test="not(empty($theAuthenticationMethod))">
+                            <array key="authenticationMethod">
+                                <xsl:for-each select="$theAuthenticationMethod?*">
+                                    <string>
+                                        <xsl:value-of select="."/>
+                                    </string>
+                                </xsl:for-each>
+                            </array>
+                        </xsl:if>
                     </map>
                 </xsl:variable>
                 
