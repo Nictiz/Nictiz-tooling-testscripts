@@ -84,19 +84,14 @@
     
     <!-- Include or exclude elements with the nts:ifset and nts:ifnotset attributes, based on whether the specified 
          parameter is passed in an nts:include. -->
-    <xsl:template match="*[@nts:ifset]" mode="processInclusions" priority="2">
+    <xsl:template match="*[@nts:ifset or @nts:ifnotset]" mode="processInclusions" priority="2">
         <xsl:param name="scenario" tunnel="yes"/>
         <xsl:param name="inclusionParameters" tunnel="yes" as="element(nts:with-parameter)*"/>
-        <xsl:if test="./@nts:ifset = $inclusionParameters/@name/string()">
-            <xsl:next-match/>
-        </xsl:if>
-        <xsl:if test="local-name(.) = ('contentType', 'fixture') and ./@nts:ifset = '_FORMAT' and $scenario = 'server'">
-            <xsl:next-match/>
-        </xsl:if>
-    </xsl:template>
-    <xsl:template match="*[@nts:ifnotset]" mode="processInclusions" priority="2">
-        <xsl:param name="inclusionParameters" tunnel="yes" as="element(nts:with-parameter)*"/>
-        <xsl:if test="not(./@nts:ifnotset = $inclusionParameters/@name/string())">
+        
+        <xsl:variable name="ifset-ok" select="not(@nts:ifset) or @nts:ifset = $inclusionParameters/@name/string() or (local-name(.) = ('contentType', 'fixture') and @nts:ifset = '_FORMAT' and $scenario = 'server')"/>
+        <xsl:variable name="ifnotset-ok" select="not(@nts:ifnotset) or not(@nts:ifnotset = $inclusionParameters/@name/string())"/>
+        
+        <xsl:if test="$ifset-ok and $ifnotset-ok">
             <xsl:next-match/>
         </xsl:if>
     </xsl:template>
