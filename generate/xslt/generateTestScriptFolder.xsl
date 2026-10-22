@@ -28,6 +28,10 @@
 
     <!-- The FHIR version that the scripts in the folder target. Either 'stu3' or 'r4'. -->
     <xsl:param name="fhirVersion"/>
+
+    <!-- The formats in which TestScripts with scenario 'server' are generated, separated by whitespace. Defaults to
+         both 'xml' and 'json'. -->
+    <xsl:param name="formats" select="'xml json'"/>
     
     <xsl:include href="generateTestScript.xsl"/>
     <xsl:include href="_ntsFolders.xsl"/>
@@ -87,8 +91,8 @@
                 <xsl:if test="$target = '#default' or (fn:contains(fn:concat('/',$target.dir), $nts.file.dir.properties?reldir.root) and xs:integer($nts.file.dir.properties?targetLevel) = xs:integer($nts.file.dir.properties?rootLevel))">
                     <xsl:choose>
                         <xsl:when test="$ntsScenario = 'server'">
-                            <!-- XIS scripts are generated in both XML and JSON flavor -->
-                            <xsl:for-each select="('xml', 'json')">
+                            <!-- XIS scripts are generated in each format of the 'formats' parameter, by default both XML and JSON -->
+                            <xsl:for-each select="tokenize(normalize-space($formats), ' ')">
                                 <xsl:variable name="testscript.filename" select="fn:concat($nts.file.basename, '-', ., '.xml')"/>
                                 <xsl:variable name="testScript">
                                     <xsl:apply-templates select="$ntsFile">

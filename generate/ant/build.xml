@@ -24,6 +24,7 @@
     - [reference.subdir]      : Optional - The _name_ (not the path!) of the folder containing fixtures. Defaults to '_reference'.
     - [targets]               : Optional - All targets to be built, including the 'default'-target. Defaults to '#default,[targets.additional]'. 
     - [targets.additional]    : Optional - The additional targets to be built.
+    - [formats]               : Optional - The formats in which TestScripts with scenario 'server' are generated, separated by a space. Defaults to 'xml json'.
 
     Additionally, the following optional parameters may be used:
     - outputLevel: the verbosity level of the script output
@@ -82,6 +83,8 @@
 
     <property name="targets.additional" value=""/> <!-- By default, we don't build additional targets -->
     <property name="targets" value="#default,${targets.additional}"/>
+
+    <property name="formats" value="xml json"/> <!-- By default, server scripts are generated in both formats -->
 
     <!-- Set the verbosity level of the output.
          0 = error
@@ -277,6 +280,7 @@
                 <arg value="tokensJsonFile=${tokens.json.url}"/>
                 <arg value="fhirVersion=${fhir.version}"/>
                 <arg value="referencesFile=@{references.file}"/>
+                <arg value="formats=${formats}"/>
             </java>
         </sequential>
     </macrodef>
