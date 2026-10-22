@@ -473,7 +473,7 @@ The following optional parameters may be used:
   The TestScript resources can use the `nts:in-targets` to define which element should be included in a target (see above). Multiple extra targets may be separated using comma's.
   Note: if there are subfolders in the folder on which an additional target is defined, each variant of the input folder will contain the full set of subfolders (but with slightly different content, of course).
 - `targets`: This parameter contains the default target '#default', to which the targets defined in `targets.additional` are added. Used when building the default target is unwanted.
-- `formats`: the formats in which TestScripts with scenario 'server' are generated, separated by a space. Defaults to both formats. To generate only the json instance:
+- `formats`: the formats in which TestScripts with scenario 'server' are generated, separated by a space. Defaults to both formats. With only one format, the format is not added to the file name, `id`, `url`, `name` and `title` of the TestScript; the `<accept .../>` element is still added. To generate only the json instance:
   ```
   formats = json
   ```

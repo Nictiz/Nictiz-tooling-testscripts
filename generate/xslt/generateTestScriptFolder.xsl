@@ -91,13 +91,17 @@
                 <xsl:if test="$target = '#default' or (fn:contains(fn:concat('/',$target.dir), $nts.file.dir.properties?reldir.root) and xs:integer($nts.file.dir.properties?targetLevel) = xs:integer($nts.file.dir.properties?rootLevel))">
                     <xsl:choose>
                         <xsl:when test="$ntsScenario = 'server'">
-                            <!-- XIS scripts are generated in each format of the 'formats' parameter, by default both XML and JSON -->
-                            <xsl:for-each select="tokenize(normalize-space($formats), ' ')">
-                                <xsl:variable name="testscript.filename" select="fn:concat($nts.file.basename, '-', ., '.xml')"/>
+                            <!-- XIS scripts are generated in each format of the 'formats' parameter, by default both XML and JSON.
+                                 With more than one format, the format is added to the file name, id, url, name and title. -->
+                            <xsl:variable name="formats.list" select="tokenize(normalize-space($formats), ' ')"/>
+                            <xsl:variable name="addFormatSuffix" select="count($formats.list) gt 1"/>
+                            <xsl:for-each select="$formats.list">
+                                <xsl:variable name="testscript.filename" select="if ($addFormatSuffix) then fn:concat($nts.file.basename, '-', ., '.xml') else fn:concat($nts.file.basename, '.xml')"/>
                                 <xsl:variable name="testScript">
                                     <xsl:apply-templates select="$ntsFile">
                                         <xsl:with-param name="target" select="$target" tunnel="yes"/>
                                         <xsl:with-param name="expectedResponseFormat" select="." tunnel="yes"/>
+                                        <xsl:with-param name="addFormatSuffix" select="$addFormatSuffix" tunnel="yes"/>
                                         <xsl:with-param name="referenceBase" select="$referenceBase" tunnel="yes"/>
                                     </xsl:apply-templates>
                                 </xsl:variable>
