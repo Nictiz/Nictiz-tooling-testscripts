@@ -79,6 +79,24 @@
                 
                 <xsl:variable name="srcProperties" select="if (unparsed-text-available($srcPropertiesPath)) then json-doc($srcPropertiesPath) else ()"/>
                 
+                <xsl:variable name="properties.path">
+                    <xsl:value-of select="concat('file:///', translate($outputDir, '\', '/'))"/>
+                    <xsl:choose>
+                        <xsl:when test="$target != '#default'">
+                            <xsl:value-of select="fn:concat('/', $target.dir, $nts.file.dir.properties?reldir.leaf)"/>
+                        </xsl:when>
+                        <xsl:otherwise>
+                            <xsl:value-of select="$nts.file.dir.properties?reldir"/>
+                        </xsl:otherwise>
+                    </xsl:choose>
+                    <xsl:value-of select="'/'"/>
+                </xsl:variable>
+
+                <!-- Inspect the generated scripts so target filters and included components are already resolved.
+                     Nested folders represent separate test sets and must not affect this folder's packages. -->
+                <xsl:variable name="hasProfileValidation" as="xs:boolean"
+                    select="exists(collection(concat($properties.path, '?select=*.xml;recurse=no'))/f:TestScript//f:assert/f:validateProfileId)"/>
+
                 <xsl:variable name="properties">
                     <map xmlns="http://www.w3.org/2005/xpath-functions">
                         <string key="goal">
@@ -184,7 +202,7 @@
                         </xsl:choose>
                         
                         <xsl:variable name="packageList" select="for $package in tokenize($packages, ',') return normalize-space($package)"/>
-                        <xsl:if test="count($packageList) != 0">
+                        <xsl:if test="exists($packageList) and $hasProfileValidation">
                             <array key="fhirPackage">
                                 <xsl:for-each select="$packageList">
                                     <xsl:variable name="package" select="."/>
@@ -236,19 +254,6 @@
                             </array>
                         </xsl:if>
                     </map>
-                </xsl:variable>
-                
-                <xsl:variable name="properties.path">
-                    <xsl:value-of select="concat('file:///', translate($outputDir, '\', '/'))"/>
-                    <xsl:choose>
-                        <xsl:when test="$target != '#default'">
-                            <xsl:value-of select="fn:concat('/', $target.dir, $nts.file.dir.properties?reldir.leaf)"/>
-                        </xsl:when>
-                        <xsl:otherwise>
-                            <xsl:value-of select="$nts.file.dir.properties?reldir"/>
-                        </xsl:otherwise>
-                    </xsl:choose>
-                    <xsl:value-of select="'/'"/>
                 </xsl:variable>
                 
                 <xsl:if test="$target != '#default' or unparsed-text-available($srcPropertiesPath)">
