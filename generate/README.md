@@ -552,12 +552,12 @@ To provide a description, set the ANT property `target.description.`_target_.
 
 Further categorization and/or subdivision in the Conformancelab UI can be added by using the `category` and `subcategory` properties.
 
-## Fhir packages
-For profile validation, Conformancelab needs to know which FHIR packages to use. This is done using the ANT property `packages`, which is a comma separated list of package canonicals.[^2]
-
-[^2]: The feature to configure the FHIR package per testset is still in development. The current workaround is for the supplier to upgrade the FHIR packages when needed.
+## FHIR packages
+For profile validation, Conformancelab needs to know which FHIR packages to use. This is done using the ANT property `packages`, which is a comma separated list of package canonicals.
 
 However, for each package canonical, a version must be provided as well. This is done per package, using an ANT property called `package.`_package canonical_ set to the version to use.
+
+The configured packages are only added to `properties.json` if at least one generated TestScript in that output folder contains an assert with `validateProfileId`.
 
 ## Server alias
 Conformancelab needs to know which test server to use. This can be set directly using the ANT property `serverAlias`, which should be set to the _name_ of the server defined in the Conformancelab platform.
