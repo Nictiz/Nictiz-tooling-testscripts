@@ -24,7 +24,7 @@
     - [reference.subdir]      : Optional - The _name_ (not the path!) of the folder containing fixtures. Defaults to '_reference'.
     - [targets]               : Optional - All targets to be built, including the 'default'-target. Defaults to '#default,[targets.additional]'. 
     - [targets.additional]    : Optional - The additional targets to be built.
-    - [formats]               : Optional - The formats in which TestScripts with scenario 'server' are generated, separated by a space. Defaults to 'xml json'.
+    - [formats]               : Optional - The formats in which TestScripts with scenario 'server' are generated, separated by a space. Defaults to 'xml json'. Use 'none' to omit automatic Accept headers.
 
     Additionally, the following optional parameters may be used:
     - outputLevel: the verbosity level of the script output

@@ -139,7 +139,7 @@ nts:scenario="server|client"
 The [output of `<nts:authToken>`](#date-t-and-authorization-headers) differs based on the scenario.
 
 When the scenario is set to 'server':
-- Two different TestScripts are outputted from one input file: an xml and a json instance. The `formats` build parameter can limit this to one of them. An `<accept .../>` element with the corresponding format is added to each `<operation>` element. By running the two variant of a TestScript, a server can show conformance to [supporting both formats](https://informatiestandaarden.nictiz.nl/wiki/FHIR:V1.0_FHIR_IG_R4#Content_Types_and_encodings).
+- Two different TestScripts are outputted from one input file: an xml and a json instance. The `formats` build parameter can limit this to one of them, or generate one instance without an automatically added `<accept .../>` element using `formats = none`. For XML and JSON variants, an `<accept .../>` element with the corresponding format is added to each `<operation>` element. By running the two variant of a TestScript, a server can show conformance to [supporting both formats](https://informatiestandaarden.nictiz.nl/wiki/FHIR:V1.0_FHIR_IG_R4#Content_Types_and_encodings).
   - To prevent adding an `<accept .../>` element to an `<operation>` in TestScripts where the scenario is 'server', for tests where an Accept header is explicitly unwanted, add an `@nts:addAccept` attribute with value 'false' to the `<operation>` element.
 - The magic variable `{$_FORMAT}` becomes available to `nts:fixture` and to `.operation.contentType`, which will result in the string 'xml' when generating the xml instance and in 'json' when generating the json instance.
 
@@ -477,6 +477,7 @@ The following optional parameters may be used:
   ```
   formats = json
   ```
+  Use `formats = none` to generate one TestScript without a format suffix and without automatically adding `<accept .../>` elements to operations in setup, tests or teardown. Explicit `<accept .../>` elements are preserved. No response format is selected in this mode, so `{$_FORMAT}` expands to an empty string; specify fixture formats and operation content types explicitly when needed.
 - `version.addition`: a string that will be added verbatim to the value in the `TestScript.version` from the input file. If this element is absent, it will be populated with this value.
 - `convert.to.json.file`: the path of a writable file where all referenced JSON fixtures are collected that don't exists, but for which an XML counterpart exists. This file can be used for the 'convertXmlToJson' script in this repo. If this parameter is not set, this situation will be treated like any other missing fixture and the build will fail.
 

@@ -30,7 +30,7 @@
     <xsl:param name="fhirVersion"/>
 
     <!-- The formats in which TestScripts with scenario 'server' are generated, separated by whitespace. Defaults to
-         both 'xml' and 'json'. -->
+         both 'xml' and 'json'. Use 'none' for one script without an automatically added Accept header. -->
     <xsl:param name="formats" select="'xml json'"/>
     
     <xsl:include href="generateTestScript.xsl"/>
@@ -93,7 +93,8 @@
                         <xsl:when test="$ntsScenario = 'server'">
                             <!-- XIS scripts are generated in each format of the 'formats' parameter, by default both XML and JSON.
                                  With more than one format, the format is added to the file name, id, url, name and title. -->
-                            <xsl:variable name="formats.list" select="tokenize(normalize-space($formats), ' ')"/>
+                            <!-- 'none' becomes one empty format string, so one script is generated without an Accept header. -->
+                            <xsl:variable name="formats.list" select="if (normalize-space($formats) = 'none') then '' else tokenize(normalize-space($formats), ' ')"/>
                             <xsl:variable name="addFormatSuffix" select="count($formats.list) gt 1"/>
                             <xsl:for-each select="$formats.list">
                                 <xsl:variable name="testscript.filename" select="if ($addFormatSuffix) then fn:concat($nts.file.basename, '-', ., '.xml') else fn:concat($nts.file.basename, '.xml')"/>
