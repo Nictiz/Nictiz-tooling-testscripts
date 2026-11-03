@@ -40,8 +40,8 @@
         <xsl:if test="$expectedResponseFormat != '' and $scenario != 'server'">
             <xsl:message select="'Parameter ''expectedResponseFormat'' only has a meaning when nts:scenario is ''server'''"></xsl:message>
         </xsl:if>
-        <xsl:if test="$scenario = 'server' and not($expectedResponseFormat = ('xml', 'json'))">
-            <xsl:message terminate="yes" select="concat('Invalid value ''', $expectedResponseFormat, ''' for parameter ''expectedResponseFormat''; should be either ''xml'' or ''json''')"></xsl:message>
+        <xsl:if test="$scenario = 'server' and not($expectedResponseFormat = ('xml', 'json', ''))">
+            <xsl:message terminate="yes" select="concat('Invalid value ''', $expectedResponseFormat, ''' for parameter ''expectedResponseFormat''; should be ''xml'', ''json'' or empty (no automatic Accept header)')"></xsl:message>
         </xsl:if>
 
         <!-- Extract the authorization tokens specified using the nts:authToken or nts:clAuthExtension element(s). These tokens can then be used within 
