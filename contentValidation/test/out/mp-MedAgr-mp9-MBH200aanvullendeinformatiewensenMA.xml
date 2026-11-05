@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<StructureDefinition xmlns="http://hl7.org/fhir">
+    <id value="mp-MedAgr-mp9-MBH200aanvullendeinformatiewensenMA"/>
+    <url value="http://nictiz.nl/fhir/StructureDefinition/Test/mp-MedAgr-mp9-MBH200aanvullendeinformatiewensenMA"/>
+    <name value="mpMedAgrmp9MBH200aanvullendeinformatiewensenMA"/>
+    <title value="mp MedAgr mp9 MBH200aanvullendeinformatiewensenMA"/>
+    <status value="draft"/>
+    <experimental value="true"/>
+    <description value="Constrained profile for qualification purposes. Not suited for implementation."/>
+    <fhirVersion value="4.0.1"/>
+    <kind value="resource"/>
+    <abstract value="false"/>
+    <type value="Bundle"/>
+    <baseDefinition value="http://hl7.org/fhir/StructureDefinition/Bundle"/>
+    <derivation value="constraint"/>
+    <differential>
+        <element id="Bundle.type">
+            <path value="Bundle.type"/>
+            <fixedCode value="searchset"/>
+        </element>
+        <element id="Bundle.entry">
+            <path value="Bundle.entry"/>
+            <slicing>
+                <discriminator>
+                    <type value="profile"/>
+                    <path value="resource"/>
+                </discriminator>
+                <rules value="open"/>
+            </slicing>
+        </element>
+        <element id="Bundle.entry:medicationrequest">
+            <path value="Bundle.entry"/>
+            <sliceName value="medicationrequest"/>
+            <min value="1"/>
+            <max value="1"/>
+        </element>
+        <element id="Bundle.entry:medicationrequest.resource">
+            <path value="Bundle.entry.resource"/>
+            <min value="1"/>
+            <type>
+                <code value="Resource"/>
+                <profile value="http://nictiz.nl/fhir/StructureDefinition/mp-MedicationAgreement"/>
+            </type>
+        </element>
+        <element id="Bundle.entry:medicationrequest.resource.extension">
+            <path value="Bundle.entry.resource.extension"/>
+            <slicing>
+                <discriminator>
+                    <type value="value"/>
+                    <path value="url"/>
+                </discriminator>
+                <rules value="open"/>
+            </slicing>
+            <min value="4"/>
+        </element>
+        <element id="Bundle.entry:medicationrequest.resource.extension:medicationAgreementAdditionalInformation">
+            <path value="Bundle.entry.resource.extension"/>
+            <sliceName value="medicationAgreementAdditionalInformation"/>
+            <min value="1"/>
+            <max value="1"/>
+        </element>
+        <element id="Bundle.entry:medicationrequest.resource.extension:medicationAgreementAdditionalInformation.value[x]">
+            <path value="Bundle.entry.resource.extension.value[x]"/>
+            <min value="1"/>
+        </element>
+        <element id="Bundle.entry:medicationrequest.resource.extension:medicationAgreementAdditionalInformation.value[x].coding">
+            <path value="Bundle.entry.resource.extension.value[x].coding"/>
+            <slicing>
+                <discriminator>
+                    <type value="value"/>
+                    <path value="code"/>
+                </discriminator>
+                <discriminator>
+                    <type value="value"/>
+                    <path value="system"/>
+                </discriminator>
+                <rules value="open"/>
+            </slicing>
+            <min value="1"/>
+        </element>
+        <element id="Bundle.entry:medicationrequest.resource.extension:medicationAgreementAdditionalInformation.value[x].coding:requiredCoding">
+            <path value="Bundle.entry.resource.extension.value[x].coding"/>
+            <sliceName value="requiredCoding"/>
+            <min value="1"/>
+            <max value="1"/>
+        </element>
+        <element id="Bundle.entry:medicationrequest.resource.extension:medicationAgreementAdditionalInformation.value[x].coding:requiredCoding.system">
+            <path value="Bundle.entry.resource.extension.value[x].coding.system"/>
+            <min value="1"/>
+            <fixedUri value="urn:oid:2.16.840.1.113883.2.4.3.11.60.20.77.5.2.14.2050"/>
+        </element>
+        <element id="Bundle.entry:medicationrequest.resource.extension:medicationAgreementAdditionalInformation.value[x].coding:requiredCoding.code">
+            <path value="Bundle.entry.resource.extension.value[x].coding.code"/>
+            <min value="1"/>
+            <fixedCode value="1"/>
+        </element>
+        <element id="Bundle.entry:medicationrequest.resource.extension:medicationAgreementAdditionalInformation.value[x].coding:requiredCoding.display">
+            <path value="Bundle.entry.resource.extension.value[x].coding.display"/>
+            <min value="1"/>
+        </element>
+        <element id="Bundle.entry:medicationrequest.resource.extension:renderedDosageInstruction">
+            <path value="Bundle.entry.resource.extension"/>
+            <sliceName value="renderedDosageInstruction"/>
+            <min value="1"/>
+            <max value="1"/>
+        </element>
+        <element id="Bundle.entry:medicationrequest.resource.extension:renderedDosageInstruction.value[x]">
+            <path value="Bundle.entry.resource.extension.value[x]"/>
+            <min value="1"/>
+            <fixedString value="Vanaf T - 4 dagen, tot en met T + 5 dagen, 3 maal per dag 1 stuk, Oraal"/>
+        </element>
+        <element id="Bundle.entry:medicationrequest.resource.extension:periodOfUse">
+            <path value="Bundle.entry.resource.extension"/>
+            <sliceName value="periodOfUse"/>
+            <min value="1"/>
+            <max value="1"/>
+        </element>
+        <element id="Bundle.entry:medicationrequest.resource.extension:periodOfUse.value[x].start">
+            <path value="Bundle.entry.resource.extension.value[x].start"/>
+            <min value="1"/>
+            <fixedDateTime value="${DATE, T, D, -4}T00:00:00+02:00"/>
+        </element>
+        <element id="Bundle.entry:medicationrequest.resource.extension:periodOfUse.value[x].end">
+            <path value="Bundle.entry.resource.extension.value[x].end"/>
+            <min value="1"/>
+            <fixedDateTime value="2022-09-10T23:59:59+02:00"/>
+        </element>
+        <element id="Bundle.entry:medicationrequest.resource.extension:pharmaceuticalTreatmentIdentifier">
+            <path value="Bundle.entry.resource.extension"/>
+            <sliceName value="pharmaceuticalTreatmentIdentifier"/>
+            <min value="1"/>
+            <max value="1"/>
+        </element>
+        <element id="Bundle.entry:medicationrequest.resource.extension:pharmaceuticalTreatmentIdentifier.value[x].system">
+            <path value="Bundle.entry.resource.extension.value[x].system"/>
+            <min value="1"/>
+        </element>
+        <element id="Bundle.entry:medicationrequest.resource.extension:pharmaceuticalTreatmentIdentifier.value[x].value">
+            <path value="Bundle.entry.resource.extension.value[x].value"/>
+            <min value="1"/>
+        </element>
+        <element id="Bundle.entry:medicationrequest.resource.identifier.system">
+            <path value="Bundle.entry.resource.identifier.system"/>
+            <min value="1"/>
+        </element>
+        <element id="Bundle.entry:medicationrequest.resource.identifier.value">
+            <path value="Bundle.entry.resource.identifier.value"/>
+            <min value="1"/>
+        </element>
+        <element id="Bundle.entry:medicationrequest.resource.category">
+            <path value="Bundle.entry.resource.category"/>
+            <min value="1"/>
+        </element>
+        <element id="Bundle.entry:medicationrequest.resource.category.coding">
+            <path value="Bundle.entry.resource.category.coding"/>
+            <slicing>
+                <discriminator>
+                    <type value="value"/>
+                    <path value="code"/>
+                </discriminator>
+                <discriminator>
+                    <type value="value"/>
+                    <path value="system"/>
+                </discriminator>
+                <rules value="open"/>
+            </slicing>
+            <min value="1"/>
+        </element>
+        <element id="Bundle.entry:medicationrequest.resource.category.coding:requiredCoding">
+            <path value="Bundle.entry.resource.category.coding"/>
+            <sliceName value="requiredCoding"/>
+            <min value="1"/>
+            <max value="1"/>
+        </element>
+        <element id="Bundle.entry:medicationrequest.resource.category.coding:requiredCoding.system">
+            <path value="Bundle.entry.resource.category.coding.system"/>
+            <min value="1"/>
+            <fixedUri value="http://snomed.info/sct"/>
+        </element>
+        <element id="Bundle.entry:medicationrequest.resource.category.coding:requiredCoding.code">
+            <path value="Bundle.entry.resource.category.coding.code"/>
+            <min value="1"/>
+            <fixedCode value="33633005"/>
+        </element>
+        <element id="Bundle.entry:medicationrequest.resource.category.coding:requiredCoding.display">
+            <path value="Bundle.entry.resource.category.coding.display"/>
+            <min value="1"/>
+        </element>
+        <element id="Bundle.entry:medicationrequest.resource.medication[x]:medicationReference">
+            <path value="Bundle.entry.resource.medication[x]"/>
+            <sliceName value="medicationReference"/>
+            <type>
+                <code value="Reference"/>
+                <targetProfile value="http://nictiz.nl/fhir/StructureDefinition/nl-core-PharmaceuticalProduct"/>
+            </type>
+        </element>
+        <element id="Bundle.entry:medicationrequest.resource.medication[x]:medicationReference.reference">
+            <path value="Bundle.entry.resource.medication[x].reference"/>
+            <min value="1"/>
+        </element>
+        <element id="Bundle.entry:medicationrequest.resource.medication[x]:medicationReference.type">
+            <path value="Bundle.entry.resource.medication[x].type"/>
+            <min value="1"/>
+            <fixedUri value="Medication"/>
+        </element>
+        <element id="Bundle.entry:medicationrequest.resource.medication[x]:medicationReference.display">
+            <path value="Bundle.entry.resource.medication[x].display"/>
+            <min value="1"/>
+        </element>
+        <element id="Bundle.entry:medicationrequest.resource.subject">
+            <path value="Bundle.entry.resource.subject"/>
+            <type>
+                <code value="Reference"/>
+                <targetProfile value="http://nictiz.nl/fhir/StructureDefinition/nl-core-Patient"/>
+            </type>
+        </element>
+        <element id="Bundle.entry:medicationrequest.resource.subject.reference">
+            <path value="Bundle.entry.resource.subject.reference"/>
+            <min value="1"/>
+        </element>
+        <element id="Bundle.entry:medicationrequest.resource.subject.type">
+            <path value="Bundle.entry.resource.subject.type"/>
+            <min value="1"/>
+            <fixedUri value="Patient"/>
+        </element>
+        <element id="Bundle.entry:medicationrequest.resource.subject.display">
+            <path value="Bundle.entry.resource.subject.display"/>
+            <min value="1"/>
+        </element>
+        <element id="Bundle.entry:medicationrequest.resource.requester">
+            <path value="Bundle.entry.resource.requester"/>
+            <type>
+                <code value="Reference"/>
+                <targetProfile value="http://nictiz.nl/fhir/StructureDefinition/nl-core-HealthProfessional"/>
+            </type>
+        </element>
+        <element id="Bundle.entry:medicationrequest.resource.requester.reference">
+            <path value="Bundle.entry.resource.requester.reference"/>
+            <min value="1"/>
+        </element>
+        <element id="Bundle.entry:medicationrequest.resource.requester.type">
+            <path value="Bundle.entry.resource.requester.type"/>
+            <min value="1"/>
+            <fixedUri value="PractitionerRole"/>
+        </element>
+        <element id="Bundle.entry:medicationrequest.resource.requester.display">
+            <path value="Bundle.entry.resource.requester.display"/>
+            <min value="1"/>
+        </element>
+    </differential>
+</StructureDefinition>
