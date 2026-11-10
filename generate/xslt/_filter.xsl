@@ -21,6 +21,7 @@
         <xsl:param name="target" tunnel="yes"/>
         <xsl:param name="scenario" tunnel="yes"/>
         <xsl:param name="expectedResponseFormat" tunnel="yes"/>
+        <xsl:param name="addFormatSuffix" tunnel="yes" select="true()"/>
         <xsl:param name="fixtures" tunnel="yes"/>
         <xsl:param name="profiles" tunnel="yes"/>
         <xsl:param name="variables" tunnel="yes"/>
@@ -33,7 +34,7 @@
                 <xsl:text>-</xsl:text>
                 <xsl:value-of select="$target"/>
             </xsl:if>
-            <xsl:if test="$scenario='server'">
+            <xsl:if test="$scenario='server' and $addFormatSuffix">
                 <xsl:text>-</xsl:text>
                 <xsl:value-of select="$expectedResponseFormat"/>
             </xsl:if>
@@ -84,7 +85,7 @@
                                 <xsl:text>-</xsl:text>
                                 <xsl:value-of select="$target"/>
                             </xsl:if>
-                            <xsl:if test="$scenario='server' and not(ancestor::f:TestScript/f:test/f:action/f:operation/f:accept) and not(contains(lower-case(.),$expectedResponseFormat))">
+                            <xsl:if test="$scenario='server' and $addFormatSuffix and not(ancestor::f:TestScript/f:test/f:action/f:operation/f:accept) and not(contains(lower-case(.),$expectedResponseFormat))">
                                 <xsl:text>-</xsl:text>
                                 <xsl:value-of select="lower-case($expectedResponseFormat)"/>
                             </xsl:if>
@@ -215,13 +216,14 @@
         <xsl:param name="target" tunnel="yes"/>
         <xsl:param name="scenario" tunnel="yes"/>
         <xsl:param name="expectedResponseFormat" tunnel="yes"/>
+        <xsl:param name="addFormatSuffix" tunnel="yes" select="true()"/>
         <xsl:variable name="joinedString">
             <xsl:value-of select="."/>
             <xsl:if test="not($target = '#default')">
                 <xsl:text>-</xsl:text>
                 <xsl:value-of select="$target"/>
             </xsl:if>
-            <xsl:if test="$scenario='server' and not(ancestor::f:TestScript/f:test/f:action/f:operation/f:accept) and not(contains(lower-case(.),$expectedResponseFormat))">
+            <xsl:if test="$scenario='server' and $addFormatSuffix and not(ancestor::f:TestScript/f:test/f:action/f:operation/f:accept) and not(contains(lower-case(.),$expectedResponseFormat))">
                 <xsl:text>-</xsl:text>
                 <xsl:value-of select="lower-case($expectedResponseFormat)"/>
             </xsl:if>
@@ -244,13 +246,14 @@
         <xsl:param name="target" tunnel="yes"/>
         <xsl:param name="scenario" tunnel="yes"/>
         <xsl:param name="expectedResponseFormat" tunnel="yes"/>
+        <xsl:param name="addFormatSuffix" tunnel="yes" select="true()"/>
         <xsl:variable name="joinedString">
             <xsl:value-of select="."/>
             <xsl:if test="not($target = '#default')">
                 <xsl:text>-</xsl:text>
                 <xsl:value-of select="$target"/>
             </xsl:if>
-            <xsl:if test="$scenario='server' and not(ancestor::f:TestScript/f:test/f:action/f:operation/f:accept) and not(contains(lower-case(.),$expectedResponseFormat))">
+            <xsl:if test="$scenario='server' and $addFormatSuffix and not(ancestor::f:TestScript/f:test/f:action/f:operation/f:accept) and not(contains(lower-case(.),$expectedResponseFormat))">
                 <xsl:text>-</xsl:text>
                 <xsl:value-of select="lower-case($expectedResponseFormat)"/>
             </xsl:if>
@@ -265,13 +268,14 @@
         <xsl:param name="target" tunnel="yes"/>
         <xsl:param name="scenario" tunnel="yes"/>
         <xsl:param name="expectedResponseFormat" tunnel="yes"/>
+        <xsl:param name="addFormatSuffix" tunnel="yes" select="true()"/>
         <xsl:attribute name="value">
             <xsl:value-of select="."/>
             <xsl:if test="not($target = '#default')">
                 <xsl:text> - target </xsl:text>
                 <xsl:value-of select="$target"/>
             </xsl:if>
-            <xsl:if test="$scenario='server' and not(ancestor::f:TestScript/f:test/f:action/f:operation/f:accept) and not(contains(lower-case(.),$expectedResponseFormat))">
+            <xsl:if test="$scenario='server' and $addFormatSuffix and not(ancestor::f:TestScript/f:test/f:action/f:operation/f:accept) and not(contains(lower-case(.),$expectedResponseFormat))">
                 <xsl:text> - </xsl:text>
                 <xsl:value-of select="upper-case($expectedResponseFormat)"/>
                 <xsl:text> Format</xsl:text>

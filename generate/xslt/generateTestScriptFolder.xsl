@@ -28,6 +28,10 @@
 
     <!-- The FHIR version that the scripts in the folder target. Either 'stu3' or 'r4'. -->
     <xsl:param name="fhirVersion"/>
+
+    <!-- The formats in which TestScripts with scenario 'server' are generated, separated by whitespace. Defaults to
+         both 'xml' and 'json'. Use 'none' for one script without an automatically added Accept header. -->
+    <xsl:param name="formats" select="'xml json'"/>
     
     <xsl:include href="generateTestScript.xsl"/>
     <xsl:include href="_ntsFolders.xsl"/>
@@ -87,13 +91,18 @@
                 <xsl:if test="$target = '#default' or (fn:contains(fn:concat('/',$target.dir), $nts.file.dir.properties?reldir.root) and xs:integer($nts.file.dir.properties?targetLevel) = xs:integer($nts.file.dir.properties?rootLevel))">
                     <xsl:choose>
                         <xsl:when test="$ntsScenario = 'server'">
-                            <!-- XIS scripts are generated in both XML and JSON flavor -->
-                            <xsl:for-each select="('xml', 'json')">
-                                <xsl:variable name="testscript.filename" select="fn:concat($nts.file.basename, '-', ., '.xml')"/>
+                            <!-- XIS scripts are generated in each format of the 'formats' parameter, by default both XML and JSON.
+                                 With more than one format, the format is added to the file name, id, url, name and title. -->
+                            <!-- 'none' becomes one empty format string, so one script is generated without an Accept header. -->
+                            <xsl:variable name="formats.list" select="if (normalize-space($formats) = 'none') then '' else tokenize(normalize-space($formats), ' ')"/>
+                            <xsl:variable name="addFormatSuffix" select="count($formats.list) gt 1"/>
+                            <xsl:for-each select="$formats.list">
+                                <xsl:variable name="testscript.filename" select="if ($addFormatSuffix) then fn:concat($nts.file.basename, '-', ., '.xml') else fn:concat($nts.file.basename, '.xml')"/>
                                 <xsl:variable name="testScript">
                                     <xsl:apply-templates select="$ntsFile">
                                         <xsl:with-param name="target" select="$target" tunnel="yes"/>
                                         <xsl:with-param name="expectedResponseFormat" select="." tunnel="yes"/>
+                                        <xsl:with-param name="addFormatSuffix" select="$addFormatSuffix" tunnel="yes"/>
                                         <xsl:with-param name="referenceBase" select="$referenceBase" tunnel="yes"/>
                                     </xsl:apply-templates>
                                 </xsl:variable>
